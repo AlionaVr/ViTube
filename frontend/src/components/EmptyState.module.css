@@ -1,12 +1,12 @@
 .root {
-    padding: 96px 24px;
-    text-align: center;
-    color: var(--color-text-secondary);
+  padding: 96px 24px;
+  text-align: center;
+  color: var(--color-text-secondary);
 }
 
 .root h1 {
-    margin-bottom: 8px;
-    font-size: 20px;
-    font-weight: 400;
-    color: var(--color-text);
+  margin-bottom: 8px;
+  font-size: 20px;
+  font-weight: 400;
+  color: var(--color-text);
 }

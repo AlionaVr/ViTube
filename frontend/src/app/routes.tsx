@@ -1,15 +1,15 @@
-import type {RouteObject} from 'react-router'
+import type { RouteObject } from 'react-router'
 
 import HomePage from '../pages/HomePage'
 import NotFoundPage from '../pages/NotFoundPage'
 import Layout from './Layout'
 
 export const routes: RouteObject[] = [
-    {
-        element: <Layout/>,
-        children: [
-            {index: true, element: <HomePage/>},
-            {path: '*', element: <NotFoundPage/>},
-        ],
-    },
+  {
+    element: <Layout />,
+    children: [
+      { index: true, element: <HomePage /> },
+      { path: '*', element: <NotFoundPage /> },
+    ],
+  },
 ]

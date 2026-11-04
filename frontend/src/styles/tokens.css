@@ -1,21 +1,21 @@
 /* Design tokens. The dark theme will override the colors. */
 :root {
-    --header-height: 56px;
-    --sidebar-width: 240px;
-    --sidebar-mini-width: 72px;
+  --header-height: 56px;
+  --sidebar-width: 240px;
+  --sidebar-mini-width: 72px;
 
-    --font-family: 'Roboto', 'Arial', sans-serif;
+  --font-family: 'Roboto', 'Arial', sans-serif;
 
-    --color-bg: #fff;
-    --color-surface: #f8f8f8;
-    --color-text: #0f0f0f;
-    --color-text-secondary: #606060;
-    --color-border: #d3d3d3;
-    --color-divider: rgba(0, 0, 0, 0.1);
-    --color-hover: rgba(0, 0, 0, 0.05);
-    --color-hover-strong: rgba(0, 0, 0, 0.1);
-    --color-focus: #1c62b9;
-    --color-link: #065fd4;
-    --color-link-hover-bg: #def1ff;
-    --color-brand: #e5232a;
+  --color-bg: #fff;
+  --color-surface: #f8f8f8;
+  --color-text: #0f0f0f;
+  --color-text-secondary: #606060;
+  --color-border: #d3d3d3;
+  --color-divider: rgba(0, 0, 0, 0.1);
+  --color-hover: rgba(0, 0, 0, 0.05);
+  --color-hover-strong: rgba(0, 0, 0, 0.1);
+  --color-focus: #1c62b9;
+  --color-link: #065fd4;
+  --color-link-hover-bg: #def1ff;
+  --color-brand: #e5232a;
 }

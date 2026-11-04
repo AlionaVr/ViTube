@@ -5,8 +5,9 @@ Revises:
 Create Date: 2026-11-04 23:33:12.732980
 """
 
-from alembic import op
 from collections.abc import Sequence
+
+from alembic import op
 
 revision: str = "e076a883e834"
 down_revision: str | Sequence[str] | None = None
