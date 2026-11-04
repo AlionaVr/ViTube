@@ -21,6 +21,7 @@ coverage/
 
 # Personal Claude Code settings
 .claude/settings.local.json
+CLAUDE.local.md
 
 # Misc
 *.log

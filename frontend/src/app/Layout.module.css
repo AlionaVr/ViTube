@@ -1,0 +1,20 @@
+.main {
+    padding-top: var(--header-height);
+    min-height: 100vh;
+}
+
+.withSidebar {
+    margin-left: var(--sidebar-width);
+}
+
+.withMiniSidebar {
+    margin-left: var(--sidebar-mini-width);
+}
+
+/* Narrow screens: the sidebar is hidden, content takes the full width. */
+@media (max-width: 791px) {
+    .withSidebar,
+    .withMiniSidebar {
+        margin-left: 0;
+    }
+}

@@ -1,0 +1,80 @@
+.full,
+.mini {
+    position: fixed;
+    top: var(--header-height);
+    bottom: 0;
+    left: 0;
+    overflow-y: auto;
+    background: var(--color-bg);
+}
+
+.full {
+    width: var(--sidebar-width);
+    padding: 0 12px;
+}
+
+.mini {
+    width: var(--sidebar-mini-width);
+    padding: 4px;
+}
+
+.section {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--color-divider);
+}
+
+.section:last-child {
+    border-bottom: none;
+}
+
+.item {
+    display: flex;
+    align-items: center;
+    border-radius: 10px;
+    color: var(--color-text);
+}
+
+.item:hover {
+    background: var(--color-hover);
+}
+
+.active {
+    background: var(--color-hover);
+    font-weight: 500;
+}
+
+.active:hover {
+    background: var(--color-hover-strong);
+}
+
+.full .item {
+    height: 40px;
+    padding: 0 12px;
+    gap: 24px;
+    font-size: 14px;
+}
+
+.mini .item {
+    padding: 16px 0 14px;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 10px;
+}
+
+.signInPrompt {
+    padding: 16px 20px;
+    font-size: 14px;
+    line-height: 20px;
+}
+
+.signInPrompt p {
+    margin: 0 0 12px;
+}
+
+/* Narrow screens: no sidebar (an overlay drawer comes with UI polish). */
+@media (max-width: 791px) {
+    .full,
+    .mini {
+        display: none;
+    }
+}

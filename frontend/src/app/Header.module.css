@@ -1,0 +1,95 @@
+.header {
+    position: fixed;
+    inset: 0 0 auto;
+    z-index: 10;
+    height: var(--header-height);
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--color-bg);
+}
+
+/* Equal side columns keep the search box centered on the page. */
+.start,
+.end {
+    display: flex;
+    align-items: center;
+    flex: 1 0 0;
+}
+
+.end {
+    justify-content: flex-end;
+}
+
+.iconButton {
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    border: none;
+    border-radius: 50%;
+    background: none;
+    color: var(--color-text);
+    cursor: pointer;
+}
+
+.iconButton:hover {
+    background: var(--color-hover-strong);
+}
+
+.logo {
+    padding: 0 14px 0 16px;
+    display: flex;
+}
+
+.search {
+    flex: 0 1 732px;
+    margin: 0 40px;
+    display: flex;
+}
+
+.searchInput {
+    flex: 1;
+    min-width: 0;
+    height: 40px;
+    padding: 0 4px 0 16px;
+    border: 1px solid var(--color-border);
+    border-right: none;
+    border-radius: 40px 0 0 40px;
+    font: inherit;
+    font-size: 16px;
+    color: var(--color-text);
+    background: var(--color-bg);
+    outline: none;
+}
+
+.searchInput:focus {
+    border-color: var(--color-focus);
+}
+
+.searchButton {
+    width: 64px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--color-border);
+    border-radius: 0 40px 40px 0;
+    background: var(--color-surface);
+    color: var(--color-text);
+    cursor: pointer;
+}
+
+.searchButton:hover {
+    background: var(--color-hover-strong);
+}
+
+@media (max-width: 656px) {
+    .search {
+        margin: 0 8px;
+    }
+
+    .searchButton {
+        width: 48px;
+    }
+}
