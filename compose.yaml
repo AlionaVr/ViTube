@@ -1,9 +1,11 @@
 # ViTube stack. Only nginx is exposed. Secrets come from .env (created by install.sh).
 name: vitube
 
+# One image for api, worker and migrate. Only api builds it: Compose labels an image with
+# the service that built it, so three builds would give three images under one tag.
 x-backend: &backend
-  build: ./backend
   image: vitube-backend
+  pull_policy: never  # local image, never pulled from a registry
   restart: unless-stopped
   environment:
     DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:?}:${POSTGRES_PASSWORD:?}@postgres:5432/${POSTGRES_DB:?}
@@ -82,6 +84,9 @@ services:
 
   api:
     <<: *backend
+    build:
+      context: ./backend
+      provenance: false  # build metadata has a timestamp: the image ID would change on every build
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -123,6 +128,7 @@ services:
       context: ./frontend
       additional_contexts:
         nginx-conf: ./nginx
+      provenance: false  # same as for the backend: stable image ID
     image: vitube-nginx
     restart: unless-stopped
     ports:

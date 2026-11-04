@@ -19,7 +19,7 @@ Decisions: MinIO image `pgsty/minio` (official images are gone), Python 3.13.
 - [x] Docker: backend and frontend Dockerfiles, nginx config, `compose.yaml`, `.env.example`
 - [x] Verify: stack healthy, migrations up/down, bucket created, re-run is idempotent, UI screenshot
 - [x] ADR 0002 note on the MinIO image; `CLAUDE.md` commands
-- [ ] `install.sh`
+- [x] `install.sh`: Docker from apt repo, `.env` with random secrets, `up --wait`, then waits for nginx -> api
 
 ## Deferred UI notes (from youtube-ui-reviewer)
 
