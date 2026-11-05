@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run pyright
+      - run: uv run pytest
+
+  frontend:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24 # same as frontend/Dockerfile
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm test
+      - run: npm run build
+
+  # Deploys the whole stack the way a reviewer does, then checks migrations.
+  stack:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      # Runners ship an older Compose; install.sh needs 2.39+ (same as on a clean Ubuntu).
+      - uses: docker/setup-compose-action@v2
+        with:
+          version: latest
+      - name: Deploy
+        run: ./install.sh
+      - name: Re-run is safe
+        run: ./install.sh
+      - name: Site answers
+        run: |
+          curl -fsS http://localhost/api/health
+          curl -fsS -o /dev/null http://localhost/docs
+      - name: Models match migrations
+        run: docker compose run --rm migrate alembic check
+      - name: Migrations roll back and apply again
+        run: |
+          docker compose run --rm migrate alembic downgrade base
+          docker compose run --rm migrate alembic upgrade head
+      - name: Show services and logs
+        if: failure()
+        run: |
+          docker compose ps -a
+          docker compose logs --no-color

@@ -20,6 +20,8 @@ Decisions: MinIO image `pgsty/minio` (official images are gone), Python 3.13.
 - [x] Verify: stack healthy, migrations up/down, bucket created, re-run is idempotent, UI screenshot
 - [x] ADR 0002 note on the MinIO image; `CLAUDE.md` commands
 - [x] `install.sh`: Docker from apt repo, `.env` with random secrets, `up --wait`, then waits for nginx -> api
+- [x] CI (GitHub Actions): backend and frontend checks; deploy via `install.sh`, `alembic check`, migrations down/up
+- [ ] CI green on GitHub
 
 ## Deferred UI notes (from youtube-ui-reviewer)
 

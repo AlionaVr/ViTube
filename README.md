@@ -1,5 +1,7 @@
 # ViTube
 
+[![CI](https://github.com/AlionaVr/Vitube/actions/workflows/ci.yml/badge.svg)](https://github.com/AlionaVr/Vitube/actions/workflows/ci.yml)
+
 A YouTube clone built with AI: FastAPI, PostgreSQL, React, MinIO, Celery.
 
 > Work in progress. Demo accounts and the config reference will be added as stages land.
