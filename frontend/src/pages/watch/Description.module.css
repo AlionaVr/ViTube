@@ -32,11 +32,9 @@
   overflow-wrap: anywhere;
 }
 
+/* Two lines by height, not line-clamp: a clamp draws its own "…" on an empty second line. */
 .text {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
+  max-height: 40px;
   overflow: hidden;
 }
 
