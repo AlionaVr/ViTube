@@ -46,5 +46,12 @@ FastAPI + PostgreSQL + MinIO + Celery + React. Deployed with `./install.sh` (Doc
 
 ## Git
 
-The user commits. After each logical step, list the changed files and propose Conventional Commit messages, e.g.
-`feat(upload): stream file to MinIO`. One logical change per commit.
+Claude commits after each logical step.
+
+- One finished logical change per commit. No unrelated files.
+- Before committing: review the staged diff and run the checks for what changed. Commit only when they pass.
+- Title: Conventional Commits, English, imperative, lowercase after the colon, at most 72 chars,
+  e.g. `feat(upload): stream file to MinIO`.
+- No trailers such as `Co-Authored-By` in the message.
+- After committing, tell the user the commit title.
+- Never push, force push or rewrite history (amend, rebase, reset) without the user's permission.
