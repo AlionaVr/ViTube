@@ -14,7 +14,9 @@ Work inside `backend/app/modules/<domain>/`.
    `NotFound`, `Forbidden`), not HTTP ones.
 4. **Router** (`router.py`):
     - thin layer;
-    - deps: `current_user` / `optional_user` / `require_role(...)`; unsafe methods get CSRF via the router dependency;
+    - deps: `CurrentUser` for a signed-in user, `dependencies=[Depends(require_role(Role.MODERATOR))]` for a role;
+    - CSRF checks are app-wide (`verify_csrf` in `app/main.py`): nothing to add per route;
+    - rate limits: a `RateLimit` constant, `Depends(LIMIT.per_ip)` or `LIMIT.hit(redis, subject)` in the service;
     - `response_model`, `summary` and `tags` for Swagger.
 5. **Register** the router in `app/main.py` if the module is new.
 6. **Tests** (`backend/tests/<domain>/`): happy path, 401, wrong user, 422. Use the `test-writer` agent for bigger

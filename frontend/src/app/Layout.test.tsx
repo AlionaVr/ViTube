@@ -1,18 +1,15 @@
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { createMemoryRouter } from 'react-router'
-import { RouterProvider } from 'react-router/dom'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { routes } from './routes'
-
-function renderAt(path: string) {
-  const router = createMemoryRouter(routes, { initialEntries: [path] })
-  render(<RouterProvider router={router} />)
-  return router
-}
+import { json, mockApi } from '../test/api'
+import { renderApp as renderAt } from '../test/render'
 
 describe('Layout', () => {
+  beforeEach(() => {
+    mockApi({ 'GET /api/auth/me': () => json(401, { detail: 'Sign in required' }) })
+  })
+
   it('collapses the sidebar to mini mode and back', async () => {
     renderAt('/')
     const menu = screen.getByRole('button', { name: 'Menu' })

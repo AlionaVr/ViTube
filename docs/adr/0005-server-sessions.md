@@ -8,17 +8,28 @@ work immediately.
 **Decision.**
 
 - **Session.** Random 256-bit id in a cookie: `HttpOnly; SameSite=Lax`, plus `Secure` when `COOKIE_SECURE=true`.
-- **Storage.** Redis stores an HMAC of the id → user, role, CSRF token, timestamps.
+- **Storage.** Redis stores an HMAC of the id → user id, CSRF token, creation time. Not the role: it is read from
+  the DB on every request, so a role change applies at once. A cache comes only if the Stage 10 load test needs it.
+  *(Amended 2026-11-06: the role was in Redis.)*
 - **Fixation.** A new id is issued on every login.
 - **Timeouts.** Idle and absolute.
 - **Logout.** Deletes the session.
+- **Durability.** Redis keeps an append-only log, fsync every second: a crash loses at most 1 s, so a logout is not
+  undone. With snapshots only, a crash brought back sessions deleted since the last snapshot (up to an hour).
 - **Ban or password change.** Deletes all of the user's sessions.
 - **CSRF**, three layers:
     - `SameSite=Lax`;
     - `X-CSRF-Token` header on every unsafe method;
     - `Origin` check.
     - GET never changes state.
-- **Passwords.** Argon2; rate limits on login and signup; one generic "wrong login or password" error.
+- **Passwords.** Argon2; one generic "wrong login or password" error.
+- **Rate limits**, counted atomically in Redis:
+    - signup: per IP;
+    - login: per IP; per email + IP (5 / 15 min), so one IP can't lock the owner out; per email from all IPs
+      (100 / 15 min) against guessing from many IPs. Trade-off: 20+ IPs can still block new sign-ins to an
+      account for 15 min; browsers already signed in keep working.
+    - Emails are ASCII (international domains as punycode): Python and Postgres lowercase them the same, so
+      a case variant can't get its own counter.
 - **XSS.** HttpOnly cookie, React escaping (no `dangerouslySetInnerHTML`), CSP.
 
 **Alternatives.** JWT (access + refresh) in cookies: stateless, but tokens can't be revoked early, it needs a refresh
