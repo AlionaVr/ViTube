@@ -1,9 +1,11 @@
 import { type FormEvent, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 
+import { useMe } from '../auth/hooks'
 import Icon from '../components/Icon'
 import Logo from '../components/Logo'
 import SignInButton from '../components/SignInButton'
+import AccountMenu from './AccountMenu'
 import styles from './Header.module.css'
 
 interface HeaderProps {
@@ -13,6 +15,7 @@ interface HeaderProps {
 
 export default function Header({ sidebarExpanded, onMenuClick }: HeaderProps) {
   const navigate = useNavigate()
+  const me = useMe()
   const [query, setQuery] = useState('')
 
   function handleSearch(event: FormEvent) {
@@ -56,7 +59,8 @@ export default function Header({ sidebarExpanded, onMenuClick }: HeaderProps) {
       </form>
 
       <div className={styles.end}>
-        <SignInButton />
+        {/* Nothing until /me answers: no "Sign in" flash for signed-in users. */}
+        {me.data ? <AccountMenu user={me.data} /> : !me.isPending && <SignInButton />}
       </div>
     </header>
   )
