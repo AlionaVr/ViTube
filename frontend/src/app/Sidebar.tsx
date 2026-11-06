@@ -4,6 +4,7 @@ import { useSubscriptions } from '../channels/hooks'
 import Avatar from '../components/Avatar'
 import Icon, { type IconName } from '../components/Icon'
 import SignInButton from '../components/SignInButton'
+import { channelUrl } from '../videos/paths'
 import { useSetDemoGuest, useViewer } from '../viewer/useViewer'
 import styles from './Sidebar.module.css'
 
@@ -28,7 +29,7 @@ function library(handle: string): NavItem[] {
   return [
     HISTORY,
     { to: '/feed/playlists', label: 'Playlists', icon: 'playlists' },
-    { to: `/@${handle}/videos`, label: 'Your videos', icon: 'yourVideos' },
+    { to: `${channelUrl(handle)}/videos`, label: 'Your videos', icon: 'yourVideos' },
     { to: '/playlist?list=WL', label: 'Watch later', icon: 'watchLater' },
     { to: '/playlist?list=LL', label: 'Liked videos', icon: 'like', activeIcon: 'likeFill' },
   ]
@@ -68,7 +69,7 @@ function SubscriptionList({ onNavigate }: NavProps) {
       {channels.map((channel) => (
         <Link
           key={channel.handle}
-          to={`/@${channel.handle}`}
+          to={channelUrl(channel.handle)}
           onClick={onNavigate}
           className={styles.item}
         >

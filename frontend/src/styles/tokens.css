@@ -17,6 +17,8 @@
   --color-hover-strong: rgba(0, 0, 0, 0.1);
   --color-hover-active: rgba(0, 0, 0, 0.2);
   --color-scrim: rgba(0, 0, 0, 0.5);
+  --color-placeholder: rgba(0, 0, 0, 0.1);
+  --color-overlay: rgba(0, 0, 0, 0.6);
   --color-scrollbar: #aaa;
   --color-focus: #1c62b9;
   --color-link: #065fd4;

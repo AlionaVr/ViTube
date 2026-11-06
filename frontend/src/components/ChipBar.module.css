@@ -1,0 +1,66 @@
+.bar {
+  position: relative;
+  min-width: 0;
+}
+
+.row {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.row::-webkit-scrollbar {
+  display: none;
+}
+
+.chip {
+  flex: none;
+  height: 32px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 8px;
+  background: var(--color-hover);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.chip:hover {
+  background: var(--color-hover-strong);
+}
+
+.chip:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+}
+
+.chip[aria-pressed='true'] {
+  background: var(--color-text);
+  color: var(--color-bg);
+}
+
+/* Arrows sit on a fade, so chips slide under them. */
+.arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 1;
+  display: flex;
+  translate: 0 -50%;
+}
+
+.left {
+  left: 0;
+  padding-right: 48px;
+  background: linear-gradient(to right, var(--color-bg) 40px, transparent);
+}
+
+.right {
+  right: 0;
+  padding-left: 48px;
+  background: linear-gradient(to left, var(--color-bg) 40px, transparent);
+}
