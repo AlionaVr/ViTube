@@ -8,12 +8,16 @@
 
   --color-bg: #fff;
   --color-surface: #f8f8f8;
+  --color-surface-hover: #f0f0f0;
   --color-text: #0f0f0f;
   --color-text-secondary: #606060;
   --color-border: #d3d3d3;
   --color-divider: rgba(0, 0, 0, 0.1);
   --color-hover: rgba(0, 0, 0, 0.05);
   --color-hover-strong: rgba(0, 0, 0, 0.1);
+  --color-hover-active: rgba(0, 0, 0, 0.2);
+  --color-scrim: rgba(0, 0, 0, 0.5);
+  --color-scrollbar: #aaa;
   --color-focus: #1c62b9;
   --color-link: #065fd4;
   --color-link-hover-bg: #def1ff;

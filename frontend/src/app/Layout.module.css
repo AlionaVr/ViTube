@@ -3,18 +3,18 @@
   min-height: 100vh;
 }
 
-.withSidebar {
+.full {
   margin-left: var(--sidebar-width);
 }
 
-.withMiniSidebar {
+.mini {
   margin-left: var(--sidebar-mini-width);
 }
 
-/* Narrow screens: the sidebar is hidden, content takes the full width. */
+/* Narrow screens: no sidebar, content takes the full width. */
 @media (max-width: 791px) {
-  .withSidebar,
-  .withMiniSidebar {
+  .full,
+  .mini {
     margin-left: 0;
   }
 }

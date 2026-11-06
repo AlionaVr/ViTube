@@ -1,35 +1,34 @@
-import { useEffect, useState } from 'react'
-import { Outlet } from 'react-router'
+import { useState } from 'react'
+import { Outlet, useLocation } from 'react-router'
 
+import { useMediaQuery, WIDE_SCREEN } from '../hooks/useMediaQuery'
+import GuideDrawer from './GuideDrawer'
 import Header from './Header'
 import styles from './Layout.module.css'
-import Sidebar from './Sidebar'
-
-// Like YouTube: the full sidebar on wide screens, the mini one below this width.
-const WIDE_SCREEN = '(min-width: 1313px)'
+import { FullGuide, MiniGuide } from './Sidebar'
 
 export default function Layout() {
-  const [sidebarExpanded, setSidebarExpanded] = useState(
-    () => window.matchMedia(WIDE_SCREEN).matches,
-  )
+  const wide = useMediaQuery(WIDE_SCREEN)
+  const watchPage = useLocation().pathname === '/watch'
+  // Like YouTube: on wide screens the guide sits next to the content, full or mini.
+  // Narrower, and always on the watch page, the menu button opens it over the page.
+  const persistent = wide && !watchPage
+  const [fullGuide, setFullGuide] = useState(true)
+  const [drawerOpen, setDrawerOpen] = useState(false)
 
-  useEffect(() => {
-    const query = window.matchMedia(WIDE_SCREEN)
-    const onChange = (event: MediaQueryListEvent) => setSidebarExpanded(event.matches)
-    query.addEventListener('change', onChange)
-    return () => query.removeEventListener('change', onChange)
-  }, [])
+  const guide = persistent && fullGuide ? 'full' : watchPage ? 'none' : 'mini'
+  const offset = { full: styles.full, mini: styles.mini, none: '' }[guide]
 
   return (
     <>
       <Header
-        sidebarExpanded={sidebarExpanded}
-        onMenuClick={() => setSidebarExpanded((expanded) => !expanded)}
+        sidebarExpanded={persistent ? fullGuide : drawerOpen}
+        onMenuClick={() => (persistent ? setFullGuide((full) => !full) : setDrawerOpen(true))}
       />
-      <Sidebar expanded={sidebarExpanded} />
-      <main
-        className={`${styles.main} ${sidebarExpanded ? styles.withSidebar : styles.withMiniSidebar}`}
-      >
+      {guide === 'full' && <FullGuide />}
+      {guide === 'mini' && <MiniGuide id={persistent ? 'guide' : undefined} />}
+      {!persistent && <GuideDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />}
+      <main className={`${styles.main} ${offset}`}>
         <Outlet />
       </main>
     </>

@@ -1,10 +1,10 @@
-import { type FormEvent, useState } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Link } from 'react-router'
 
-import Icon from '../components/Icon'
+import IconButton from '../components/IconButton'
 import Logo from '../components/Logo'
 import SignInButton from '../components/SignInButton'
 import styles from './Header.module.css'
+import SearchBox from './SearchBox'
 
 interface HeaderProps {
   sidebarExpanded: boolean
@@ -12,48 +12,22 @@ interface HeaderProps {
 }
 
 export default function Header({ sidebarExpanded, onMenuClick }: HeaderProps) {
-  const navigate = useNavigate()
-  const [query, setQuery] = useState('')
-
-  function handleSearch(event: FormEvent) {
-    event.preventDefault()
-    const trimmed = query.trim()
-    if (trimmed) {
-      navigate(`/results?${new URLSearchParams({ search_query: trimmed })}`)
-    }
-  }
-
   return (
     <header className={styles.header}>
       <div className={styles.start}>
-        <button
-          type="button"
-          className={styles.iconButton}
-          aria-label="Menu"
+        <IconButton
+          icon="menu"
+          label="Menu"
           aria-expanded={sidebarExpanded}
           aria-controls="guide"
           onClick={onMenuClick}
-        >
-          <Icon name="menu" />
-        </button>
+        />
         <Link to="/" className={styles.logo} aria-label="ViTube home">
           <Logo />
         </Link>
       </div>
 
-      <form className={styles.search} role="search" onSubmit={handleSearch}>
-        <input
-          className={styles.searchInput}
-          type="search"
-          placeholder="Search"
-          aria-label="Search"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
-        <button type="submit" className={styles.searchButton} aria-label="Search">
-          <Icon name="search" />
-        </button>
-      </form>
+      <SearchBox />
 
       <div className={styles.end}>
         <SignInButton />

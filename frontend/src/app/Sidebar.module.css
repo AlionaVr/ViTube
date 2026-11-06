@@ -4,13 +4,22 @@
   top: var(--header-height);
   bottom: 0;
   left: 0;
+  z-index: 5;
   overflow-y: auto;
+  overscroll-behavior: contain;
   background: var(--color-bg);
 }
 
+/* Like YouTube: the scrollbar shows only while the pointer is over the guide. */
 .full {
   width: var(--sidebar-width);
   padding: 0 12px;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.full:hover {
+  scrollbar-color: var(--color-scrollbar) transparent;
 }
 
 .mini {
@@ -23,19 +32,37 @@
   border-bottom: 1px solid var(--color-divider);
 }
 
-.section:last-child {
-  border-bottom: none;
+.title {
+  padding: 6px 12px 4px;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 22px;
 }
 
+/* Full-guide size by default; the mini guide overrides it below. */
 .item {
+  height: 40px;
+  padding: 0 12px;
   display: flex;
   align-items: center;
+  gap: 24px;
   border-radius: 10px;
+  font-size: 14px;
+  line-height: 20px;
   color: var(--color-text);
 }
 
 .item:hover {
   background: var(--color-hover);
+}
+
+.item:active {
+  background: var(--color-hover-strong);
+}
+
+.item:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
 }
 
 .active {
@@ -47,22 +74,33 @@
   background: var(--color-hover-strong);
 }
 
-.full .item {
-  height: 40px;
-  padding: 0 12px;
-  gap: 24px;
-  font-size: 14px;
+.you {
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mini .item {
+  height: auto;
   padding: 16px 0 14px;
   flex-direction: column;
   gap: 6px;
   font-size: 10px;
+  line-height: 14px;
+}
+
+.mini .label {
+  max-width: 100%;
 }
 
 .signInPrompt {
-  padding: 16px 20px;
+  padding: 16px 20px 16px 24px;
   font-size: 14px;
   line-height: 20px;
 }
@@ -71,7 +109,31 @@
   margin: 0 0 12px;
 }
 
-/* Narrow screens: no sidebar (an overlay drawer comes with UI polish). */
+.footer {
+  padding: 16px 12px 24px;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--color-text-secondary);
+}
+
+.footer p {
+  margin: 0 0 8px;
+}
+
+.footerButton {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-link);
+  font: inherit;
+  cursor: pointer;
+}
+
+.footerButton:hover {
+  text-decoration: underline;
+}
+
+/* Narrow screens: no sidebar; the menu button opens the drawer. */
 @media (max-width: 791px) {
   .full,
   .mini {
