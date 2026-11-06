@@ -40,6 +40,7 @@ describe('formatTimeAgo', () => {
     [3 * 86_400, '3 days ago'],
     [13 * 86_400, '1 week ago'],
     [45 * 86_400, '1 month ago'],
+    [364 * 86_400, '11 months ago'],
     [400 * 86_400, '1 year ago'],
   ])('%ds → %s', (seconds, text) => {
     expect(ago(seconds)).toBe(text)

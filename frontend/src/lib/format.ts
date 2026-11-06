@@ -37,7 +37,8 @@ export function formatComments(n: number): string {
 
 const UNITS: [unit: string, seconds: number][] = [
   ['year', 365 * 24 * 3600],
-  ['month', 30 * 24 * 3600],
+  // A twelfth of a year: 30 days would give "12 months ago" for 360–364 days.
+  ['month', (365 / 12) * 24 * 3600],
   ['week', 7 * 24 * 3600],
   ['day', 24 * 3600],
   ['hour', 3600],
