@@ -4,7 +4,11 @@ Run: python -m app.db.roles (as the superuser; needs POSTGRES_APP_PASSWORD).
 """
 
 import asyncio
+import base64
+import hashlib
+import hmac
 import os
+import secrets
 import sys
 
 from sqlalchemy import text
@@ -15,6 +19,7 @@ from app.db import locks
 from app.db.session import create_engine
 
 APP_ROLE = "vitube_app"  # also in compose.yaml: DATABASE_URL of api and worker
+SCRAM_ITERATIONS = 4096  # Postgres default
 
 # Each runs on every deploy, so the role is right on a fresh DB and on an existing volume.
 SETUP = (
@@ -36,18 +41,35 @@ SETUP = (
 )
 
 
+def scram_sha256(password: str) -> str:
+    """The SCRAM-SHA-256 verifier Postgres stores, built here: the plain password never leaves us.
+
+    Postgres keeps a verifier given in ALTER ROLE ... PASSWORD as is (RFC 5802, RFC 7677).
+    """
+    if not password.isascii():
+        # Postgres normalizes non-ASCII passwords (SASLprep) before hashing; this code doesn't.
+        raise ValueError("The app DB password must be ASCII")
+    salt = secrets.token_bytes(16)
+    salted = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, SCRAM_ITERATIONS)
+    stored_key = hashlib.sha256(hmac.digest(salted, b"Client Key", "sha256")).digest()
+    server_key = hmac.digest(salted, b"Server Key", "sha256")
+    b64 = [base64.b64encode(part).decode() for part in (salt, stored_key, server_key)]
+    return f"SCRAM-SHA-256${SCRAM_ITERATIONS}:{b64[0]}${b64[1]}:{b64[2]}"
+
+
 async def setup_app_role(conn: AsyncConnection, password: str) -> None:
     """Create or update the app role. Idempotent; a new password rotates the old one."""
     await conn.execute(text("SELECT pg_advisory_xact_lock(:id)"), {"id": locks.MIGRATIONS})
     if not await conn.scalar(text("SELECT 1 FROM pg_roles WHERE rolname = :r"), {"r": APP_ROLE}):
         await conn.execute(text(f"CREATE ROLE {APP_ROLE}"))
-    # ALTER ROLE takes no bind parameters: Postgres quotes the password itself (%L).
+    # ALTER ROLE takes no bind parameters: Postgres quotes the verifier itself (%L).
     set_password = await conn.scalar(
         text(
-            "SELECT format('ALTER ROLE %I LOGIN PASSWORD %L', CAST(:r AS text), CAST(:p AS text))"
+            "SELECT format('ALTER ROLE %I LOGIN PASSWORD %L', CAST(:r AS text), CAST(:v AS text))"
         ),
-        {"r": APP_ROLE, "p": password},
+        {"r": APP_ROLE, "v": scram_sha256(password)},
     )
+    # Not text(): the verifier has ":" that text() would read as bind parameters.
     await conn.exec_driver_sql(set_password)
     for statement in SETUP:
         await conn.execute(text(statement))

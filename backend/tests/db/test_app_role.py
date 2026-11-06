@@ -1,13 +1,13 @@
 """The app's DB role (ADR 0010): what vitube_app may and may not do."""
 
 import pytest
-from sqlalchemy import make_url, text
+from sqlalchemy import event, make_url, text
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
 
 from app.core.config import get_settings
-from app.db.roles import APP_ROLE, setup_app_role
+from app.db.roles import APP_ROLE, scram_sha256, setup_app_role
 
 INSUFFICIENT_PRIVILEGE = "42501"
 
@@ -74,10 +74,21 @@ async def test_app_role_has_no_superpowers_and_has_timeouts(db: AsyncSession) ->
     assert await db.scalar(text("SHOW idle_in_transaction_session_timeout")) == "1min"
 
 
-async def test_redeploy_keeps_the_role_and_rotates_its_password(admin_engine: AsyncEngine) -> None:
+def test_non_ascii_password_is_refused() -> None:
+    with pytest.raises(ValueError, match="ASCII"):
+        scram_sha256("пароль-123")
+
+
+async def test_redeploy_rotates_the_password_and_sends_only_its_hash(
+    admin_engine: AsyncEngine,
+) -> None:
     app_url = make_url(str(get_settings().database_url))  # the URL the app connects with
     old_password = app_url.password
     assert old_password
+    sent: list[str] = []  # every statement and parameter set that reached Postgres
+
+    def record(conn, cursor, statement, parameters, context, executemany) -> None:
+        sent.append(f"{statement} {parameters}")
 
     async def can_log_in(password: str) -> bool:
         engine = create_async_engine(app_url.set(password=password), poolclass=NullPool)
@@ -90,13 +101,17 @@ async def test_redeploy_keeps_the_role_and_rotates_its_password(admin_engine: As
         finally:
             await engine.dispose()
 
+    event.listen(admin_engine.sync_engine, "before_cursor_execute", record)
     try:
         for _ in range(2):  # two deploys in a row: the second run must be a no-op
             async with admin_engine.begin() as conn:
                 await setup_app_role(conn, "rotated-password")
 
+        assert any("SCRAM-SHA-256$" in line for line in sent)  # the hash went out...
+        assert not any("rotated-password" in line for line in sent)  # ...the password didn't
         assert await can_log_in("rotated-password")
         assert not await can_log_in(old_password)
     finally:
+        event.remove(admin_engine.sync_engine, "before_cursor_execute", record)
         async with admin_engine.begin() as conn:
             await setup_app_role(conn, old_password)
