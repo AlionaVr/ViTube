@@ -1,0 +1,21 @@
+.root {
+  position: relative;
+  display: inline-flex;
+}
+
+.panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 20;
+  min-width: max-content;
+  border-radius: 12px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  box-shadow: var(--shadow-popup);
+}
+
+.end {
+  left: auto;
+  right: 0;
+}

@@ -241,6 +241,7 @@ function commentsOf(entry: Entry) {
     const publishedAt = NOW - entry.age * HOUR_MS
     comments = generateComments(
       entry.id,
+      entry.media,
       channelSummary(entry.channel),
       entry.views,
       publishedAt,

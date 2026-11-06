@@ -1,0 +1,169 @@
+/*
+ * YouTube's watch layout as a grid. Default: player and the rest in the primary column, Up next
+ * on the right. Theater: the player spans the full width above both columns.
+ * The primary column is as wide as a player that still fits the screen height with room for the title.
+ * Row 2 is 1fr, so a long Up next list adds space under the comments, never between player and title.
+ */
+.watch {
+  --primary-max: clamp(640px, calc((100vh - var(--header-height) - 24px - 136px) * 16 / 9), 1600px);
+  display: grid;
+  grid-template-columns:
+    [full-start] minmax(24px, 1fr)
+    [primary-start] minmax(min(640px, 100%), var(--primary-max))
+    [primary-end] 24px
+    [secondary-start] minmax(300px, 402px)
+    [secondary-end] minmax(24px, 1fr)
+    [full-end];
+  grid-template-rows: auto 1fr;
+  padding: 24px 0;
+}
+
+.player {
+  grid-column: primary;
+  grid-row: 1;
+}
+
+.below {
+  grid-column: primary;
+  grid-row: 2;
+  min-width: 0;
+}
+
+.secondary {
+  grid-column: secondary;
+  grid-row: 1 / span 2;
+  min-width: 0;
+}
+
+.playerBox {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #000;
+}
+
+.theater {
+  padding-top: 0;
+}
+
+.theater .player {
+  grid-column: full;
+}
+
+.theater .playerBox {
+  aspect-ratio: auto;
+  height: max(480px, min(56.25vw, calc(100vh - var(--header-height) - 113px)));
+  border-radius: 0;
+}
+
+.theater .below,
+.theater .secondary {
+  grid-row: 2;
+  padding-top: 24px;
+}
+
+/* One column: Up next sits between the description and the comments (rendered there). */
+@media (max-width: 1015px) {
+  .watch {
+    --gutter: 24px;
+    grid-template-columns:
+      [full-start] var(--gutter)
+      [primary-start] minmax(0, 1fr)
+      [primary-end] var(--gutter)
+      [full-end];
+  }
+
+  .theater .playerBox {
+    height: auto;
+    aspect-ratio: 16 / 9;
+  }
+}
+
+/* Phone width: the player goes edge to edge. */
+@media (max-width: 656px) {
+  .watch {
+    --gutter: 12px;
+    padding-top: 0;
+  }
+
+  .player {
+    grid-column: full;
+  }
+
+  .playerBox {
+    border-radius: 0;
+  }
+}
+
+.title {
+  margin-top: 12px;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 28px;
+  overflow-wrap: anywhere;
+}
+
+.upNextInline {
+  margin-top: 24px;
+}
+
+.unavailable {
+  position: absolute;
+  inset: 0;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: #0f0f0f;
+  color: #aaa;
+  text-align: center;
+}
+
+.unavailable p {
+  margin: 0;
+}
+
+.unavailable .unavailableTitle {
+  margin-top: 8px;
+  font-size: 20px;
+  font-weight: 500;
+  color: #fff;
+}
+
+.ghost {
+  border-radius: 4px;
+  background: var(--color-placeholder);
+}
+
+.ghostTitle {
+  width: 70%;
+  height: 28px;
+  margin-top: 12px;
+}
+
+.ghostOwner {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ghostAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+.ghostLine {
+  width: 160px;
+  height: 20px;
+}
+
+.ghostDescription {
+  height: 88px;
+  margin-top: 12px;
+  border-radius: 12px;
+}

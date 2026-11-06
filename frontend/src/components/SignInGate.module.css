@@ -1,0 +1,38 @@
+.card {
+  width: 340px;
+  max-width: calc(100vw - 32px);
+  padding: 16px 24px 12px;
+}
+
+.title {
+  margin: 0 0 8px;
+  font-size: 16px;
+  line-height: 22px;
+}
+
+.text {
+  margin: 0 0 16px;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-text-secondary);
+}
+
+.signIn {
+  height: 36px;
+  margin-left: -16px;
+  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 18px;
+  color: var(--color-link);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.signIn:hover {
+  background: var(--color-link-hover-bg);
+}
+
+.signIn:focus-visible {
+  outline: 2px solid var(--color-focus);
+}

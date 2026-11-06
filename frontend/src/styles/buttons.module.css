@@ -1,0 +1,87 @@
+/* YouTube's pill buttons. Combine .pill with one look: tonal, filled, primary, text or link. */
+
+.pill {
+  height: 36px;
+  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+  border-radius: 18px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.pill:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.pill:disabled {
+  cursor: default;
+}
+
+.small {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 16px;
+}
+
+.tonal {
+  background: var(--color-hover);
+  color: var(--color-text);
+}
+
+.tonal:hover:enabled {
+  background: var(--color-hover-strong);
+}
+
+.tonal:active:enabled {
+  background: var(--color-hover-active);
+}
+
+.filled {
+  background: var(--color-text);
+  color: var(--color-bg);
+}
+
+.filled:hover:enabled {
+  background: var(--color-filled-hover);
+}
+
+.primary {
+  background: var(--color-link);
+  color: #fff;
+}
+
+.primary:hover:enabled {
+  background: var(--color-primary-hover);
+}
+
+.primary:disabled {
+  background: var(--color-hover);
+  color: var(--color-text-disabled);
+}
+
+.text {
+  background: none;
+  color: var(--color-text);
+}
+
+.text:hover:enabled {
+  background: var(--color-hover-strong);
+}
+
+.link {
+  background: none;
+  color: var(--color-link);
+}
+
+.link:hover:enabled {
+  background: var(--color-link-hover-bg);
+}

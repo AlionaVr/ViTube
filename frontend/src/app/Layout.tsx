@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Outlet, useLocation } from 'react-router'
+import { Outlet, ScrollRestoration, useLocation } from 'react-router'
 
 import { useMediaQuery, WIDE_SCREEN } from '../hooks/useMediaQuery'
 import GuideDrawer from './GuideDrawer'
@@ -31,6 +31,8 @@ export default function Layout() {
       <main className={`${styles.main} ${offset}`}>
         <Outlet />
       </main>
+      {/* A new page starts at the top; Back returns to where you were. */}
+      <ScrollRestoration />
     </>
   )
 }

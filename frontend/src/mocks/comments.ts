@@ -1,6 +1,7 @@
 // Demo comments, generated per video from a seed.
 import type { ChannelSummary } from '../channels/types'
 import type { Comment } from '../comments/types'
+import type { MediaKey } from './catalog'
 import { pick, seededRandom } from './random'
 
 /** Stored comment: the viewer's own rating is added on read. */
@@ -27,30 +28,43 @@ const AUTHORS: ChannelSummary[] = [
   ['ana.lumen', 'Ana'],
 ].map(([handle, name]) => ({ handle, name, avatar_url: null }))
 
-const TEXTS = [
-  'The timing on the apple gag still gets me every single time.',
-  'Can’t believe this was made with free software.',
-  'That fur shading holds up better than some recent features.',
-  'The way the squirrel freezes before the fall — perfect anticipation.',
-  'I teach intro to animation and show this to every new group. Never fails.',
-  'The ending wrecked me the first time. Still does.',
-  'Pausing on that frame — it could be a painting.',
-  'Anyone know which lens settings were used for this shot?',
-  'Five seconds of pure calm. Thank you.',
-  'I’ve been animating for about six years and this finally made squash and stretch click for me. The part about holding the extreme pose for two extra frames before the release is something nobody explained in any of the courses I paid for.\n\nAlso, the side-by-side with the final render is brilliant. Please do more of these!',
+const GENERAL_TEXTS = [
   'Очень круто разобрано, спасибо! Ждём продолжение.',
   'Наконец-то нормальный разбор без воды.',
   'Underrated channel. Subscribed.',
-  'The music at the end gives me chills.',
   'Rewatched three times just for the lighting.',
   'This deserves way more views.',
   'Where can I download the source files?',
   'Great video, but the audio is a bit quiet in the second half.',
-  'My kids made me watch this 14 times today. Send help.',
-  'The color script part was so useful. Bookmarked.',
   'First time seeing this and I’m hooked.',
-  'Who else is here after the latest Blender release? 🙋',
 ]
+
+// Comments that fit what the video shows.
+const TEXTS_BY_MEDIA: Record<MediaKey, string[]> = {
+  bunny: [
+    'The timing on the apple gag still gets me every single time.',
+    'That fur shading holds up better than some recent features.',
+    'The way the squirrel freezes before the fall — perfect anticipation.',
+    'I teach intro to animation and show this to every new group. Never fails.',
+    'My kids made me watch this 14 times today. Send help.',
+    'I’ve been animating for about six years and this finally made squash and stretch click for me. The part about holding the extreme pose for two extra frames before the release is something nobody explained in any of the courses I paid for.\n\nAlso, the side-by-side with the final render is brilliant. Please do more of these!',
+    'Who else is here after the latest Blender release? 🙋',
+  ],
+  sintel: [
+    'The ending wrecked me the first time. Still does.',
+    'Pausing on that frame — it could be a painting.',
+    'The music at the end gives me chills.',
+    'The color script part was so useful. Bookmarked.',
+    'Can’t believe this was made with free software.',
+    'That dragon’s wing timing is unreal.',
+  ],
+  flower: [
+    'Five seconds of pure calm. Thank you.',
+    'Anyone know which lens settings were used for this shot?',
+    'What a color! Is it a portulaca?',
+    'I could watch this on loop all day.',
+  ],
+}
 
 const REPLIES = [
   'Same here!',
@@ -79,6 +93,7 @@ export interface GeneratedComments {
 
 export function generateComments(
   videoId: string,
+  media: MediaKey,
   owner: ChannelSummary,
   views: number,
   publishedAt: number,
@@ -87,6 +102,7 @@ export function generateComments(
   const random = seededRandom(videoId)
   const between = (from: number) => new Date(from + random() * (now - from)).toISOString()
   const likes = () => Math.floor(random() ** 3 * Math.max(views, 50) * 0.002)
+  const texts = [...TEXTS_BY_MEDIA[media], ...GENERAL_TEXTS]
   const replies = new Map<string, MockComment[]>()
 
   const count = 4 + Math.floor(random() * 6) + Math.floor(Math.log10(Math.max(views, 10)) * 2.5)
@@ -117,7 +133,7 @@ export function generateComments(
       id,
       author: byOwner ? owner : pick(random, AUTHORS),
       by_owner: byOwner,
-      text: pick(random, byOwner ? OWNER_TEXTS : TEXTS),
+      text: pick(random, byOwner ? OWNER_TEXTS : texts),
       published_at: publishedAtIso,
       like_count: likes(),
       reply_count: replyCount,

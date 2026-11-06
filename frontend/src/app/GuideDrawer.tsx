@@ -1,8 +1,9 @@
-import { useEffect, useRef } from 'react'
+import { useRef } from 'react'
 import { Link } from 'react-router'
 
 import IconButton from '../components/IconButton'
 import Logo from '../components/Logo'
+import { useModalDialog } from '../hooks/useModalDialog'
 import styles from './GuideDrawer.module.css'
 import { GuideContent } from './Sidebar'
 
@@ -17,13 +18,7 @@ interface GuideDrawerProps {
  */
 export default function GuideDrawer({ open, onClose }: GuideDrawerProps) {
   const ref = useRef<HTMLDialogElement>(null)
-
-  useEffect(() => {
-    const dialog = ref.current
-    if (!dialog) return
-    if (open && !dialog.open) dialog.showModal()
-    if (!open && dialog.open) dialog.close()
-  }, [open])
+  useModalDialog(ref, open)
 
   return (
     // The scrim is the dialog's ::backdrop; a click there targets the dialog itself.

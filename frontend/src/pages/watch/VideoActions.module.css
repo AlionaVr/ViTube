@@ -1,0 +1,112 @@
+.row {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.owner {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ownerText {
+  min-width: 0;
+  margin-right: 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.channelName {
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 22px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.channelName:focus-visible {
+  outline: 2px solid var(--color-focus);
+  border-radius: 4px;
+}
+
+.subscribers {
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--color-text-secondary);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Like | dislike in one pill. */
+.segmented {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  border-radius: 18px;
+  background: var(--color-hover);
+}
+
+.segment {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.segment:hover:enabled {
+  background: var(--color-hover);
+}
+
+.segment:active:enabled {
+  background: var(--color-hover-strong);
+}
+
+.segment:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.like {
+  padding: 0 12px 0 16px;
+  border-radius: 18px 0 0 18px;
+}
+
+.dislike {
+  padding: 0 16px 0 12px;
+  border-radius: 0 18px 18px 0;
+}
+
+.divider {
+  width: 1px;
+  height: 24px;
+  background: var(--color-divider);
+}
+
+.confirm {
+  margin: 0 0 24px;
+  font-size: 16px;
+  line-height: 22px;
+}
+
+.confirmActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
