@@ -93,7 +93,10 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** Credentials */
+        /**
+         * Credentials
+         * @description Sign in. No length rule here: it applies to new passwords only.
+         */
         Credentials: {
             /**
              * Email
@@ -107,6 +110,16 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** NewAccount */
+        NewAccount: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** Password */
+            password: string;
         };
         /**
          * Role
@@ -155,7 +168,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Credentials"];
+                "application/json": components["schemas"]["NewAccount"];
             };
         };
         responses: {

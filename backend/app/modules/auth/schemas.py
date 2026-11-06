@@ -24,6 +24,13 @@ Email = Annotated[
 
 
 class Credentials(BaseModel):
+    """Sign in. No length rule here: it applies to new passwords only."""
+
+    email: Email
+    password: str = Field(min_length=1, max_length=128)
+
+
+class NewAccount(BaseModel):
     email: Email
     password: str = Field(min_length=8, max_length=128)
 

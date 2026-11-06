@@ -8,7 +8,7 @@ from app.db.session import DbSession
 from app.modules.auth import service
 from app.modules.auth.cookies import SESSION_COOKIE, clear_session_cookies, set_session_cookies
 from app.modules.auth.deps import CurrentUser, Sessions
-from app.modules.auth.schemas import Credentials, UserOut
+from app.modules.auth.schemas import Credentials, NewAccount, UserOut
 from app.modules.auth.sessions import SessionStore
 from app.modules.users.models import User
 
@@ -35,7 +35,7 @@ async def start_session(
     dependencies=[Depends(SIGNUP_PER_IP.per_ip)],
 )
 async def signup(
-    body: Credentials, request: Request, response: Response, db: DbSession, sessions: Sessions
+    body: NewAccount, request: Request, response: Response, db: DbSession, sessions: Sessions
 ) -> User:
     user = await service.signup(db, body.email, body.password)
     await start_session(request, response, sessions, user)

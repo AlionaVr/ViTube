@@ -158,6 +158,14 @@ async def test_unknown_email_and_wrong_password_get_the_same_response(
     assert wrong_password.json() == {"detail": "Wrong email or password"}
 
 
+async def test_short_password_on_sign_in_is_just_wrong(client: AsyncClient) -> None:
+    await signup(client)
+
+    response = await login(client, password="short")
+
+    assert response.status_code == 401  # not 422: old accounts keep working if the rule changes
+
+
 async def test_unknown_email_still_runs_a_password_check(
     client: AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
