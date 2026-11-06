@@ -1,6 +1,7 @@
 from collections.abc import AsyncIterator
+from typing import Annotated
 
-from fastapi import Request
+from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -24,3 +25,6 @@ async def get_db(request: Request) -> AsyncIterator[AsyncSession]:
     """One session per request. Services commit; closing without a commit rolls back."""
     async with request.app.state.sessionmaker() as session:
         yield session
+
+
+DbSession = Annotated[AsyncSession, Depends(get_db)]

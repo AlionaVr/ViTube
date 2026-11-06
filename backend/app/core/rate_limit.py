@@ -2,13 +2,12 @@
 
 import hashlib
 from dataclasses import dataclass
-from typing import Annotated
 
-from fastapi import Depends, Request
+from fastapi import Request
 from redis.asyncio import Redis
 
 from app.core.errors import TooManyRequests
-from app.core.redis import get_redis
+from app.core.redis import RedisClient
 
 
 @dataclass(frozen=True)
@@ -36,7 +35,7 @@ class RateLimit:
     async def reset(self, redis: Redis, subject: str) -> None:
         await redis.delete(self._key(subject))
 
-    async def per_ip(self, request: Request, redis: Annotated[Redis, Depends(get_redis)]) -> None:
+    async def per_ip(self, request: Request, redis: RedisClient) -> None:
         """A dependency: Depends(LIMIT.per_ip) counts requests per client IP."""
         # nginx sends the client IP in X-Forwarded-For; uvicorn puts it in request.client.
         ip = request.client.host if request.client else "unknown"

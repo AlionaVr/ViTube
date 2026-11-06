@@ -8,6 +8,7 @@ class AuthSettings(BaseSettings):
     """Separate from Settings: only the api reads them, so only the api gets the secret."""
 
     session_secret: SecretStr = Field(min_length=32)  # refuses "change-me" from .env.example
+    cookie_secure: bool = False  # true behind HTTPS; plain HTTP (a VM by IP) needs false
 
 
 @lru_cache

@@ -83,7 +83,9 @@ async def client(app: FastAPI, admin_engine: AsyncEngine) -> AsyncIterator[Async
     """An HTTP client on empty tables and an empty Redis."""
     await reset_state(app, admin_engine)
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
+    # Origin as a browser sends it from our own pages: the CSRF check wants it on unsafe methods.
+    headers = {"Origin": "http://test"}
+    async with AsyncClient(transport=transport, base_url="http://test", headers=headers) as client:
         yield client
 
 
