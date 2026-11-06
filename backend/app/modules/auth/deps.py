@@ -1,6 +1,7 @@
 """Auth dependencies: the session from the cookie, CSRF checks, the signed-in user."""
 
 import hmac
+from collections.abc import Awaitable, Callable
 from typing import Annotated
 from urllib.parse import urlsplit
 
@@ -11,7 +12,7 @@ from app.db.session import DbSession
 from app.modules.auth.cookies import SESSION_COOKIE
 from app.modules.auth.sessions import SessionStore, UserSession
 from app.modules.users import repository as users
-from app.modules.users.models import User
+from app.modules.users.models import Role, User
 
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 
@@ -56,3 +57,14 @@ async def current_user(session: CurrentSession, db: DbSession) -> User:
 
 
 CurrentUser = Annotated[User, Depends(current_user)]
+
+
+def require_role(minimum: Role) -> Callable[..., Awaitable[User]]:
+    """A dependency: the signed-in user with at least this role (ADR 0009), else 403."""
+
+    async def check(user: CurrentUser) -> User:
+        if not user.role.at_least(minimum):
+            raise Forbidden()
+        return user
+
+    return check

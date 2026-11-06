@@ -5,11 +5,11 @@ import secrets
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.errors import Conflict, Unauthorized
+from app.core.errors import Conflict, NotFound, Unauthorized
 from app.core.rate_limit import RateLimit
 from app.modules.auth.passwords import hash_password, verify_password
 from app.modules.users import repository as users
-from app.modules.users.models import User
+from app.modules.users.models import Role, User
 
 HANDLE_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789"  # no look-alikes: i, l, o, 0, 1
 HANDLE_TRIES = 5
@@ -53,4 +53,14 @@ async def login(db: AsyncSession, redis: Redis, email: str, password: str, ip: s
         raise Unauthorized("Wrong email or password")
     # The owner's typos from this IP are forgiven; the account-wide count stays for guessers.
     await LOGIN_PER_EMAIL_AND_IP.reset(redis, ip_key)
+    return user
+
+
+async def set_role(db: AsyncSession, email: str, role: Role) -> User:
+    """Open sessions get the new role on the next request: it is read from the DB each time."""
+    user = await users.get_by_email(db, email)
+    if user is None:
+        raise NotFound("No user with this email")
+    user.role = role
+    await db.commit()
     return user

@@ -21,6 +21,10 @@ class Role(enum.Enum):
     MODERATOR = "moderator"
     ADMIN = "admin"
 
+    def at_least(self, minimum: "Role") -> bool:
+        order = list(Role)  # declaration order: each role includes the ones above it
+        return order.index(self) >= order.index(minimum)
+
 
 class User(Base):
     __tablename__ = "users"
