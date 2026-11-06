@@ -54,7 +54,9 @@ services:
     <<: *data-service
     image: redis:8-alpine
     cap_add: [ CHOWN, SETGID, SETUID ]
-    command: [ "redis-server", "--requirepass", "${REDIS_PASSWORD:?}" ]
+    # Append-only log, fsync every second: a crash loses at most 1 s, so logouts stay done (ADR 0005).
+    command:
+      [ "redis-server", "--requirepass", "${REDIS_PASSWORD:?}", "--appendonly", "yes", "--appendfsync", "everysec" ]
     environment:
       REDISCLI_AUTH: ${REDIS_PASSWORD:?}  # lets the healthcheck's redis-cli log in
     volumes:

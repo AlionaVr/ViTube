@@ -14,6 +14,8 @@ work immediately.
 - **Fixation.** A new id is issued on every login.
 - **Timeouts.** Idle and absolute.
 - **Logout.** Deletes the session.
+- **Durability.** Redis keeps an append-only log, fsync every second: a crash loses at most 1 s, so a logout is not
+  undone. With snapshots only, a crash brought back sessions deleted since the last snapshot (up to an hour).
 - **Ban or password change.** Deletes all of the user's sessions.
 - **CSRF**, three layers:
     - `SameSite=Lax`;
