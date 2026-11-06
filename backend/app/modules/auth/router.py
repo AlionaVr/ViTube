@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, Request, Response, status
 
-from app.core.rate_limit import RateLimit
+from app.core.rate_limit import RateLimit, client_ip
 from app.core.redis import RedisClient
 from app.db.session import DbSession
 from app.modules.auth import service
@@ -56,7 +56,7 @@ async def login(
     redis: RedisClient,
     sessions: Sessions,
 ) -> User:
-    user = await service.login(db, redis, body.email, body.password)
+    user = await service.login(db, redis, body.email, body.password, client_ip(request))
     await start_session(request, response, sessions, user)
     return user
 

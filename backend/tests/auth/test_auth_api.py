@@ -10,6 +10,7 @@ from httpx2 import ASGITransport, AsyncClient, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.rate_limit import RateLimit
 from app.modules.auth import service
 from app.modules.users.models import User
 
@@ -94,8 +95,9 @@ async def test_signup_with_a_taken_email_is_refused(client: AsyncClient) -> None
         {"email": EMAIL, "password": "short"},
         {"email": EMAIL, "password": "x" * 129},
         {"email": EMAIL},
+        {"email": "annaé@example.com", "password": PASSWORD},
     ],
-    ids=["bad email", "short password", "long password", "no password"],
+    ids=["bad email", "short password", "long password", "no password", "non-ASCII name"],
 )
 async def test_signup_checks_input(client: AsyncClient, body: dict[str, str]) -> None:
     response = await client.post("/api/auth/signup", json=body)
@@ -183,35 +185,79 @@ async def test_login_is_limited_per_ip(app: FastAPI, client: AsyncClient) -> Non
 
 
 @pytest.mark.parametrize("registered", [True, False], ids=["known email", "unknown email"])
-async def test_login_is_limited_per_email_across_ips(
+async def test_login_is_limited_per_email_from_one_ip(
     app: FastAPI, client: AsyncClient, registered: bool
 ) -> None:
     if registered:
         await signup(client)
     emails = [EMAIL, EMAIL.upper()]  # the same account, whatever the case
 
-    for i in range(5):
-        async with client_from(app, f"10.0.1.{i}") as guesser:
+    async with client_from(app, "10.0.1.1") as guesser:
+        for i in range(5):
             response = await login(guesser, email=emails[i % 2], password="wrong password")
             assert response.status_code == 401
 
-    async with client_from(app, "10.0.1.99") as guesser:
         assert (await login(guesser, password="wrong password")).status_code == 429
 
 
-async def test_successful_login_resets_the_email_limit(app: FastAPI, client: AsyncClient) -> None:
+async def test_guessing_from_one_ip_does_not_lock_the_owner_out(
+    app: FastAPI, client: AsyncClient
+) -> None:
     await signup(client)
+    async with client_from(app, "10.0.1.1") as guesser:
+        for _ in range(5):
+            await login(guesser, password="wrong password")
+        assert (await login(guesser)).status_code == 429  # blocked there, even with the password
 
-    async def wrong_logins(count: int, subnet: int) -> list[int]:
-        codes = []
-        for i in range(count):
-            async with client_from(app, f"10.0.{subnet}.{i}") as guesser:
-                codes.append((await login(guesser, password="wrong password")).status_code)
-        return codes
+    async with client_from(app, "10.0.1.2") as owner:
+        assert (await login(owner)).status_code == 200
 
-    assert await wrong_logins(4, subnet=2) == [401] * 4
-    assert (await login(client)).status_code == 200
-    assert await wrong_logins(5, subnet=3) == [401] * 5
+
+async def test_login_is_limited_per_email_across_ips(
+    app: FastAPI, client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The account-wide cap, made small here: 10 = two IPs at their own limit of 5.
+    small_cap = RateLimit("login_email", limit=10, window=15 * 60)
+    monkeypatch.setattr(service, "LOGIN_PER_EMAIL", small_cap)
+    async with client_from(app, "10.0.2.1") as guesser:
+        codes = [(await login(guesser, password="wrong password")).status_code for _ in range(7)]
+        assert codes == [401] * 5 + [429] * 2  # blocked tries don't count toward the cap
+    async with client_from(app, "10.0.2.2") as guesser:
+        for _ in range(5):
+            assert (await login(guesser, password="wrong password")).status_code == 401
+
+    async with client_from(app, "10.0.2.99") as guesser:
+        assert (await login(guesser, password="wrong password")).status_code == 429
+
+
+async def test_successful_login_forgives_typos_from_that_ip(
+    app: FastAPI, client: AsyncClient
+) -> None:
+    await signup(client)
+    async with client_from(app, "10.0.3.1") as owner:
+        for _ in range(4):
+            assert (await login(owner, password="wrong password")).status_code == 401
+        assert (await login(owner)).status_code == 200
+        for _ in range(5):
+            assert (await login(owner, password="wrong password")).status_code == 401
+
+
+async def test_non_ascii_case_variant_of_an_email_is_refused(client: AsyncClient) -> None:
+    # Python lowercases "İ" to "i" + a dot, Postgres to "i": such a variant would find the
+    # account but get its own rate limit counter.
+    await signup(client, email="aliona@example.com")
+
+    response = await login(client, email="alİona@example.com")
+
+    assert response.status_code == 422
+
+
+async def test_internationalized_domain_is_kept_as_punycode(client: AsyncClient) -> None:
+    response = await signup(client, email="anna@пример.рф")
+
+    assert response.status_code == 201
+    assert response.json()["email"] == "anna@xn--e1afmkfd.xn--p1ai"
+    assert (await login(client, email="anna@пример.рф")).status_code == 200
 
 
 async def test_logout_needs_the_csrf_token(client: AsyncClient) -> None:

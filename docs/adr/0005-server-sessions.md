@@ -22,8 +22,14 @@ work immediately.
     - `X-CSRF-Token` header on every unsafe method;
     - `Origin` check.
     - GET never changes state.
-- **Passwords.** Argon2; rate limits on login (per IP and per email) and signup (per IP), counted atomically in
-  Redis; one generic "wrong login or password" error.
+- **Passwords.** Argon2; one generic "wrong login or password" error.
+- **Rate limits**, counted atomically in Redis:
+    - signup: per IP;
+    - login: per IP; per email + IP (5 / 15 min), so one IP can't lock the owner out; per email from all IPs
+      (100 / 15 min) against guessing from many IPs. Trade-off: 20+ IPs can still block new sign-ins to an
+      account for 15 min; browsers already signed in keep working.
+    - Emails are ASCII (international domains as punycode): Python and Postgres lowercase them the same, so
+      a case variant can't get its own counter.
 - **XSS.** HttpOnly cookie, React escaping (no `dangerouslySetInnerHTML`), CSP.
 
 **Alternatives.** JWT (access + refresh) in cookies: stateless, but tokens can't be revoked early, it needs a refresh

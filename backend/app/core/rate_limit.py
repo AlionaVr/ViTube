@@ -37,6 +37,9 @@ class RateLimit:
 
     async def per_ip(self, request: Request, redis: RedisClient) -> None:
         """A dependency: Depends(LIMIT.per_ip) counts requests per client IP."""
-        # nginx sends the client IP in X-Forwarded-For; uvicorn puts it in request.client.
-        ip = request.client.host if request.client else "unknown"
-        await self.hit(redis, ip)
+        await self.hit(redis, client_ip(request))
+
+
+def client_ip(request: Request) -> str:
+    # nginx sends the client IP in X-Forwarded-For; uvicorn puts it in request.client.
+    return request.client.host if request.client else "unknown"
