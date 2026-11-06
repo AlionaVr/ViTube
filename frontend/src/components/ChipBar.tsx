@@ -39,7 +39,10 @@ export default function ChipBar({ chips, selected, onSelect, label }: ChipBarPro
   }, [chips.length])
 
   const scrollBy = (direction: -1 | 1) =>
-    row.current?.scrollBy({ left: direction * row.current.clientWidth * 0.8, behavior: 'smooth' })
+    row.current?.scrollBy({
+      left: direction * row.current.clientWidth * 0.8,
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+    })
 
   return (
     <div className={styles.bar}>
