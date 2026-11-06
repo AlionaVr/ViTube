@@ -3,6 +3,7 @@ import '@testing-library/jest-dom/vitest'
 import { cleanup } from '@testing-library/react'
 import { afterEach } from 'vitest'
 
+import { installMediaStubs } from './media'
 import { MockIntersectionObserver, MockResizeObserver } from './observers'
 import { matchMediaFor } from './screen'
 
@@ -11,6 +12,8 @@ afterEach(cleanup)
 
 // jsdom has no matchMedia. Default to a wide screen; tests call setScreenWidth() to change that.
 window.matchMedia = matchMediaFor(1440)
+
+installMediaStubs()
 
 window.IntersectionObserver = MockIntersectionObserver as unknown as typeof IntersectionObserver
 window.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver
