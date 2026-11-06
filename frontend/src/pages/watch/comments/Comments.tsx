@@ -31,7 +31,11 @@ function SortMenu({
       label="Sort comments"
       role="menu"
       trigger={(props) => (
-        <button type="button" className={`${buttons.pill} ${buttons.text}`} {...props}>
+        <button
+          type="button"
+          className={`${buttons.pill} ${buttons.text} ${buttons.iconLeading}`}
+          {...props}
+        >
           <Icon name="sort" />
           Sort by
         </button>

@@ -271,11 +271,18 @@ export default function Player({ src, poster, theater, onTheaterToggle, onNext }
             <ControlButton
               icon={media.ended ? 'replay' : media.paused ? 'play' : 'pause'}
               label={media.ended ? 'Replay' : media.paused ? 'Play' : 'Pause'}
+              iconSize={36}
               shortcut="k"
               onClick={togglePlay}
             />
             {onNext && (
-              <ControlButton icon="next" label="Next" shortcut="Shift+N" onClick={onNext} />
+              <ControlButton
+                icon="next"
+                label="Next"
+                shortcut="Shift+N"
+                iconSize={32}
+                onClick={onNext}
+              />
             )}
             <VolumeControl
               volume={media.volume}
@@ -298,6 +305,7 @@ export default function Player({ src, poster, theater, onTheaterToggle, onNext }
               <ControlButton
                 icon={theater ? 'defaultView' : 'theater'}
                 label={theater ? 'Default view' : 'Theater mode'}
+                iconSize={36}
                 shortcut="t"
                 onClick={onTheaterToggle}
               />

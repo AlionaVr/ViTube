@@ -8,9 +8,11 @@
   gap: 12px;
 }
 
+/* YouTube keeps room for the ⋮ menu button, so titles wrap there too. */
 .meta {
   flex: 1;
   min-width: 0;
+  padding-right: 24px;
 }
 
 .title {

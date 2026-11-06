@@ -8,9 +8,17 @@ interface ControlButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement
   label: string
   /** Shown in the tooltip, as YouTube does: "Pause (k)". */
   shortcut?: string
+  /** Material glyphs fill their box unevenly; sizes are tuned per icon to YouTube's. */
+  iconSize?: number
 }
 
-export default function ControlButton({ icon, label, shortcut, ...rest }: ControlButtonProps) {
+export default function ControlButton({
+  icon,
+  label,
+  shortcut,
+  iconSize = 28,
+  ...rest
+}: ControlButtonProps) {
   return (
     <button
       type="button"
@@ -20,7 +28,7 @@ export default function ControlButton({ icon, label, shortcut, ...rest }: Contro
       data-tooltip={shortcut ? `${label} (${shortcut})` : label}
       {...rest}
     >
-      <Icon name={icon} size={28} />
+      <Icon name={icon} size={iconSize} />
     </button>
   )
 }

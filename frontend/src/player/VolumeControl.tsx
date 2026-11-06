@@ -41,6 +41,7 @@ export default function VolumeControl({
       <ControlButton
         icon={icon}
         label={level === 0 ? 'Unmute' : 'Mute'}
+        iconSize={32}
         shortcut="m"
         onClick={onToggleMute}
       />

@@ -24,7 +24,7 @@ function SubscribeButton({ channel }: { channel: Channel }) {
       <>
         <button
           type="button"
-          className={`${buttons.pill} ${buttons.tonal}`}
+          className={`${buttons.pill} ${buttons.tonal} ${buttons.iconLeading} ${buttons.iconTrailing}`}
           aria-haspopup="dialog"
           onClick={() => setConfirming(true)}
         >
@@ -146,7 +146,7 @@ export default function VideoActions({ video }: { video: Video }) {
         <RatingButtons video={video} />
         <button
           type="button"
-          className={`${buttons.pill} ${buttons.tonal}`}
+          className={`${buttons.pill} ${buttons.tonal} ${buttons.iconLeading}`}
           aria-haspopup="dialog"
           onClick={() => setSharing(true)}
         >

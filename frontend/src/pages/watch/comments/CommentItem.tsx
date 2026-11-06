@@ -142,7 +142,7 @@ export default function CommentItem({ comment, videoId, threadId }: CommentItemP
         {!isReply && comment.reply_count > 0 && (
           <button
             type="button"
-            className={`${buttons.pill} ${buttons.link} ${styles.repliesToggle}`}
+            className={`${buttons.pill} ${buttons.link} ${buttons.iconLeading} ${styles.repliesToggle}`}
             aria-expanded={showReplies}
             onClick={() => setShowReplies((value) => !value)}
           >

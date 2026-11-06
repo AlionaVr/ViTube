@@ -32,6 +32,15 @@
   border-radius: 16px;
 }
 
+/* An icon at the edge needs less room than text. */
+.iconLeading {
+  padding-left: 12px;
+}
+
+.iconTrailing {
+  padding-right: 12px;
+}
+
 .tonal {
   background: var(--color-hover);
   color: var(--color-text);
