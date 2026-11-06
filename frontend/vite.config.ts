@@ -1,15 +1,16 @@
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vitest/config'
 
-// Dev server proxies the API to the running Docker stack (nginx on :80).
-const stack = 'http://localhost'
+// Dev server proxies the API to the Docker stack (nginx on :80),
+// or to a backend run from the IDE: API_PROXY=http://localhost:8000 npm run dev
+const api = process.env.API_PROXY ?? 'http://localhost'
 
 export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/api': stack,
-      '/docs': stack,
+      '/api': api,
+      '/docs': api,
     },
   },
   test: {

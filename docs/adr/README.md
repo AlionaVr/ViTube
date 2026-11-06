@@ -13,3 +13,4 @@ One short file per key decision: context, decision, alternatives, consequences.
 | [0007](0007-search-postgres-fts.md)       | Search: PostgreSQL FTS + pg_trgm                  |
 | [0008](0008-deployment.md)                | Deploy: `install.sh` + Docker Compose             |
 | [0009](0009-moderation-audit.md)          | Moderation: reports, hiding, audit log            |
+| [0010](0010-db-roles.md)                  | DB roles: the app gets data access only           |

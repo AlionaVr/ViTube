@@ -1,3 +1,9 @@
-node_modules/
-dist/
-Dockerfile
+# Allowlist: only what the build needs. Stray .env files can't leak VITE_* values into the bundle.
+*
+!package.json
+!package-lock.json
+!index.html
+!public
+!src
+!tsconfig*.json
+!vite.config.ts

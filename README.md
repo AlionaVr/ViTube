@@ -37,6 +37,27 @@ Prefix the commands below with `sudo` if your user is not in the `docker` group 
 
 Other OS: install Docker with Compose 2.39 or newer yourself, then run `./install.sh`.
 
+## Local development
+
+Postgres and Redis run in Docker; the backend runs from the IDE, with a debugger and auto-reload.
+
+1. Add `COMPOSE_FILE=compose.yaml:compose.local.yaml` to `.env`. [compose.local.yaml](compose.local.yaml) opens
+   Postgres and Redis on `localhost`. Production (`install.sh`, CI) uses `compose.yaml` only.
+2. Copy `.env.local.example` to `.env.local` and put in the passwords from `.env`.
+3. Run:
+
+```bash
+docker compose up -d --wait postgres redis
+docker compose run --rm --build migrate                          # migrations + app DB role
+cd backend
+uv run --env-file ../.env.local uvicorn app.main:app --reload    # API on :8000
+cd ../frontend
+API_PROXY=http://localhost:8000 npm run dev                      # UI on :5173
+```
+
+In IntelliJ, the same backend run configuration: `uvicorn app.main:app --reload`, working directory `backend/`,
+env file `.env.local`.
+
 ## Docs
 
 - Plan and requirements: [docs/plan.md](docs/plan.md)

@@ -15,6 +15,10 @@ Check:
 - Counters are updated atomically (`x = x + 1`) in the same transaction.
 - Migrations are reversible, don't edit applied ones, and autogenerate output was reviewed (enums, generated columns,
   extensions).
+- Migrations are lock-safe: no long exclusive locks on big tables (`CREATE INDEX CONCURRENTLY` on existing tables, in
+  an autocommit block; no table rewrites such as type changes). `alembic/env.py` keeps the advisory lock and
+  `lock_timeout`.
+- New tables need no manual grants: `vitube_app` gets them via default privileges (ADR 0010).
 - Naming is consistent (snake_case, plural tables).
 
 Output findings by severity with file:line and a concrete fix. Do not edit files.

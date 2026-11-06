@@ -1,0 +1,16 @@
+# Local development only: merged over compose.yaml. install.sh and CI never use it.
+# Turn it on with COMPOSE_FILE=compose.yaml:compose.local.yaml in .env.
+# Opens Postgres and Redis on localhost for a backend run from the IDE (see .env.local.example).
+services:
+  postgres:
+    networks: [ data, local ]  # an internal network can't publish ports
+    ports:
+      - "127.0.0.1:5432:5432"
+
+  redis:
+    networks: [ data, local ]
+    ports:
+      - "127.0.0.1:6379:6379"
+
+networks:
+  local: { }

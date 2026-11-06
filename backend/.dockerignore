@@ -1,5 +1,8 @@
-.venv/
-**/__pycache__/
-.pytest_cache/
-.ruff_cache/
-Dockerfile
+# Allowlist: only what the image needs is sent to the build.
+*
+!pyproject.toml
+!uv.lock
+!alembic.ini
+!alembic
+!app
+**/__pycache__

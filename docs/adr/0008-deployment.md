@@ -16,6 +16,15 @@ right away.
 
 Only port 80 is exposed. All services have healthchecks, `restart: unless-stopped`, and named volumes.
 
+Containers are hardened:
+
+- non-root users, `no-new-privileges`, all capabilities dropped (data services keep only what their entrypoint needs);
+- read-only root FS for our containers;
+- networks: `edge` (nginx only, the published port), internal `web` (nginx ↔ api) and internal `data`
+  (backend ↔ Postgres, Redis, MinIO). The backend and data have no internet access.
+
+Local development adds `compose.local.yaml` (DB ports on localhost); `install.sh` never uses it.
+
 **Alternatives.** Native apt + systemd: no Docker, but fragile across Ubuntu versions.
 
 **Consequences.**

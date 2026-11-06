@@ -3,11 +3,14 @@
 FROM node:24-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+# --ignore-scripts: no install-time code from npm packages runs during the build.
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --ignore-scripts --no-audit --no-fund
 COPY . .
 RUN npm run build
 
-FROM nginx:1.30-alpine
+# Runs as uid 101 and listens on 8080: no root in the running container.
+FROM nginxinc/nginx-unprivileged:1.30-alpine
 # nginx-conf is a named build context: ./nginx (see compose.yaml).
 COPY --from=nginx-conf default.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html

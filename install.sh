@@ -99,7 +99,7 @@ start_stack() {
 wait_for_site() {
   local _
   for _ in $(seq 30); do
-    "${DOCKER[@]}" compose exec -T nginx wget -q -O /dev/null http://127.0.0.1/api/health 2>/dev/null && return
+    "${DOCKER[@]}" compose exec -T nginx wget -q -O /dev/null http://127.0.0.1:8080/api/health 2>/dev/null && return
     sleep 1
   done
   die "The site does not answer. Check: ${DOCKER[*]} compose logs nginx api"

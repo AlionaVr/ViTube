@@ -1,12 +1,13 @@
 import asyncio
 from logging.config import fileConfig
 
-from sqlalchemy import pool
+from sqlalchemy import pool, text
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from alembic import context
 from app.core.config import get_settings
+from app.db import locks
 from app.db.models import Base
 
 config = context.config
@@ -33,8 +34,14 @@ def run_migrations_offline() -> None:
 
 
 def do_run_migrations(connection: Connection) -> None:
-    context.configure(connection=connection, target_metadata=target_metadata)
+    context.configure(
+        connection=connection, target_metadata=target_metadata, compare_server_default=True
+    )
     with context.begin_transaction():
+        # A second run (e.g. two deploys at once) waits here instead of racing this one.
+        connection.execute(text("SELECT pg_advisory_xact_lock(:id)"), {"id": locks.MIGRATIONS})
+        # DDL that waits for a table lock fails fast instead of queueing all queries behind it.
+        connection.execute(text("SET LOCAL lock_timeout = '5s'"))
         context.run_migrations()
 
 
