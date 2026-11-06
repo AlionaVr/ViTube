@@ -67,6 +67,19 @@ async def test_parallel_attempts_never_pass_the_limit(redis: Redis) -> None:
     assert await redis.ttl(await only_key(redis)) > 0  # the counter always expires
 
 
+async def test_a_cancelled_attempt_never_leaves_a_counter_without_ttl(redis: Redis) -> None:
+    # A request cancelled mid-count (timeout, client gone) must not lock its subject out forever.
+    for attempt in range(40):
+        task = asyncio.create_task(LIMIT.hit(redis, "a"))
+        await asyncio.sleep(attempt / 20_000)  # cancel at different points: 0-2 ms
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+
+        for key in await redis.keys("ratelimit:*"):
+            assert await redis.ttl(key) > 0
+        await redis.flushdb()
+
+
 async def test_keys_hold_no_subject_in_plain_text(redis: Redis) -> None:
     await LIMIT.hit(redis, "anna@example.com")
 

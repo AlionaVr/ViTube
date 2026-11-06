@@ -1,5 +1,6 @@
 """Server-side sessions in Redis (ADR 0005)."""
 
+import asyncio
 import base64
 import uuid
 
@@ -8,7 +9,7 @@ from pydantic import SecretStr, ValidationError
 from redis.asyncio import Redis
 
 from app.modules.auth.config import AuthSettings
-from app.modules.auth.sessions import SessionStore
+from app.modules.auth.sessions import SessionStore, UserSession
 
 IDLE = 100
 ABSOLUTE = 1000
@@ -105,6 +106,65 @@ async def test_session_ends_at_the_absolute_timeout(
     clock.time += 1
     assert await store.read(session.id) is None
     assert await redis.keys("session:*") == []
+
+
+async def test_a_read_at_the_ttl_boundary_renews_or_misses_never_half(
+    store: SessionStore, redis: Redis
+) -> None:
+    # GETEX reads and renews in one step. So the first read that finds the session also keeps
+    # it alive for the rest: parallel reads all find it or all miss it, and a found one exists.
+    for attempt in range(100):
+        await redis.flushdb()
+        session = await store.create(uuid.uuid4())
+        key = await only_session_key(redis)
+        await redis.pexpire(key, attempt % 4)  # expires 0-3 ms from now: during the reads
+
+        results = await asyncio.gather(*(store.read(session.id) for _ in range(20)))
+
+        found = [r is not None for r in results]
+        assert all(found) or not any(found)
+        assert await redis.exists(key) == any(found)
+
+
+async def test_reads_never_bring_back_a_deleted_session(store: SessionStore, redis: Redis) -> None:
+    for _ in range(20):
+        session = await store.create(uuid.uuid4())
+        reads = [store.read(session.id) for _ in range(20)]
+
+        await asyncio.gather(*reads[:10], store.delete(session.id), *reads[10:])
+
+        assert await redis.keys("session:*") == []
+        assert await store.read(session.id) is None
+
+
+async def test_parallel_reads_after_the_absolute_timeout_all_refuse(
+    store: SessionStore, redis: Redis, clock: Clock
+) -> None:
+    session = await store.create(uuid.uuid4())
+    clock.time += ABSOLUTE
+
+    results = await asyncio.gather(*(store.read(session.id) for _ in range(20)))
+
+    assert results == [None] * 20
+    assert await redis.keys("session:*") == []
+
+
+async def test_cancelled_reads_never_mix_up_sessions(store: SessionStore) -> None:
+    # A request cancelled mid-read (timeout, client gone) must not leave its reply on a pooled
+    # connection for the next request to take: that showed other users' data (CVE-2023-28858).
+    sessions = [await store.create(uuid.uuid4()) for _ in range(20)]
+    for attempt in range(30):
+        tasks = [asyncio.create_task(store.read(s.id)) for s in sessions]
+        await asyncio.sleep(attempt / 10_000)  # cancel at different points: 0-3 ms
+        for task in tasks[::2]:
+            task.cancel()
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        for session, result in zip(sessions, results, strict=True):
+            if isinstance(result, UserSession):
+                assert result.user_id == session.user_id
+
+    results = await asyncio.gather(*(store.read(s.id) for s in sessions))
+    assert [r and r.user_id for r in results] == [s.user_id for s in sessions]
 
 
 def test_short_session_secret_is_refused() -> None:
