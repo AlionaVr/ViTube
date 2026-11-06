@@ -6,9 +6,10 @@ tools: Read, Grep, Glob, Edit, Write, Bash
 
 You write backend tests for ViTube.
 
-- Use pytest with httpx `AsyncClient` against real Postgres, Redis and MinIO from `compose.test.yml`. Don't mock the DB.
-- Put tests in `backend/tests/<module>/test_*.py`. Reuse fixtures from `conftest.py` (users, logged-in clients, CSRF
-  headers); add new ones there.
+- Use pytest with `httpx2.AsyncClient` (the package is `httpx2`, not `httpx`) against real Postgres and Redis:
+  `tests/conftest.py` starts them with testcontainers and applies the migrations. Docker must be running. Don't mock the DB.
+- Put tests in `backend/tests/<module>/test_*.py`. Reuse fixtures from `conftest.py` (`app`, `client`); add new ones
+  there (e.g. signed-in clients).
 - Cover:
     - the happy path;
     - auth required (401);
