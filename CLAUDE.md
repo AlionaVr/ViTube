@@ -11,6 +11,7 @@ FastAPI + PostgreSQL + MinIO + Celery + React. Deployed with `./install.sh` (Doc
 - Backend (`backend/`): `uv run ruff check .`, `uv run pyright`, `uv run pytest` (needs Docker: tests start Postgres and Redis via testcontainers).
 - Migrations: `docker compose run --rm migrate alembic <cmd>`. See the `add-migration` skill.
 - Frontend (`frontend/`): `npm run dev` (proxies `/api` to the stack, or to `API_PROXY`), `npm run lint`, `npm run format:check`, `npm test`, `npm run build`.
+- API types: after changing the API, run `npm run gen:api` in `frontend/` and commit `src/api/openapi.json` + `schema.d.ts` (CI checks).
 - Local dev (backend from the IDE): `compose.local.yaml` + `.env.local`, see README. Production uses `compose.yaml` only.
 - CI (`.github/workflows/ci.yml`): the checks above, plus a deploy via `install.sh`, `alembic check` and migrations down/up.
 
