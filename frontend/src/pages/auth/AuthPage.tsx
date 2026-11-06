@@ -89,6 +89,7 @@ export default function AuthPage({ mode }: { mode: Mode }) {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
+    if (submit.isPending) return // Enter in a field while a request runs
     let found = checkInput(mode, email, password)
     if (!found.email && !found.password) {
       try {
@@ -106,18 +107,20 @@ export default function AuthPage({ mode }: { mode: Mode }) {
   return (
     <div className={styles.page}>
       <title>{`${text.title} - ViTube`}</title>
-      <main className={styles.card}>
+      <main className={styles.card} aria-busy={submit.isPending}>
         {submit.isPending && <div className={styles.progress} />}
         <div className={styles.intro}>
-          <Link to="/" aria-label="ViTube home">
-            <Logo />
+          {/* Only the mark, like the logo on Google's sign-in card. */}
+          <Link to="/" className={styles.logo} aria-label="ViTube home">
+            <Logo size={40} wordmark={false} />
           </Link>
           <h1 className={styles.title}>{text.title}</h1>
           <p className={styles.subtitle}>{text.subtitle}</p>
         </div>
 
         <form className={styles.form} onSubmit={handleSubmit} noValidate>
-          <fieldset className={styles.fields} disabled={submit.isPending}>
+          {/* Not disabled while a request runs: focus must reach a field that gets an error. */}
+          <div className={styles.fields}>
             <TextField
               ref={emailRef}
               label="Email"
@@ -139,11 +142,16 @@ export default function AuthPage({ mode }: { mode: Mode }) {
               onChange={(event) => setPassword(event.target.value)}
             />
             <label className={styles.checkbox}>
-              <input
-                type="checkbox"
-                checked={showPassword}
-                onChange={(event) => setShowPassword(event.target.checked)}
-              />
+              <span className={styles.box}>
+                <input
+                  type="checkbox"
+                  checked={showPassword}
+                  onChange={(event) => setShowPassword(event.target.checked)}
+                />
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                </svg>
+              </span>
               Show password
             </label>
             {/* Below the fields, next to the button: the fields stay level with the title. */}
@@ -153,7 +161,7 @@ export default function AuthPage({ mode }: { mode: Mode }) {
                 {errors.form}
               </p>
             )}
-          </fieldset>
+          </div>
 
           <div className={styles.actions}>
             <Link to={text.other.to} state={location.state} className={styles.secondary}>

@@ -29,6 +29,13 @@
   background: #fff;
 }
 
+.logo {
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  height: 48px;
+}
+
 .title {
   margin-top: 24px;
   font-size: 36px;
@@ -46,16 +53,13 @@
 .form {
   display: flex;
   flex-direction: column;
-  padding-top: 56px;
+  padding-top: 76px;
 }
 
 .fields {
   display: flex;
   flex-direction: column;
   gap: 24px;
-  margin: 0;
-  padding: 0;
-  border: 0;
 }
 
 .alert {
@@ -82,12 +86,45 @@
   cursor: pointer;
 }
 
-.checkbox input {
+/* Google's checkbox: a 2px frame that fills blue with a white tick. */
+.box {
+  display: grid;
+}
+
+.box > * {
+  grid-area: 1 / 1;
+}
+
+.box input {
   width: 18px;
   height: 18px;
   margin: 0;
-  accent-color: var(--color-link);
+  border: 2px solid var(--color-text-secondary);
+  border-radius: 2px;
+  appearance: none;
   cursor: pointer;
+}
+
+.box input:checked {
+  border-color: var(--color-link);
+  background: var(--color-link);
+}
+
+.box input:focus-visible {
+  outline: 2px solid var(--color-link);
+  outline-offset: 2px;
+}
+
+.box svg {
+  width: 18px;
+  height: 18px;
+  fill: #fff;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.box input:checked + svg {
+  visibility: visible;
 }
 
 .actions {
@@ -127,7 +164,6 @@
 }
 
 .primary:disabled {
-  opacity: 0.6;
   box-shadow: none;
   cursor: default;
 }
@@ -147,9 +183,17 @@
   outline-offset: 2px;
 }
 
-/* A request is on its way: a thin bar sweeps along the card's top edge. */
+/* A request is on its way: a white veil over the card, and a bar sweeping along its top edge. */
+.card[aria-busy='true']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgb(255 255 255 / 50%);
+}
+
 .progress {
   position: absolute;
+  z-index: 1;
   inset: 0 0 auto;
   height: 4px;
   overflow: hidden;
@@ -182,8 +226,20 @@
   }
 }
 
-/* Narrow screens: one column, and the card blends into a white page, as on Google's pages. */
+/* Material 3 window sizes, as on Google's pages: one column below 840px... */
 @media (max-width: 839px) {
+  .card {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+
+  .form {
+    padding-top: 24px;
+  }
+}
+
+/* ...and below 600px the card blends into a white page. */
+@media (max-width: 599px) {
   .page {
     --page-bg: #fff;
 
@@ -192,13 +248,7 @@
   }
 
   .card {
-    grid-template-columns: 1fr;
-    min-height: 0;
     padding: 24px;
     border-radius: 0;
-  }
-
-  .form {
-    padding-top: 24px;
   }
 }
