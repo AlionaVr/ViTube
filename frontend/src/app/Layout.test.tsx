@@ -1,4 +1,4 @@
-import { fireEvent, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vitest'
 
@@ -23,6 +23,15 @@ describe('Layout', () => {
 
     await userEvent.click(menu)
     expect(menu).toHaveAttribute('aria-expanded', 'true')
+  })
+
+  it('remembers a collapsed guide after a reload', async () => {
+    renderApp('/')
+    await userEvent.click(menuButton())
+    cleanup()
+
+    renderApp('/')
+    expect(menuButton()).toHaveAttribute('aria-expanded', 'false')
   })
 
   it('opens the guide as a drawer on narrower screens and closes it on the scrim', async () => {
