@@ -27,6 +27,7 @@ Check:
     - images run as a non-root user with a numeric `USER`; app code is root-owned and read-only;
     - `.dockerignore` is an allowlist: no `.env*`, tests, VCS or caches reach the build;
     - no secrets in `ARG`, `ENV` or layers; secrets come from `.env` at runtime only;
+    - a service gets only the secrets it uses (e.g. `SESSION_SECRET`: api only);
     - `npm ci --ignore-scripts`; no `curl | sh`;
     - every service has `no-new-privileges` and `cap_drop: ALL`; each `cap_add` is explained in a comment;
     - our containers are `read_only` (writable `/tmp` only);

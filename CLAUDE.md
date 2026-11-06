@@ -7,7 +7,7 @@ FastAPI + PostgreSQL + MinIO + Celery + React. Deployed with `./install.sh` (Doc
 
 ## Commands
 
-- Stack: `docker compose up -d --build --wait` (without `.env`: add `--env-file .env.example`).
+- Stack: `docker compose up -d --build --wait` (needs `.env`; `./install.sh` creates it with random secrets).
 - Backend (`backend/`): `uv run ruff check .`, `uv run pyright`, `uv run pytest` (needs Docker: tests start Postgres and Redis via testcontainers).
 - Migrations: `docker compose run --rm migrate alembic <cmd>`. See the `add-migration` skill.
 - Frontend (`frontend/`): `npm run dev` (proxies `/api` to the stack, or to `API_PROXY`), `npm run lint`, `npm run format:check`, `npm test`, `npm run build`.

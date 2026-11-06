@@ -7,15 +7,19 @@ from app.core.config import get_settings
 from app.core.errors import register_error_handlers
 from app.core.redis import create_redis
 from app.db.session import create_engine, create_sessionmaker
+from app.modules.auth.config import get_auth_settings
+from app.modules.auth.sessions import SessionStore
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # Clients shared for the app's lifetime, like singleton beans. Connections open on first use.
     settings = get_settings()
+    auth_settings = get_auth_settings()  # fails at startup, not at the first login
     engine = create_engine(settings)
     app.state.sessionmaker = create_sessionmaker(engine)
     app.state.redis = create_redis(settings)
+    app.state.sessions = SessionStore(app.state.redis, auth_settings.session_secret)
     try:
         yield
     finally:

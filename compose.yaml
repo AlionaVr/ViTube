@@ -119,6 +119,9 @@ services:
       provenance: false  # build metadata has a timestamp: the image ID would change on every build
     init: true  # PID 1 that forwards signals and reaps child processes
     networks: [ web, data ]
+    environment:
+      <<: *backend-env
+      SESSION_SECRET: ${SESSION_SECRET:?}  # only the api handles sessions
     depends_on:
       migrate:
         condition: service_completed_successfully
