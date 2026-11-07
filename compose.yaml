@@ -150,6 +150,8 @@ services:
       <<: [ *backend-env, *storage-env ]
       SESSION_SECRET: ${SESSION_SECRET:?}  # only the api handles sessions
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-1024}
+      MAX_VIDEO_DURATION_SEC: ${MAX_VIDEO_DURATION_SEC:-1800}
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -199,6 +201,10 @@ services:
     image: vitube-nginx
     restart: unless-stopped
     networks: [ edge, web ]
+    environment:
+      MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-1024}
+      NGINX_ENVSUBST_FILTER: ^MAX_UPLOAD_SIZE_MB$$  # only these; nginx's own $$vars stay as they are
+    tmpfs: [ /tmp, "/etc/nginx/conf.d:uid=101,gid=101" ]  # the rendered config; nginx runs as 101
     ports:
       - "${HTTP_PORT:-80}:8080"  # the unprivileged nginx listens on 8080
     depends_on:

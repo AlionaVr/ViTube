@@ -39,6 +39,11 @@ class Conflict(DomainError):
     detail = "Conflict"
 
 
+class PayloadTooLarge(DomainError):
+    status_code = 413
+    detail = "Request body too large"
+
+
 class TooManyRequests(DomainError):
     status_code = 429
     detail = "Too many attempts. Try again later."
