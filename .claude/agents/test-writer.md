@@ -8,8 +8,11 @@ You write backend tests for ViTube.
 
 - Use pytest with `httpx2.AsyncClient` (the package is `httpx2`, not `httpx`) against real Postgres and Redis:
   `tests/conftest.py` starts them with testcontainers and applies the migrations. Docker must be running. Don't mock the DB.
-- Put tests in `backend/tests/<module>/test_*.py`. Reuse fixtures from `conftest.py` (`app`, `client`); add new ones
-  there (e.g. signed-in clients).
+- Put tests in `backend/tests/<module>/test_*.py`. Reuse fixtures from `conftest.py`: `app`, `client` (sends the
+  `Origin` header), `db` (a session as the app role), `redis`, `admin_engine` (superuser). Add new ones there.
+- Sign in with `POST /api/auth/signup` on `client`. Once signed in, unsafe requests need
+  `X-CSRF-Token: client.cookies["csrf_token"]`. For per-IP limits, build a client with
+  `ASGITransport(app=app, client=(ip, 1234))`.
 - Cover:
     - the happy path;
     - auth required (401);

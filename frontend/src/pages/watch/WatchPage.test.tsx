@@ -1,7 +1,8 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
+import { json, mockApi } from '../../test/api'
 import { listVideos } from '../../videos/api'
 import { resetMockServer } from '../../mocks/server'
 import { renderApp } from '../../test/render'
@@ -20,6 +21,9 @@ async function openWatch(title = 'Sintel – trailer') {
 }
 
 describe('WatchPage', () => {
+  beforeEach(() => {
+    mockApi({ 'GET /api/auth/me': () => json(401, { detail: 'Sign in required' }) })
+  })
   afterEach(() => {
     resetMockServer()
     localStorage.clear()

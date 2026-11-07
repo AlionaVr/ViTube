@@ -1,11 +1,15 @@
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 
+import { json, mockApi } from '../test/api'
 import { renderApp } from '../test/render'
 import { setScreenWidth } from '../test/screen'
 
 describe('SearchBox', () => {
+  beforeEach(() => {
+    mockApi({ 'GET /api/auth/me': () => json(401, { detail: 'Sign in required' }) })
+  })
   it('submits to the YouTube-style results URL', async () => {
     const router = renderApp('/')
     await userEvent.type(screen.getByRole('searchbox', { name: 'Search' }), ' cats & dogs {Enter}')

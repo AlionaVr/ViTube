@@ -1,13 +1,17 @@
 import { cleanup, fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
+import { json, mockApi } from '../test/api'
 import { renderApp } from '../test/render'
 import { setScreenWidth } from '../test/screen'
 
 const menuButton = () => screen.getAllByRole('button', { name: 'Menu' })[0]
 
 describe('Layout', () => {
+  beforeEach(() => {
+    mockApi({ 'GET /api/auth/me': () => json(401, { detail: 'Sign in required' }) })
+  })
   afterEach(() => localStorage.clear())
 
   it('collapses the sidebar to mini mode and back on wide screens', async () => {

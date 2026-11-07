@@ -1,7 +1,8 @@
 import { act, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { json, mockApi } from '../test/api'
 import { renderApp } from '../test/render'
 import { intersectAll } from '../test/observers'
 import { listVideos } from '../videos/api'
@@ -14,6 +15,9 @@ vi.mock('../videos/api', async (importOriginal) => {
 const cards = () => screen.getAllByRole('article')
 
 describe('HomePage', () => {
+  beforeEach(() => {
+    mockApi({ 'GET /api/auth/me': () => json(401, { detail: 'Sign in required' }) })
+  })
   it('shows skeletons, then cards with channel, views and age', async () => {
     renderApp('/')
     expect(screen.getByLabelText('Loading videos')).toHaveAttribute('aria-busy', 'true')

@@ -43,7 +43,7 @@ Postgres and Redis run in Docker; the backend runs from the IDE, with a debugger
 
 1. Add `COMPOSE_FILE=compose.yaml:compose.local.yaml` to `.env`. [compose.local.yaml](compose.local.yaml) opens
    Postgres and Redis on `localhost`. Production (`install.sh`, CI) uses `compose.yaml` only.
-2. Copy `.env.local.example` to `.env.local` and put in the passwords from `.env`.
+2. Copy `.env.local.example` to `.env.local`, put in the passwords from `.env` and a `SESSION_SECRET`.
 3. Run:
 
 ```bash
@@ -57,6 +57,31 @@ API_PROXY=http://localhost:8000 npm run dev                      # UI on :5173
 
 In IntelliJ, the same backend run configuration: `uvicorn app.main:app --reload`, working directory `backend/`,
 env file `.env.local`.
+
+## Accounts and roles
+
+Sign up on the site with an email and a password. Roles are `user`, `moderator` and `admin`; each has the rights of
+the ones before it. Give a role from the command line:
+
+```bash
+docker compose exec api python -m app.cli set-role <email> admin
+```
+
+It applies at once, also to sessions that are already open.
+
+Served over HTTPS? Set `COOKIE_SECURE=true` in `.env` and run `./install.sh` again: session cookies then go over
+HTTPS only.
+
+Calling the API with curl: POST, PUT, PATCH and DELETE need an `Origin` header with the site's address (CSRF
+protection, [ADR 0005](docs/adr/0005-server-sessions.md)). Once signed in, also send the `csrf_token` cookie's value
+in `X-CSRF-Token`:
+
+```bash
+curl -c jar -b jar -H 'Origin: http://localhost' -H 'Content-Type: application/json' \
+  -d '{"email":"anna@example.com","password":"correct horse"}' http://localhost/api/auth/login
+curl -b jar -H 'Origin: http://localhost' -H "X-CSRF-Token: $(awk '$6=="csrf_token"{print $7}' jar)" \
+  -X POST http://localhost/api/auth/logout
+```
 
 ## Docs
 
