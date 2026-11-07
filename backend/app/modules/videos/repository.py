@@ -15,6 +15,10 @@ async def get_by_public_id(db: AsyncSession, public_id: str) -> Video | None:
     return await db.scalar(select(Video).where(Video.public_id == public_id))
 
 
+async def get_by_id(db: AsyncSession, video_id: UUID) -> Video | None:
+    return await db.get(Video, video_id)
+
+
 async def get_owner(db: AsyncSession, video: Video) -> User:
     # No query when the owner is the signed-in user: the session's identity map has them.
     return await db.get_one(User, video.owner_id)

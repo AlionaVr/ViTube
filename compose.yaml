@@ -77,6 +77,7 @@ services:
   minio:
     <<: *data-service
     image: *minio-image
+    networks: [ data, media ]  # media: nginx reads videos and thumbnails (ADR 0004)
     command: [ "server", "/data" ]
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:?}
@@ -124,6 +125,20 @@ services:
         mc admin policy create local vitube-app /tmp/app-policy.json
         mc admin user add local vitube-app "$$MINIO_APP_PASSWORD"
         mc admin policy attach local vitube-app --user vitube-app
+        # Anonymous reads of processed files only, for nginx on the internal "media" network after
+        # the API's check (ADR 0004). Originals stay unreadable.
+        cat > /tmp/media-read.json <<EOF
+        {
+          "Version": "2012-10-17",
+          "Statement": [{
+            "Effect": "Allow",
+            "Principal": {"AWS": ["*"]},
+            "Action": ["s3:GetObject"],
+            "Resource": ["arn:aws:s3:::$$S3_BUCKET/videos/*", "arn:aws:s3:::$$S3_BUCKET/thumbs/*"]
+          }]
+        }
+        EOF
+        mc anonymous set-json /tmp/media-read.json "local/$$S3_BUCKET"
 
   # One-shot: apply DB migrations, then set up the app role, then exit. api and worker start after it.
   migrate:
@@ -214,10 +229,11 @@ services:
       provenance: false  # same as for the backend: stable image ID
     image: vitube-nginx
     restart: unless-stopped
-    networks: [ edge, web ]
+    networks: [ edge, web, media ]
     environment:
       MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-1024}
-      NGINX_ENVSUBST_FILTER: ^MAX_UPLOAD_SIZE_MB$$  # only these; nginx's own $$vars stay as they are
+      S3_BUCKET: ${S3_BUCKET:?}
+      NGINX_ENVSUBST_FILTER: ^(MAX_UPLOAD_SIZE_MB|S3_BUCKET)$$  # only these; nginx's own $$vars stay
     tmpfs: [ "/tmp:size=64m", "/etc/nginx/conf.d:uid=101,gid=101" ]  # the rendered config; nginx runs as 101
     ports:
       - "${HTTP_PORT:-80}:8080"  # the unprivileged nginx listens on 8080
@@ -236,6 +252,8 @@ networks:
     internal: true   # nginx <-> api
   data:
     internal: true   # api, worker, migrate <-> Postgres, Redis, MinIO
+  media:
+    internal: true   # nginx -> MinIO, reads of processed files
 
 volumes:
   postgres-data:

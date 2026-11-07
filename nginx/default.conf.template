@@ -1,11 +1,18 @@
-# Template: the nginx image fills in ${MAX_UPLOAD_SIZE_MB} from env at start (NGINX_ENVSUBST_FILTER in compose.yaml).
+# Template: the nginx image fills in ${MAX_UPLOAD_SIZE_MB} and ${S3_BUCKET} from env at start
+# (NGINX_ENVSUBST_FILTER in compose.yaml).
 
-# Docker DNS: re-resolve "api" at runtime, so an api restart with a new IP doesn't break proxying.
+# Docker DNS: re-resolve names at runtime, so a restart with a new IP doesn't break proxying.
 resolver 127.0.0.11 valid=10s ipv6=off;
 
 upstream api {
     zone api 64k;
     server api:8000 resolve;
+}
+
+# Network "media" only: nginx never joins "data" (compose.yaml).
+upstream minio {
+    zone minio 64k;
+    server minio:9000 resolve;
 }
 
 server {
@@ -38,6 +45,64 @@ server {
 
     location = /docs {
         proxy_pass http://api;
+    }
+
+    # Media (ADR 0004): the API decides, nginx streams from MinIO. Every request is checked, with
+    # no cache, so revoked access applies to the next request (each Range request too).
+    location /media/ {
+        auth_request /internal/media-auth;
+        # "Signed in, no access" comes as 403 (auth_request passes on only 401 and 403): outsiders
+        # get 404 and don't learn the video exists. MinIO's own XML errors become a plain 404 too.
+        error_page 403 404 = @not_found;
+        proxy_intercept_errors on;
+        limit_except GET {  # and HEAD
+            deny all;
+        }
+        # /media/videos/... -> /<bucket>/videos/...; the trailing "?" drops the query string.
+        rewrite ^/media/(.*)$ /${S3_BUCKET}/$1? break;
+        proxy_pass http://minio;
+        # MinIO needs none of the client's credentials.
+        proxy_set_header Host minio:9000;
+        proxy_set_header Cookie "";
+        proxy_set_header Authorization "";
+        # Only what the browser needs: keep ETag and Last-Modified (revalidation), drop MinIO's own.
+        proxy_hide_header Set-Cookie;
+        proxy_hide_header Strict-Transport-Security;
+        proxy_hide_header X-Amz-Id-2;
+        proxy_hide_header X-Amz-Request-Id;
+        proxy_hide_header X-Ratelimit-Limit;
+        proxy_hide_header X-Ratelimit-Remaining;
+        proxy_hide_header X-Xss-Protection;
+        proxy_hide_header X-Content-Type-Options;  # set below
+        # Stream to slow clients from memory; never spool big files into the small /tmp.
+        proxy_max_temp_file_size 0;
+        # A location with add_header drops the server's ones: repeat them.
+        add_header X-Content-Type-Options nosniff always;
+        add_header X-Frame-Options DENY always;
+        add_header Referrer-Policy strict-origin-when-cross-origin always;
+        # The browser may keep a copy but asks again before each use: revocation applies.
+        add_header Cache-Control "private, no-cache" always;
+    }
+
+    location = /internal/media-auth {
+        internal;
+        proxy_pass http://api;
+        proxy_pass_request_body off;
+        proxy_set_header Content-Length "";
+        proxy_set_header X-Original-URI $request_uri;
+        # A location with proxy_set_header drops the server's ones: repeat them.
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Answers meant for nginx only.
+    location /internal/ {
+        return 404;
+    }
+
+    location @not_found {
+        return 404;
     }
 
     # File names have content hashes, so they can be cached forever.

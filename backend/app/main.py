@@ -12,6 +12,7 @@ from app.modules.auth.config import get_auth_settings
 from app.modules.auth.deps import verify_csrf
 from app.modules.auth.router import router as auth_router
 from app.modules.auth.sessions import SessionStore
+from app.modules.videos.internal import router as internal_router
 from app.modules.videos.router import router as videos_router
 
 
@@ -43,6 +44,7 @@ app = FastAPI(
 register_error_handlers(app)
 app.include_router(auth_router)
 app.include_router(videos_router)
+app.include_router(internal_router)
 
 
 @app.get("/api/health", tags=["system"], summary="Liveness check")
