@@ -1,6 +1,8 @@
-"""/api/videos: drafts, metadata, the file upload and the watch page data."""
+"""/api/videos: drafts, metadata, the file upload, the watch page data and sharing."""
 
-from fastapi import APIRouter, Request, status
+from typing import Annotated
+
+from fastapi import APIRouter, Path, Request, status
 from starlette.requests import ClientDisconnect
 
 from app.core.errors import DomainError
@@ -9,7 +11,15 @@ from app.core.storage import StorageClient
 from app.db.session import DbSession
 from app.modules.auth.deps import CurrentUser, OptionalUser
 from app.modules.videos import service
-from app.modules.videos.schemas import PublicId, UploadLimits, VideoCreate, VideoOut, VideoUpdate
+from app.modules.videos.schemas import (
+    HANDLE_PATTERN,
+    AccessGrant,
+    PublicId,
+    UploadLimits,
+    VideoCreate,
+    VideoOut,
+    VideoUpdate,
+)
 
 router = APIRouter(prefix="/api/videos", tags=["videos"])
 
@@ -77,3 +87,28 @@ async def upload_file(
         )
     except ClientDisconnect:
         raise DomainError("The upload was interrupted") from None  # nothing was stored
+
+
+@router.post(
+    "/{public_id}/access",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Let a user watch your private video",
+)
+async def grant_access(
+    public_id: PublicId, body: AccessGrant, user: CurrentUser, db: DbSession
+) -> None:
+    await service.grant_access(db, user, public_id, body.handle)
+
+
+@router.delete(
+    "/{public_id}/access/{handle}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Take back a user's access to your video",
+)
+async def revoke_access(
+    public_id: PublicId,
+    handle: Annotated[str, Path(pattern=HANDLE_PATTERN)],
+    user: CurrentUser,
+    db: DbSession,
+) -> None:
+    await service.revoke_access(db, user, public_id, handle)

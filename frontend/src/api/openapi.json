@@ -339,6 +339,102 @@
         }
       }
     },
+    "/api/videos/{public_id}/access": {
+      "post": {
+        "tags": [
+          "videos"
+        ],
+        "summary": "Let a user watch your private video",
+        "operationId": "grant_access_api_videos__public_id__access_post",
+        "parameters": [
+          {
+            "name": "public_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{11}$",
+              "description": "Public video id",
+              "title": "Public Id"
+            },
+            "description": "Public video id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccessGrant"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/videos/{public_id}/access/{handle}": {
+      "delete": {
+        "tags": [
+          "videos"
+        ],
+        "summary": "Take back a user's access to your video",
+        "operationId": "revoke_access_api_videos__public_id__access__handle__delete",
+        "parameters": [
+          {
+            "name": "public_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{11}$",
+              "description": "Public video id",
+              "title": "Public Id"
+            },
+            "description": "Public video id"
+          },
+          {
+            "name": "handle",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._-]{3,30}$",
+              "title": "Handle"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/health": {
       "get": {
         "tags": [
@@ -367,6 +463,21 @@
   },
   "components": {
     "schemas": {
+      "AccessGrant": {
+        "properties": {
+          "handle": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9._-]{3,30}$",
+            "title": "Handle",
+            "description": "Who may watch, without the @"
+          }
+        },
+        "type": "object",
+        "required": [
+          "handle"
+        ],
+        "title": "AccessGrant"
+      },
       "ChannelSummary": {
         "properties": {
           "handle": {

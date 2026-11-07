@@ -18,6 +18,11 @@ async def get_by_email(db: AsyncSession, email: str) -> User | None:
     return await db.scalar(select(User).where(User.email == email))
 
 
+async def get_by_handle(db: AsyncSession, handle: str) -> User | None:
+    # citext: the match ignores case.
+    return await db.scalar(select(User).where(User.handle == handle))
+
+
 async def insert_unless_taken(
     db: AsyncSession, *, email: str, handle: str, password_hash: str
 ) -> User | None:

@@ -3,7 +3,7 @@
 from datetime import timedelta
 from uuid import UUID
 
-from sqlalchemy import exists, func, select, update
+from sqlalchemy import delete, exists, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,6 +27,17 @@ async def get_owner(db: AsyncSession, video: Video) -> User:
 async def has_access(db: AsyncSession, video_id: UUID, user_id: UUID) -> bool:
     query = select(exists().where(VideoAccess.video_id == video_id, VideoAccess.user_id == user_id))
     return bool(await db.scalar(query))
+
+
+async def grant_access(db: AsyncSession, video_id: UUID, user_id: UUID) -> None:
+    statement = insert(VideoAccess).values(video_id=video_id, user_id=user_id)
+    await db.execute(statement.on_conflict_do_nothing())  # granting twice is fine
+
+
+async def revoke_access(db: AsyncSession, video_id: UUID, user_id: UUID) -> None:
+    await db.execute(
+        delete(VideoAccess).where(VideoAccess.video_id == video_id, VideoAccess.user_id == user_id)
+    )
 
 
 async def insert_unless_taken(

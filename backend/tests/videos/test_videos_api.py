@@ -21,7 +21,7 @@ from app.core.storage import PART_SIZE, get_storage_settings, open_s3_client
 from app.modules.users.models import Role
 from app.modules.videos import service
 from app.modules.videos.config import MIB, get_video_settings
-from app.modules.videos.models import Video, VideoStatus
+from app.modules.videos.models import Video, VideoAccess, VideoStatus
 from app.worker.celery_app import celery_app
 from tests.videos.factories import get_video, grant, set_role, set_status
 
@@ -887,3 +887,101 @@ async def test_dropped_connection_mid_upload_is_400_and_stores_nothing(
     assert response.json() == {"detail": "The upload was interrupted"}
     await assert_still_a_draft(db, s3, queued, draft)
     assert (await upload(owner, draft.public_id, b"the whole file")).status_code == 200
+
+
+# --- Sharing a private video ---
+
+
+async def share(client: AsyncClient, public_id: str, handle: str) -> Response:
+    return await client.post(
+        f"/api/videos/{public_id}/access", json={"handle": handle}, headers=csrf(client)
+    )
+
+
+async def unshare(client: AsyncClient, public_id: str, handle: str) -> Response:
+    return await client.delete(f"/api/videos/{public_id}/access/{handle}", headers=csrf(client))
+
+
+async def test_shared_private_video_can_be_watched_until_unshared(
+    owner: AsyncClient, stranger: AsyncClient, db: AsyncSession
+) -> None:
+    video = await video_in(owner, db, VideoStatus.READY)
+    handle = await handle_of(stranger)
+    assert (await stranger.get(f"/api/videos/{video.public_id}")).status_code == 404
+
+    assert (await share(owner, video.public_id, handle)).status_code == 204
+    assert (await stranger.get(f"/api/videos/{video.public_id}")).status_code == 200
+
+    assert (await unshare(owner, video.public_id, handle)).status_code == 204
+    assert (await stranger.get(f"/api/videos/{video.public_id}")).status_code == 404
+
+
+async def test_sharing_twice_is_fine(
+    owner: AsyncClient, stranger: AsyncClient, db: AsyncSession
+) -> None:
+    video = await video_in(owner, db, VideoStatus.READY)
+    handle = await handle_of(stranger)
+
+    assert (await share(owner, video.public_id, handle)).status_code == 204
+    assert (await share(owner, video.public_id, handle.upper())).status_code == 204  # citext
+
+    assert await db.scalar(select(func.count()).select_from(VideoAccess)) == 1
+
+
+async def test_only_the_owner_shares(
+    owner: AsyncClient, stranger: AsyncClient, moderator: AsyncClient, db: AsyncSession
+) -> None:
+    video = await video_in(owner, db, VideoStatus.READY)
+    handle = await handle_of(stranger)
+
+    assert (await share(stranger, video.public_id, handle)).status_code == 404
+    assert (await share(moderator, video.public_id, handle)).status_code == 404
+    assert (await unshare(stranger, video.public_id, handle)).status_code == 404
+    assert await db.scalar(select(func.count()).select_from(VideoAccess)) == 0
+
+
+async def test_guest_cannot_share(owner: AsyncClient, guest: AsyncClient, db: AsyncSession) -> None:
+    video = await video_in(owner, db, VideoStatus.READY)
+
+    assert (await share(guest, video.public_id, "someone")).status_code == 401
+
+
+async def test_sharing_needs_the_csrf_token(
+    owner: AsyncClient, stranger: AsyncClient, db: AsyncSession
+) -> None:
+    video = await video_in(owner, db, VideoStatus.READY)
+    url = f"/api/videos/{video.public_id}/access"
+
+    response = await owner.post(url, json={"handle": await handle_of(stranger)})
+
+    assert response.status_code == 403
+
+
+async def test_sharing_with_an_unknown_handle_is_404(owner: AsyncClient, db: AsyncSession) -> None:
+    video = await video_in(owner, db, VideoStatus.READY)
+
+    response = await share(owner, video.public_id, "no-such-user")
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "No user with this handle"}
+
+
+async def test_sharing_with_yourself_is_refused(owner: AsyncClient, db: AsyncSession) -> None:
+    video = await video_in(owner, db, VideoStatus.READY)
+
+    response = await share(owner, video.public_id, await handle_of(owner))
+
+    assert response.status_code == 400
+
+
+@pytest.mark.parametrize("handle", ["ab", "x" * 31, "@anna", "an na"])
+async def test_sharing_checks_the_handle(owner: AsyncClient, db: AsyncSession, handle: str) -> None:
+    video = await video_in(owner, db, VideoStatus.READY)
+
+    assert (await share(owner, video.public_id, handle)).status_code == 422
+
+
+async def test_unsharing_an_unknown_handle_is_fine(owner: AsyncClient, db: AsyncSession) -> None:
+    video = await video_in(owner, db, VideoStatus.READY)
+
+    assert (await unshare(owner, video.public_id, "no-such-user")).status_code == 204

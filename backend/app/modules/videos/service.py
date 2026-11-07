@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import Conflict, DomainError, NotFound, PayloadTooLarge
 from app.core.rate_limit import RateLimit
 from app.core.storage import Storage
+from app.modules.users import repository as users
 from app.modules.users.models import User
 from app.modules.videos import repository as videos
 from app.modules.videos.access import get_viewable
@@ -119,6 +120,27 @@ async def upload_file(
     await enqueue_processing(video.id)  # only after the commit: the worker must see `uploaded`
     await db.refresh(video)
     return VideoOut.of(video, user)
+
+
+async def grant_access(db: AsyncSession, user: User, public_id: str, handle: str) -> None:
+    """Let a user watch the owner's private video. Takes effect on their next request."""
+    video = await get_owned(db, user, public_id)
+    grantee = await users.get_by_handle(db, handle)
+    if grantee is None:
+        raise NotFound("No user with this handle")
+    if grantee.id == user.id:
+        raise DomainError("You can always watch your own video")
+    await videos.grant_access(db, video.id, grantee.id)
+    await db.commit()
+
+
+async def revoke_access(db: AsyncSession, user: User, public_id: str, handle: str) -> None:
+    """Applies to the user's next request, media too (ADR 0004: no cache)."""
+    video = await get_owned(db, user, public_id)
+    grantee = await users.get_by_handle(db, handle)
+    if grantee is not None:  # an unknown handle has nothing to revoke
+        await videos.revoke_access(db, video.id, grantee.id)
+        await db.commit()
 
 
 async def enqueue_processing(video_id: UUID) -> None:

@@ -11,6 +11,7 @@ from app.modules.videos.models import DESCRIPTION_MAX, TITLE_MAX, Video, VideoSt
 MEDIA_PREFIX = "/media/"  # nginx serves objects here after an access check (ADR 0004)
 
 PublicId = Annotated[str, Path(pattern=r"^[A-Za-z0-9_-]{11}$", description="Public video id")]
+HANDLE_PATTERN = r"^[A-Za-z0-9._-]{3,30}$"  # the users.handle rule; case doesn't matter
 Title = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=TITLE_MAX)]
 Description = Annotated[str, StringConstraints(max_length=DESCRIPTION_MAX)]
 
@@ -66,6 +67,10 @@ class VideoOut(BaseModel):
             created_at=video.created_at,
             channel=ChannelSummary.of(owner),
         )
+
+
+class AccessGrant(BaseModel):
+    handle: str = Field(pattern=HANDLE_PATTERN, description="Who may watch, without the @")
 
 
 class UploadLimits(BaseModel):
