@@ -1,6 +1,7 @@
 // In-memory stand-in for the backend: answers like the API will (pages, 401 for guests, 404).
 // Deleted once the real endpoints exist; only the */api.ts modules import it.
 import { ApiError, type User } from '../api/client'
+import { fetchMe } from '../auth/hooks'
 import type { Channel, ChannelSummary } from '../channels/types'
 import type { Comment, CommentSort } from '../comments/types'
 import type { Category, Page, Rating, Video, VideoSummary } from '../videos/types'
@@ -26,36 +27,19 @@ function delay(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, LATENCY_MS))
 }
 
-// ---- Demo viewer: signed in by default, a guest after the dev switch.
+// ---- Viewer: the real session, as the API will read it from the cookie.
 
-const VIEWER_KEY = 'vitube:demo-viewer'
-
-export const DEMO_USER: User = { handle: 'demo-viewer', email: 'demo@vitube.local', role: 'user' }
-
-function viewer(): User | null {
-  try {
-    return localStorage.getItem(VIEWER_KEY) === 'guest' ? null : DEMO_USER
-  } catch {
-    return DEMO_USER
-  }
-}
-
-export function setDemoGuest(guest: boolean): void {
-  try {
-    if (guest) localStorage.setItem(VIEWER_KEY, 'guest')
-    else localStorage.removeItem(VIEWER_KEY)
-  } catch {
-    // Storage blocked: the switch can't persist; nothing else to do.
-  }
-}
-
-export async function getViewer(): Promise<User | null> {
+/** Waits like the network, then asks who is signed in. No auth backend (offline dev): a guest, as in the UI. */
+async function session(): Promise<User | null> {
   await delay()
-  return viewer()
+  try {
+    return await fetchMe()
+  } catch {
+    return null
+  }
 }
 
-function requireViewer(): User {
-  const user = viewer()
+function requireViewer(user: User | null): User {
   if (!user) throw new ApiError(401, 'Sign in required')
   return user
 }
@@ -123,8 +107,8 @@ function paginate<T>(items: T[], cursor: string | null, size: number): Page<T> {
   return { items: items.slice(start, end), next_cursor: end < items.length ? String(end) : null }
 }
 
-function rating(map: Map<string, Rating>, id: string): Rating {
-  return viewer() ? (map.get(id) ?? 'none') : 'none'
+function rating(user: User | null, map: Map<string, Rating>, id: string): Rating {
+  return user ? (map.get(id) ?? 'none') : 'none'
 }
 
 /** Base counts exclude the viewer; their own like is added here. */
@@ -138,7 +122,7 @@ function withRating<T extends { like_count: number }>(item: T, myRating: Rating)
 
 // ---- Videos.
 
-function toSummary(entry: Entry): VideoSummary {
+function toSummary(entry: Entry, user: User | null): VideoSummary {
   const duration = mediaDuration(entry.media)
   return {
     id: entry.id,
@@ -148,12 +132,12 @@ function toSummary(entry: Entry): VideoSummary {
     view_count: entry.views,
     published_at: new Date(NOW - entry.age * HOUR_MS).toISOString(),
     channel: channelSummary(entry.channel),
-    last_position_sec: viewer() && entry.watched ? entry.watched * duration : null,
+    last_position_sec: user && entry.watched ? entry.watched * duration : null,
   }
 }
 
-function toVideo(entry: Entry): Video {
-  const subscribed = viewer() !== null && state.subscriptions.has(entry.channel)
+function toVideo(entry: Entry, user: User | null): Video {
+  const subscribed = user !== null && state.subscriptions.has(entry.channel)
   const channel: Channel = {
     ...channelSummary(entry.channel),
     subscriber_count: CHANNELS[entry.channel].subscribers + (subscribed ? 1 : 0),
@@ -162,8 +146,8 @@ function toVideo(entry: Entry): Video {
   const { top, replies } = commentsOf(entry)
   const replyTotal = [...replies.values()].reduce((sum, list) => sum + list.length, 0)
   return {
-    ...toSummary(entry),
-    ...withRating({ like_count: entry.likes }, rating(state.ratings, entry.id)),
+    ...toSummary(entry, user),
+    ...withRating({ like_count: entry.likes }, rating(user, state.ratings, entry.id)),
     description: entry.description,
     media_url: mediaUrl(entry.media),
     comment_count: top.length + replyTotal,
@@ -175,32 +159,39 @@ export async function listVideos(params: {
   category: string | null
   cursor: string | null
 }): Promise<Page<VideoSummary>> {
-  await delay()
+  const user = await session()
   const entries = params.category ? ENTRIES.filter((e) => e.category === params.category) : ENTRIES
-  return paginate(entries.map(toSummary), params.cursor, 12)
+  return paginate(
+    entries.map((e) => toSummary(e, user)),
+    params.cursor,
+    12,
+  )
 }
 
 export async function getVideo(id: string): Promise<Video> {
-  await delay()
-  return toVideo(findEntry(id))
+  const user = await session()
+  return toVideo(findEntry(id), user)
 }
 
 export async function listRelated(id: string, cursor: string | null): Promise<Page<VideoSummary>> {
-  await delay()
+  const user = await session()
   const current = findEntry(id)
   // Same channel first, then the same film, then the rest.
   const score = (e: Entry) =>
     e.channel === current.channel ? 0 : e.media === current.media ? 1 : 2
   const related = ENTRIES.filter((e) => e.id !== id).sort((a, b) => score(a) - score(b))
-  return paginate(related.map(toSummary), cursor, 12)
+  return paginate(
+    related.map((e) => toSummary(e, user)),
+    cursor,
+    12,
+  )
 }
 
 export async function rateVideo(
   id: string,
   myRating: Rating,
 ): Promise<{ like_count: number; my_rating: Rating }> {
-  await delay()
-  requireViewer()
+  requireViewer(await session())
   const entry = findEntry(id)
   state.ratings.set(id, myRating)
   return withRating({ like_count: entry.likes }, myRating)
@@ -214,16 +205,15 @@ export async function listCategories(): Promise<Category[]> {
 // ---- Channels.
 
 export async function listSubscriptions(): Promise<ChannelSummary[]> {
-  await delay()
-  return viewer() ? [...state.subscriptions].map(channelSummary) : []
+  const user = await session()
+  return user ? [...state.subscriptions].map(channelSummary) : []
 }
 
 export async function setSubscribed(
   handle: string,
   subscribed: boolean,
 ): Promise<{ subscriber_count: number; is_subscribed: boolean }> {
-  await delay()
-  requireViewer()
+  requireViewer(await session())
   const key = channelKey(handle)
   if (subscribed) state.subscriptions.add(key)
   else state.subscriptions.delete(key)
@@ -252,8 +242,8 @@ function commentsOf(entry: Entry) {
   return comments
 }
 
-function toComment(comment: MockComment): Comment {
-  return withRating(comment, rating(state.commentRatings, comment.id))
+function toComment(comment: MockComment, user: User | null): Comment {
+  return withRating(comment, rating(user, state.commentRatings, comment.id))
 }
 
 function findComment(id: string): MockComment {
@@ -270,25 +260,32 @@ export async function listComments(
   sort: CommentSort,
   cursor: string | null,
 ): Promise<Page<Comment>> {
-  await delay()
-  const user = viewer()
+  const user = await session()
   const { top } = commentsOf(findEntry(videoId))
   // Like YouTube: the viewer's own comments come first, then by likes or by date.
   const mine = (c: MockComment) => (user && c.author.handle === user.handle ? 0 : 1)
   const order = (a: MockComment, b: MockComment) =>
     mine(a) - mine(b) ||
     (sort === 'top' ? b.like_count - a.like_count : b.published_at.localeCompare(a.published_at))
-  return paginate([...top].sort(order).map(toComment), cursor, 10)
+  return paginate(
+    [...top].sort(order).map((c) => toComment(c, user)),
+    cursor,
+    10,
+  )
 }
 
 export async function listReplies(
   commentId: string,
   cursor: string | null,
 ): Promise<Page<Comment>> {
-  await delay()
+  const user = await session()
   findComment(commentId)
   const replies = [...state.comments.values()].find((c) => c.replies.has(commentId))?.replies
-  return paginate((replies?.get(commentId) ?? []).map(toComment), cursor, 10)
+  return paginate(
+    (replies?.get(commentId) ?? []).map((c) => toComment(c, user)),
+    cursor,
+    10,
+  )
 }
 
 export async function addComment(
@@ -296,8 +293,7 @@ export async function addComment(
   text: string,
   parentId: string | null,
 ): Promise<Comment> {
-  await delay()
-  const user = requireViewer()
+  const user = requireViewer(await session())
   const trimmed = text.trim()
   if (!trimmed) throw new ApiError(422, 'Comment is empty')
   const entry = findEntry(videoId)
@@ -319,15 +315,14 @@ export async function addComment(
   } else {
     top.unshift(comment)
   }
-  return toComment(comment)
+  return toComment(comment, user)
 }
 
 export async function rateComment(
   id: string,
   myRating: Rating,
 ): Promise<{ like_count: number; my_rating: Rating }> {
-  await delay()
-  requireViewer()
+  requireViewer(await session())
   const comment = findComment(id)
   state.commentRatings.set(id, myRating)
   return withRating({ like_count: comment.like_count }, myRating)

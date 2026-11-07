@@ -1,9 +1,9 @@
 import { Link } from 'react-router'
 
-import { useMe } from '../auth/hooks'
 import IconButton from '../components/IconButton'
 import Logo from '../components/Logo'
 import SignInButton from '../components/SignInButton'
+import { useViewer } from '../viewer/useViewer'
 import AccountMenu from './AccountMenu'
 import styles from './Header.module.css'
 import SearchBox from './SearchBox'
@@ -14,7 +14,7 @@ interface HeaderProps {
 }
 
 export default function Header({ sidebarExpanded, onMenuClick }: HeaderProps) {
-  const me = useMe()
+  const viewer = useViewer()
 
   return (
     <header className={styles.header}>
@@ -35,7 +35,11 @@ export default function Header({ sidebarExpanded, onMenuClick }: HeaderProps) {
 
       <div className={styles.end}>
         {/* Nothing until /me answers: no "Sign in" flash for signed-in users. */}
-        {me.data ? <AccountMenu user={me.data} /> : !me.isPending && <SignInButton />}
+        {viewer.status === 'authenticated' ? (
+          <AccountMenu user={viewer.user} />
+        ) : (
+          viewer.status === 'guest' && <SignInButton />
+        )}
       </div>
     </header>
   )

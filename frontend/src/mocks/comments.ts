@@ -15,7 +15,7 @@ const AUTHORS: ChannelSummary[] = [
   ['pixelpusher42', 'Pixel Pusher'],
   ['tanya.v', 'Tanya V'],
   ['anim8or', 'Anim8or'],
-  ['user-k3j9x2m1', 'user-k3j9x2m1'],
+  ['user-q8w2n5tz', 'user-q8w2n5tz'],
   ['dmitry.blender', 'Dmitry'],
   ['sofia.frames', 'Sofia'],
   ['nightowl_edits', 'Night Owl'],

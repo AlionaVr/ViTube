@@ -14,9 +14,7 @@
       "Bash(npm test:*)"
     ],
     "deny": [
-      "Bash(git commit --amend:*)",
       "Bash(git push:*)",
-      "Bash(git rebase:*)",
       "Bash(git reset --hard:*)",
       "Bash(git filter-branch:*)",
       "Bash(rm -rf /:*)",

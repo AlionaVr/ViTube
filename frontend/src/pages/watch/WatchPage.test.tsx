@@ -2,7 +2,7 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
-import { json, mockApi } from '../../test/api'
+import { ANNA, json, mockApi } from '../../test/api'
 import { listVideos } from '../../videos/api'
 import { resetMockServer } from '../../mocks/server'
 import { renderApp } from '../../test/render'
@@ -22,7 +22,7 @@ async function openWatch(title = 'Sintel – trailer') {
 
 describe('WatchPage', () => {
   beforeEach(() => {
-    mockApi({ 'GET /api/auth/me': () => json(401, { detail: 'Sign in required' }) })
+    mockApi({ 'GET /api/auth/me': () => json(200, ANNA) })
   })
   afterEach(() => {
     resetMockServer()
@@ -93,12 +93,12 @@ describe('WatchPage', () => {
 
     const first = (await screen.findAllByRole('article'))[0]
     await within(first).findByText('Beautiful trailer!')
-    expect(within(first).getByText('@demo-viewer')).toBeInTheDocument()
+    expect(within(first).getByText(`@${ANNA.handle}`)).toBeInTheDocument()
     expect(box).toHaveValue('')
   })
 
   it('asks a guest to sign in instead of liking', async () => {
-    localStorage.setItem('vitube:demo-viewer', 'guest')
+    mockApi({ 'GET /api/auth/me': () => json(401, { detail: 'Sign in required' }) })
     await openWatch()
 
     await userEvent.click(screen.getByRole('button', { name: /^Like this video along with/ }))

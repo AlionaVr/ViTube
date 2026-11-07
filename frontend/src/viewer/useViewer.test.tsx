@@ -1,40 +1,42 @@
 import { QueryClientProvider } from '@tanstack/react-query'
-import { act, renderHook, waitFor } from '@testing-library/react'
+import { renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
-import { afterEach, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 import { createQueryClient } from '../api/queryClient'
-import { DEMO_USER } from '../mocks/server'
-import { useSetDemoGuest, useViewer } from './useViewer'
+import { ANNA, json, mockApi } from '../test/api'
+import { useViewer } from './useViewer'
 
 function renderViewer() {
   const queryClient = createQueryClient()
+  // Errors show at once; the retry policy has its own tests.
+  queryClient.setDefaultOptions({ queries: { retry: false } })
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   )
-  return renderHook(() => ({ viewer: useViewer(), setGuest: useSetDemoGuest() }), { wrapper })
+  return renderHook(() => useViewer(), { wrapper })
 }
 
 describe('useViewer', () => {
-  afterEach(() => localStorage.clear())
-
-  it('is loading first, then the demo user', async () => {
+  it('is loading first, then the signed-in user', async () => {
+    mockApi({ 'GET /api/auth/me': () => json(200, ANNA) })
     const { result } = renderViewer()
-    expect(result.current.viewer).toEqual({ status: 'loading' })
+    expect(result.current).toEqual({ status: 'loading' })
 
-    await waitFor(() =>
-      expect(result.current.viewer).toEqual({ status: 'authenticated', user: DEMO_USER }),
-    )
+    await waitFor(() => expect(result.current).toEqual({ status: 'authenticated', user: ANNA }))
   })
 
-  it('becomes a guest after the demo switch, and back', async () => {
+  it('is a guest without a session', async () => {
+    mockApi({ 'GET /api/auth/me': () => json(401, { detail: 'Sign in required' }) })
     const { result } = renderViewer()
-    await waitFor(() => expect(result.current.viewer.status).toBe('authenticated'))
 
-    act(() => result.current.setGuest(true))
-    await waitFor(() => expect(result.current.viewer).toEqual({ status: 'guest' }))
+    await waitFor(() => expect(result.current).toEqual({ status: 'guest' }))
+  })
 
-    act(() => result.current.setGuest(false))
-    await waitFor(() => expect(result.current.viewer.status).toBe('authenticated'))
+  it('is a guest when the API is down', async () => {
+    mockApi({ 'GET /api/auth/me': () => json(503) })
+    const { result } = renderViewer()
+
+    await waitFor(() => expect(result.current).toEqual({ status: 'guest' }))
   })
 })

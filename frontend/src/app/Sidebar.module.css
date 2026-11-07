@@ -120,19 +120,6 @@
   margin: 0 0 8px;
 }
 
-.footerButton {
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--color-link);
-  font: inherit;
-  cursor: pointer;
-}
-
-.footerButton:hover {
-  text-decoration: underline;
-}
-
 /* Narrow screens: no sidebar; the menu button opens the drawer. */
 @media (max-width: 791px) {
   .full,

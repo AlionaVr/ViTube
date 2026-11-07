@@ -5,7 +5,7 @@ import Avatar from '../components/Avatar'
 import Icon, { type IconName } from '../components/Icon'
 import SignInButton from '../components/SignInButton'
 import { channelUrl } from '../videos/paths'
-import { useSetDemoGuest, useViewer } from '../viewer/useViewer'
+import { useViewer } from '../viewer/useViewer'
 import styles from './Sidebar.module.css'
 
 interface NavItem {
@@ -81,22 +81,6 @@ function SubscriptionList({ onNavigate }: NavProps) {
   )
 }
 
-// Dev only: check the signed-in and guest UI without the auth backend.
-function DemoViewerSwitch() {
-  const viewer = useViewer()
-  const setGuest = useSetDemoGuest()
-  if (viewer.status === 'loading') return null
-  const guest = viewer.status === 'guest'
-  return (
-    <p>
-      Demo: {guest ? 'guest' : `@${viewer.user.handle}`}.{' '}
-      <button type="button" className={styles.footerButton} onClick={() => setGuest(!guest)}>
-        {guest ? 'Sign in as the demo user' : 'View as a guest'}
-      </button>
-    </p>
-  )
-}
-
 /** The full guide: in the persistent sidebar and in the drawer. */
 export function GuideContent({ onNavigate }: NavProps) {
   const viewer = useViewer()
@@ -129,7 +113,6 @@ export function GuideContent({ onNavigate }: NavProps) {
         </>
       )}
       <footer className={styles.footer}>
-        {import.meta.env.DEV && <DemoViewerSwitch />}
         <p>© {new Date().getFullYear()} ViTube</p>
       </footer>
     </>

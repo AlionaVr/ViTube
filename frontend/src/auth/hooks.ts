@@ -5,18 +5,17 @@ import { ApiError, api, type Credentials, unwrap, type User } from '../api/clien
 const ME = ['me'] as const
 
 /** The signed-in user, or null for a guest. */
+export async function fetchMe(): Promise<User | null> {
+  try {
+    return await unwrap(api.GET('/api/auth/me'))
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) return null
+    throw error
+  }
+}
+
 export function useMe() {
-  return useQuery({
-    queryKey: ME,
-    queryFn: async (): Promise<User | null> => {
-      try {
-        return await unwrap(api.GET('/api/auth/me'))
-      } catch (error) {
-        if (error instanceof ApiError && error.status === 401) return null
-        throw error
-      }
-    },
-  })
+  return useQuery({ queryKey: ME, queryFn: fetchMe })
 }
 
 // The account changed: store the new user and reload everything else, so no data of the

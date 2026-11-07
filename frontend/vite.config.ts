@@ -6,7 +6,8 @@ import { defineConfig } from 'vitest/config'
 
 // Dev server proxies the API to the Docker stack (nginx on :80),
 // or to a backend run from the IDE: API_PROXY=http://localhost:8000 npm run dev
-const api = process.env.API_PROXY ?? 'http://localhost'
+// Keeps the browser's Host: the API refuses writes whose Origin doesn't match it (ADR 0005).
+const api = { target: process.env.API_PROXY ?? 'http://localhost', changeOrigin: false }
 
 // Dev only: serves the demo videos and thumbnails offline (demo-data/README.md). sirv handles Range for seeking.
 function demoData(): Plugin {

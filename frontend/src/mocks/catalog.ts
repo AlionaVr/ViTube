@@ -57,7 +57,7 @@ export const CHANNELS = {
 
 export type ChannelKey = keyof typeof CHANNELS
 
-/** The demo viewer starts subscribed to these. */
+/** Any signed-in viewer starts subscribed to these (one shared demo state). */
 export const INITIAL_SUBSCRIPTIONS: ChannelKey[] = ['frame', 'dragon', 'bloom', 'multrazbor']
 
 export const CATEGORIES: Category[] = [
@@ -80,7 +80,7 @@ export interface MockVideo {
   /** Age in hours. */
   age: number
   description: string
-  /** Part already watched by the demo viewer, 0..1. */
+  /** Part already watched by a signed-in viewer, 0..1. */
   watched?: number
 }
 

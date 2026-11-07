@@ -2,7 +2,7 @@ import { cleanup, fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
-import { json, mockApi } from '../test/api'
+import { ANNA, json, mockApi } from '../test/api'
 import { renderApp } from '../test/render'
 import { setScreenWidth } from '../test/screen'
 
@@ -67,15 +67,22 @@ describe('Layout', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
-  it('shows the signed-in guide by default and the sign-in prompt for a guest', async () => {
+  it('shows the library, subscriptions and account menu to a signed-in viewer', async () => {
+    mockApi({ 'GET /api/auth/me': () => json(200, ANNA) })
     renderApp('/')
-    expect(await screen.findByRole('link', { name: 'Liked videos' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Account menu' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Liked videos' })).toBeInTheDocument()
     expect(await screen.findByRole('heading', { name: 'Subscriptions' })).toBeInTheDocument()
     expect(screen.queryByText(/Sign in to like videos/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Sign in' })).not.toBeInTheDocument()
+  })
 
-    await userEvent.click(screen.getByRole('button', { name: 'View as a guest' }))
+  it('shows the sign-in prompt and button to a guest', async () => {
+    renderApp('/')
     expect(await screen.findByText(/Sign in to like videos/)).toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: 'Sign in' })).toHaveLength(2)
     expect(screen.queryByRole('link', { name: 'Liked videos' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Account menu' })).not.toBeInTheDocument()
   })
 
   it('shows the not-found page for unknown paths', () => {
