@@ -1,8 +1,9 @@
 .avatar {
+  flex: none;
   display: inline-grid;
-  flex-shrink: 0;
   place-items: center;
   border-radius: 50%;
+  object-fit: cover;
   color: #fff;
   font-weight: 500;
   line-height: 1;

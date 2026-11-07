@@ -1,0 +1,114 @@
+.search {
+  flex: 0 1 732px;
+  min-width: 0;
+  margin: 0 40px;
+  display: flex;
+}
+
+/* On focus YouTube shows a search icon inside and grows the box to the left by the same 32px. */
+.box {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  margin-left: 32px;
+  padding: 0 4px 0 16px;
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--color-border);
+  border-radius: 40px 0 0 40px;
+  background: var(--color-bg);
+}
+
+.box:focus-within {
+  margin-left: 0;
+  border-color: var(--color-focus);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.icon {
+  display: none;
+  margin-right: 12px;
+  color: var(--color-text);
+}
+
+.box:focus-within .icon {
+  display: flex;
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  font-size: 16px;
+  color: var(--color-text);
+}
+
+.input::placeholder {
+  color: var(--color-text-secondary);
+}
+
+/* Our own clear button replaces the browser's. */
+.input::-webkit-search-cancel-button,
+.input::-webkit-search-decoration {
+  appearance: none;
+}
+
+.submit {
+  flex: none;
+  width: 64px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--color-border);
+  border-left: none;
+  border-radius: 0 40px 40px 0;
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.submit:hover {
+  background: var(--color-surface-hover);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
+}
+
+.submit:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+}
+
+/* Narrow screens: back arrow + search bar over the whole header. */
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  padding: 0 16px 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-bg);
+}
+
+.overlay .search {
+  flex: 1;
+  margin: 0;
+}
+
+.overlay .box {
+  margin-left: 0;
+}
+
+.overlay .box:focus-within .icon {
+  display: none;
+}
+
+@media (max-width: 656px) {
+  .submit {
+    width: 48px;
+  }
+}

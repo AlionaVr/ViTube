@@ -20,22 +20,7 @@
 
 .end {
   justify-content: flex-end;
-}
-
-.iconButton {
-  width: 40px;
-  height: 40px;
-  display: grid;
-  place-items: center;
-  border: none;
-  border-radius: 50%;
-  background: none;
-  color: var(--color-text);
-  cursor: pointer;
-}
-
-.iconButton:hover {
-  background: var(--color-hover-strong);
+  gap: 8px;
 }
 
 .logo {
@@ -43,53 +28,14 @@
   display: flex;
 }
 
-.search {
-  flex: 0 1 732px;
-  margin: 0 40px;
-  display: flex;
+.logo:focus-visible {
+  outline: 2px solid var(--color-focus);
+  border-radius: 4px;
 }
 
-.searchInput {
-  flex: 1;
-  min-width: 0;
-  height: 40px;
-  padding: 0 4px 0 16px;
-  border: 1px solid var(--color-border);
-  border-right: none;
-  border-radius: 40px 0 0 40px;
-  font: inherit;
-  font-size: 16px;
-  color: var(--color-text);
-  background: var(--color-bg);
-  outline: none;
-}
-
-.searchInput:focus {
-  border-color: var(--color-focus);
-}
-
-.searchButton {
-  width: 64px;
-  height: 40px;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--color-border);
-  border-radius: 0 40px 40px 0;
-  background: var(--color-surface);
-  color: var(--color-text);
-  cursor: pointer;
-}
-
-.searchButton:hover {
-  background: var(--color-hover-strong);
-}
-
+/* The search box folds into an icon next to the end buttons. */
 @media (max-width: 656px) {
-  .search {
-    margin: 0 8px;
-  }
-
-  .searchButton {
-    width: 48px;
+  .end {
+    flex: none;
   }
 }

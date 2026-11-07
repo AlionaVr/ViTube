@@ -44,13 +44,13 @@ export default function AccountMenu({ user }: { user: User }) {
         aria-controls={panelId}
         onClick={() => setOpen((isOpen) => !isOpen)}
       >
-        <Avatar user={user} size={32} />
+        <Avatar name={user.email} size={32} />
       </button>
 
       {open && (
         <div id={panelId} className={styles.panel}>
           <div className={styles.account}>
-            <Avatar user={user} size={40} />
+            <Avatar name={user.email} size={40} />
             <div className={styles.names}>
               <p className={styles.name}>{user.email}</p>
               <p className={styles.handle}>@{user.handle}</p>

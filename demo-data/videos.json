@@ -1,0 +1,47 @@
+{
+  "videos": [
+    {
+      "file": "big-buck-bunny-trailer.mp4",
+      "url": "https://download.blender.org/peach/trailer/trailer_iphone.m4v",
+      "sha256": "2e09da35a9093921001a6f0a01fc544ba20a84588c4f9bc9a52b506888478280",
+      "bytes": 3889885,
+      "duration": 33.0,
+      "title": "Big Buck Bunny – trailer",
+      "description": "A giant rabbit takes revenge on three bullying rodents.\n\n© 2008 Blender Foundation, www.bigbuckbunny.org. Licensed under CC BY 3.0.",
+      "author": "Blender Foundation",
+      "source_page": "https://peach.blender.org/",
+      "license": "CC BY 3.0",
+      "license_url": "https://creativecommons.org/licenses/by/3.0/",
+      "thumbnails_at": [5, 10, 15.25, 16.5, 20.5, 21.5, 25.25, 26.25]
+    },
+    {
+      "file": "sintel-trailer.mp4",
+      "url": "https://download.blender.org/durian/trailer/sintel_trailer-480p.mp4",
+      "sha256": "b670602fa00934ca27c4351bb0efe7ea7a07fae57284e44226025eeed7c51254",
+      "bytes": 4372373,
+      "duration": 52.2,
+      "title": "Sintel – trailer",
+      "description": "A lone girl searches for the baby dragon she once saved.\n\n© 2010 Blender Foundation, durian.blender.org. Licensed under CC BY 3.0.",
+      "author": "Blender Foundation",
+      "source_page": "https://durian.blender.org/",
+      "license": "CC BY 3.0",
+      "license_url": "https://creativecommons.org/licenses/by/3.0/",
+      "crop": "854:364:0:58",
+      "thumbnails_at": [7, 13, 14.5, 23, 29, 34, 38]
+    },
+    {
+      "file": "flower.mp4",
+      "url": "https://mdn.github.io/shared-assets/videos/flower.mp4",
+      "sha256": "0cd83d944a6ca7822b4a8306cecc60a36e859b041f6702c6a1ad9ead78924451",
+      "bytes": 1128375,
+      "duration": 5.1,
+      "title": "Flower opening",
+      "description": "A red flower opens in five seconds.\n\nFrom MDN Web Docs shared assets. Public domain (CC0).",
+      "author": "MDN Web Docs",
+      "source_page": "https://github.com/mdn/shared-assets/tree/main/videos",
+      "license": "CC0 1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "thumbnails_at": [0.5, 2.5, 3.5, 4.75]
+    }
+  ]
+}

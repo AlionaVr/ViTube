@@ -1,0 +1,70 @@
+.box {
+  --box-bg: var(--color-tonal);
+  position: relative;
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--box-bg);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.collapsed {
+  cursor: pointer;
+}
+
+.collapsed:hover {
+  --box-bg: var(--color-tonal-hover);
+}
+
+.info {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 8px;
+  font-weight: 500;
+}
+
+.text,
+.fullText {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Two lines by height, not line-clamp: a clamp draws its own "…" on an empty second line. */
+.text {
+  max-height: 40px;
+  overflow: hidden;
+}
+
+/* "...more" sits on the last line and fades the text under it. */
+.more {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  padding: 0 0 0 40px;
+  border: none;
+  background: linear-gradient(to right, transparent, var(--box-bg) 32px);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.less {
+  margin-top: 16px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.more:focus-visible,
+.less:focus-visible {
+  outline: 2px solid var(--color-focus);
+  border-radius: 4px;
+}

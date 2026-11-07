@@ -1,0 +1,18 @@
+.dialog {
+  width: min(480px, calc(100vw - 32px));
+  padding: 0;
+  border: none;
+  border-radius: 12px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  box-shadow: var(--shadow-popup);
+}
+
+.dialog::backdrop {
+  background: var(--color-scrim);
+}
+
+/* The content fills the dialog, so a click on the dialog itself is a click on the backdrop. */
+.content {
+  padding: 24px;
+}

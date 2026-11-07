@@ -36,7 +36,7 @@ export default function TextField({ label, hint, error, id, ref, ...input }: Tex
       </div>
       {note && (
         <p id={noteId} className={styles.note}>
-          {error && <Icon name="error" size={16} />}
+          {error && <Icon name="errorFill" size={16} />}
           {note}
         </p>
       )}

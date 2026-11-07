@@ -4,6 +4,7 @@
   --color-text: #1f1f1f;
   --color-text-secondary: #444746;
   --color-outline: #747775;
+  --color-error: #b3261e;
   --page-bg: #f0f4f9;
 
   display: flex;

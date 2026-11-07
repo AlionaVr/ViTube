@@ -1,0 +1,31 @@
+.text {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.clamped {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.toggle {
+  margin-top: 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.toggle:hover {
+  color: var(--color-text);
+}
+
+.toggle:focus-visible {
+  outline: 2px solid var(--color-focus);
+  border-radius: 4px;
+}

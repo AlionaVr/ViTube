@@ -1,0 +1,20 @@
+.spinner {
+  display: inline-block;
+  border: 3px solid var(--color-placeholder);
+  border-top-color: var(--color-text-secondary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* It still turns: it is the only sign that something is loading. Slower, though. */
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 2s;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

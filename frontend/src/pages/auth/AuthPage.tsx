@@ -157,7 +157,7 @@ export default function AuthPage({ mode }: { mode: Mode }) {
             {/* Below the fields, next to the button: the fields stay level with the title. */}
             {errors.form && (
               <p className={styles.alert} role="alert">
-                <Icon name="error" size={16} />
+                <Icon name="errorFill" size={16} />
                 {errors.form}
               </p>
             )}

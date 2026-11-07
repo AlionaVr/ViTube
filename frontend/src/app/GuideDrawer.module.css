@@ -1,0 +1,84 @@
+/* Slides in from the left; the panel fills the dialog, so only the backdrop is "outside". */
+.drawer {
+  inset: 0 auto 0 0;
+  width: var(--sidebar-width);
+  max-width: 100vw;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: var(--color-bg);
+  color: var(--color-text);
+  transform: translateX(-100%);
+  transition:
+    transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    overlay 0.2s allow-discrete,
+    display 0.2s allow-discrete;
+}
+
+.drawer[open] {
+  transform: none;
+}
+
+.drawer::backdrop {
+  background: transparent;
+  transition:
+    background 0.2s,
+    overlay 0.2s allow-discrete,
+    display 0.2s allow-discrete;
+}
+
+.drawer[open]::backdrop {
+  background: var(--color-scrim);
+}
+
+@starting-style {
+  .drawer[open] {
+    transform: translateX(-100%);
+  }
+
+  .drawer[open]::backdrop {
+    background: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawer,
+  .drawer::backdrop {
+    transition: none;
+  }
+}
+
+.panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Same place as the page header's menu button and logo. */
+.header {
+  flex: none;
+  height: var(--header-height);
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+}
+
+.logo {
+  padding: 0 14px 0 16px;
+  display: flex;
+}
+
+.content {
+  flex: 1;
+  padding: 0 12px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.content:hover {
+  scrollbar-color: var(--color-scrollbar) transparent;
+}
