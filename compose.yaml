@@ -54,7 +54,9 @@ services:
     <<: *data-service
     image: redis:8-alpine
     cap_add: [ CHOWN, SETGID, SETUID ]
-    command: [ "redis-server", "--requirepass", "${REDIS_PASSWORD:?}" ]
+    # Append-only log, fsync every second: a crash loses at most 1 s, so logouts stay done (ADR 0005).
+    command:
+      [ "redis-server", "--requirepass", "${REDIS_PASSWORD:?}", "--appendonly", "yes", "--appendfsync", "everysec" ]
     environment:
       REDISCLI_AUTH: ${REDIS_PASSWORD:?}  # lets the healthcheck's redis-cli log in
     volumes:
@@ -119,6 +121,10 @@ services:
       provenance: false  # build metadata has a timestamp: the image ID would change on every build
     init: true  # PID 1 that forwards signals and reaps child processes
     networks: [ web, data ]
+    environment:
+      <<: *backend-env
+      SESSION_SECRET: ${SESSION_SECRET:?}  # only the api handles sessions
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
     depends_on:
       migrate:
         condition: service_completed_successfully

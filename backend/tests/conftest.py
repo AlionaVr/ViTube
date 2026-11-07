@@ -14,6 +14,7 @@ from pathlib import Path
 import pytest
 from fastapi import FastAPI
 from httpx2 import ASGITransport, AsyncClient
+from redis.asyncio import Redis
 from sqlalchemy import make_url, text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from testcontainers.community.postgres import PostgresContainer
@@ -50,6 +51,7 @@ def services() -> Iterator[Services]:
         )
         host, port = redis.get_container_host_ip(), redis.get_exposed_port(6379)
         env.setenv("REDIS_URL", f"redis://{host}:{port}/0")
+        env.setenv("SESSION_SECRET", "test-session-secret-0123456789abcdef")
         # Same steps as the migrate job. Subprocesses: alembic's env.py calls asyncio.run().
         job_env = {**os.environ, "DATABASE_URL": admin_url, "POSTGRES_APP_PASSWORD": app_password}
         for args in (["alembic", "upgrade", "head"], ["app.db.roles"]):
@@ -81,7 +83,9 @@ async def client(app: FastAPI, admin_engine: AsyncEngine) -> AsyncIterator[Async
     """An HTTP client on empty tables and an empty Redis."""
     await reset_state(app, admin_engine)
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
+    # Origin as a browser sends it from our own pages: the CSRF check wants it on unsafe methods.
+    headers = {"Origin": "http://test"}
+    async with AsyncClient(transport=transport, base_url="http://test", headers=headers) as client:
         yield client
 
 
@@ -91,6 +95,13 @@ async def db(app: FastAPI, admin_engine: AsyncEngine) -> AsyncIterator[AsyncSess
     await reset_state(app, admin_engine)
     async with app.state.sessionmaker() as session:
         yield session
+
+
+@pytest.fixture
+async def redis(app: FastAPI) -> Redis:
+    """The app's Redis client, on an empty Redis."""
+    await app.state.redis.flushdb()
+    return app.state.redis
 
 
 async def reset_state(app: FastAPI, admin_engine: AsyncEngine) -> None:

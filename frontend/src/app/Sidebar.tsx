@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router'
 
+import { useMe } from '../auth/hooks'
 import Icon, { type IconName } from '../components/Icon'
 import SignInButton from '../components/SignInButton'
 import styles from './Sidebar.module.css'
@@ -47,6 +48,8 @@ function NavItems({ items }: { items: NavItem[] }) {
 }
 
 export default function Sidebar({ expanded }: { expanded: boolean }) {
+  const me = useMe()
+
   if (!expanded) {
     return (
       <nav id="guide" className={styles.mini} aria-label="Main">
@@ -63,10 +66,13 @@ export default function Sidebar({ expanded }: { expanded: boolean }) {
       <section className={styles.section}>
         <NavItems items={[YOU, HISTORY]} />
       </section>
-      <section className={`${styles.section} ${styles.signInPrompt}`}>
-        <p>Sign in to like videos, comment, and subscribe.</p>
-        <SignInButton />
-      </section>
+      {/* Guests only, as on YouTube. */}
+      {me.data === null && (
+        <section className={`${styles.section} ${styles.signInPrompt}`}>
+          <p>Sign in to like videos, comment, and subscribe.</p>
+          <SignInButton />
+        </section>
+      )}
     </nav>
   )
 }

@@ -1,0 +1,254 @@
+/* YouTube signs people in on Google's account pages: their palette, scoped to these pages. */
+.page {
+  --color-link: #0b57d0;
+  --color-text: #1f1f1f;
+  --color-text-secondary: #444746;
+  --color-outline: #747775;
+  --page-bg: #f0f4f9;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+  background: var(--page-bg);
+  color: var(--color-text);
+}
+
+.card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 48px;
+  width: 100%;
+  max-width: 1040px;
+  min-height: 384px;
+  padding: 36px;
+  overflow: hidden; /* clips the progress bar to the round corners */
+  border-radius: 28px;
+  background: #fff;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  height: 48px;
+}
+
+.title {
+  margin-top: 24px;
+  font-size: 36px;
+  font-weight: 400;
+  line-height: 44px;
+}
+
+.subtitle {
+  margin: 16px 0 0;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+/* Lines up the first field with the title on the left. */
+.form {
+  display: flex;
+  flex-direction: column;
+  padding-top: 76px;
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.alert {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 0;
+  color: var(--color-error);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.alert svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.checkbox {
+  display: inline-flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: -12px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* Google's checkbox: a 2px frame that fills blue with a white tick. */
+.box {
+  display: grid;
+}
+
+.box > * {
+  grid-area: 1 / 1;
+}
+
+.box input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  border: 2px solid var(--color-text-secondary);
+  border-radius: 2px;
+  appearance: none;
+  cursor: pointer;
+}
+
+.box input:checked {
+  border-color: var(--color-link);
+  background: var(--color-link);
+}
+
+.box input:focus-visible {
+  outline: 2px solid var(--color-link);
+  outline-offset: 2px;
+}
+
+.box svg {
+  width: 18px;
+  height: 18px;
+  fill: #fff;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.box input:checked + svg {
+  visibility: visible;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 40px;
+}
+
+.primary,
+.secondary {
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  border-radius: 20px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.25px;
+  cursor: pointer;
+}
+
+.primary {
+  padding: 0 24px;
+  border: 0;
+  background: var(--color-link);
+  color: #fff;
+}
+
+.primary:hover {
+  background: color-mix(in srgb, var(--color-link) 92%, #fff);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 30%),
+    0 1px 3px 1px rgb(0 0 0 / 15%);
+}
+
+.primary:disabled {
+  box-shadow: none;
+  cursor: default;
+}
+
+.secondary {
+  padding: 0 12px;
+  color: var(--color-link);
+}
+
+.secondary:hover {
+  background: color-mix(in srgb, var(--color-link) 8%, transparent);
+}
+
+.primary:focus-visible,
+.secondary:focus-visible {
+  outline: 2px solid var(--color-link);
+  outline-offset: 2px;
+}
+
+/* A request is on its way: a white veil over the card, and a bar sweeping along its top edge. */
+.card[aria-busy='true']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgb(255 255 255 / 50%);
+}
+
+.progress {
+  position: absolute;
+  z-index: 1;
+  inset: 0 0 auto;
+  height: 4px;
+  overflow: hidden;
+  background: #d3e3fd;
+}
+
+.progress::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: var(--color-link);
+  animation: sweep 1.2s ease-in-out infinite;
+}
+
+@keyframes sweep {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(250%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress::before {
+    width: 100%;
+    animation: none;
+  }
+}
+
+/* Material 3 window sizes, as on Google's pages: one column below 840px... */
+@media (max-width: 839px) {
+  .card {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+
+  .form {
+    padding-top: 24px;
+  }
+}
+
+/* ...and below 600px the card blends into a white page. */
+@media (max-width: 599px) {
+  .page {
+    --page-bg: #fff;
+
+    align-items: flex-start;
+    padding: 0;
+  }
+
+  .card {
+    padding: 24px;
+    border-radius: 0;
+  }
+}
