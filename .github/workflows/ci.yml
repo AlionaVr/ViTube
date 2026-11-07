@@ -21,6 +21,8 @@ jobs:
         with:
           enable-cache: true
       - run: uv sync --locked
+      - name: ffmpeg for the worker pipeline tests
+        run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends ffmpeg
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run pyright

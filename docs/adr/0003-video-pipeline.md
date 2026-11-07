@@ -12,6 +12,8 @@ Transcoding takes minutes, so it can't run inside an HTTP request.
   - claims the video: `UPLOADED → PROCESSING` in one conditional `UPDATE`, so a duplicate task does nothing;
   - `ffprobe` (is it a video? duration within limit?) → `ffmpeg` to MP4 H.264/AAC with `+faststart`, height ≤ 720 →
     thumbnail → upload to MinIO → `READY`.
+  - ffmpeg reads uploads with a list of allowed container formats and local files only, so a playlist posing as a
+    video can't fetch URLs or read other files. Output drops metadata (phone GPS tags). Work files go to a volume.
 - A bad file sets `FAILED` with a readable `error_message`. Other errors (storage, DB, a lost worker) put the video
   back to `UPLOADED`: the stored original is processed again, never uploaded again.
 - A sweeper (Celery beat) re-queues videos stuck in `UPLOADED` and takes back `PROCESSING` jobs older than the task

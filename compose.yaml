@@ -6,7 +6,7 @@ x-hardened: &hardened
   security_opt: [ "no-new-privileges:true" ]
   cap_drop: [ ALL ]
   read_only: true
-  tmpfs: [ /tmp ]
+  tmpfs: [ "/tmp:size=64m" ]  # RAM: capped; big work files go to volumes
   pids_limit: 256  # stops a fork bomb
 
 # Third-party data services start as root, fix data dir owners, then drop to their own user:
@@ -17,8 +17,8 @@ x-data-service: &data-service
   cap_drop: [ ALL ]
   networks: [ data ]
 
-# One image for api, worker and migrate. Only api builds it: Compose labels an image with
-# the service that built it, so three builds would give three images under one tag.
+# api and migrate share one image, built by api: Compose labels an image with the service that
+# built it, so two builds would give two images under one tag. The worker builds its own (+ ffmpeg).
 x-backend: &backend
   <<: *hardened
   image: vitube-backend
@@ -143,6 +143,7 @@ services:
     <<: *backend
     build:
       context: ./backend
+      target: app
       provenance: false  # build metadata has a timestamp: the image ID would change on every build
     init: true  # PID 1 that forwards signals and reaps child processes
     networks: [ web, data ]
@@ -172,10 +173,23 @@ services:
 
   worker:
     <<: *backend
+    build:
+      context: ./backend
+      target: worker
+      provenance: false
+    image: vitube-worker
     environment:
       <<: [ *backend-env, *storage-env ]
-    # Few processes: each ffmpeg job already uses all CPU cores.
-    command: [ "celery", "-A", "app.worker.celery_app:celery_app", "worker", "--concurrency=2", "--loglevel=INFO" ]
+      MAX_VIDEO_DURATION_SEC: ${MAX_VIDEO_DURATION_SEC:-1800}
+      MAX_VIDEO_HEIGHT: ${MAX_VIDEO_HEIGHT:-720}
+      SCRATCH_DIR: /scratch
+    volumes:
+      - worker-scratch:/scratch  # ffmpeg's work files: up to a few GB, too big for RAM
+    # Few processes: each ffmpeg job already uses all CPU cores. -B: the sweeper's schedule runs
+    # here too (ADR 0003); fine with one worker container.
+    command:
+      [ "celery", "-A", "app.worker.celery_app:celery_app", "worker", "-B", "--schedule", "/tmp/celerybeat-schedule",
+        "--concurrency=2", "--loglevel=INFO" ]
     init: true
     depends_on:
       migrate:
@@ -204,7 +218,7 @@ services:
     environment:
       MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-1024}
       NGINX_ENVSUBST_FILTER: ^MAX_UPLOAD_SIZE_MB$$  # only these; nginx's own $$vars stay as they are
-    tmpfs: [ /tmp, "/etc/nginx/conf.d:uid=101,gid=101" ]  # the rendered config; nginx runs as 101
+    tmpfs: [ "/tmp:size=64m", "/etc/nginx/conf.d:uid=101,gid=101" ]  # the rendered config; nginx runs as 101
     ports:
       - "${HTTP_PORT:-80}:8080"  # the unprivileged nginx listens on 8080
     depends_on:
@@ -227,3 +241,4 @@ volumes:
   postgres-data:
   redis-data:
   minio-data:
+  worker-scratch:

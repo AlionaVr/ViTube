@@ -4,6 +4,7 @@ import logging
 from collections.abc import AsyncIterable, AsyncIterator
 from contextlib import asynccontextmanager
 from functools import lru_cache
+from pathlib import Path
 from typing import TYPE_CHECKING, Annotated
 
 import anyio
@@ -21,6 +22,7 @@ log = logging.getLogger(__name__)
 
 # S3 parts must be at least 5 MiB, except the last one. An upload holds one part in memory.
 PART_SIZE = 8 * 1024 * 1024
+FILE_CHUNK = 1024 * 1024
 
 
 class StorageSettings(BaseSettings):
@@ -87,6 +89,16 @@ class Storage:
             raise
         return size
 
+    async def upload_file(self, key: str, path: Path, *, content_type: str) -> int:
+        return await self.upload(key, _read_chunks(path), content_type=content_type)
+
+    async def download(self, key: str, path: Path) -> None:
+        """Stream an object into a local file."""
+        response = await self._client.get_object(Bucket=self._bucket, Key=key)
+        async with response["Body"] as body, await anyio.open_file(path, "wb") as file:
+            async for chunk in body.iter_chunks(FILE_CHUNK):
+                await file.write(chunk)
+
     async def _abort(self, key: str, upload_id: str) -> None:
         # Shielded: a cancelled request must still drop its parts.
         with anyio.CancelScope(shield=True):
@@ -97,6 +109,12 @@ class Storage:
             except Exception:
                 # The first error matters more; MinIO drops stale parts itself after a day.
                 log.exception("Could not abort the upload of %s", key)
+
+
+async def _read_chunks(path: Path) -> AsyncIterator[bytes]:
+    async with await anyio.open_file(path, "rb") as file:
+        while chunk := await file.read(FILE_CHUNK):
+            yield chunk
 
 
 @asynccontextmanager

@@ -1,8 +1,9 @@
 """Video queries. No commits: the service decides when a transaction ends."""
 
+from datetime import timedelta
 from uuid import UUID
 
-from sqlalchemy import exists, select, update
+from sqlalchemy import exists, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -60,3 +61,80 @@ async def move_status(
         .returning(Video.id)
     )
     return await db.scalar(statement) is not None
+
+
+async def claim(db: AsyncSession, video_id: UUID) -> int | None:
+    """Take an uploaded video for processing. Returns this run's attempt number, None if taken.
+
+    One conditional UPDATE, like an optimistic lock: of two workers only one gets the row.
+    """
+    statement = (
+        update(Video)
+        .where(Video.id == video_id, Video.status == VideoStatus.UPLOADED)
+        .values(status=VideoStatus.PROCESSING, processing_attempts=Video.processing_attempts + 1)
+        .returning(Video.processing_attempts)
+    )
+    return await db.scalar(statement)
+
+
+async def finish(
+    db: AsyncSession,
+    video_id: UUID,
+    attempt: int,
+    *,
+    status: VideoStatus,
+    duration_sec: int | None = None,
+    error_message: str | None = None,
+) -> bool:
+    """Leave `processing`, if this run still holds the claim.
+
+    The attempt number fences off a run the sweeper took back: a newer claim has a newer number.
+    """
+    statement = (
+        update(Video)
+        .where(
+            Video.id == video_id,
+            Video.status == VideoStatus.PROCESSING,
+            Video.processing_attempts == attempt,
+        )
+        .values(status=status, duration_sec=duration_sec, error_message=error_message)
+        .returning(Video.id)
+    )
+    return await db.scalar(statement) is not None
+
+
+async def take_back_stale(
+    db: AsyncSession, *, older_than: timedelta, max_attempts: int
+) -> list[UUID]:
+    """Jobs whose worker is gone: back to `uploaded`, or `failed` after the last attempt.
+
+    Returns the ids that are back in `uploaded`.
+    """
+    stale = (
+        Video.status == VideoStatus.PROCESSING,
+        Video.status_changed_at < func.now() - older_than,
+    )
+    await db.execute(
+        update(Video)
+        .where(*stale, Video.processing_attempts >= max_attempts)
+        .values(status=VideoStatus.FAILED, error_message="Processing failed")
+    )
+    rows = await db.scalars(
+        update(Video).where(*stale).values(status=VideoStatus.UPLOADED).returning(Video.id)
+    )
+    return list(rows)
+
+
+async def touch_stale_uploaded(db: AsyncSession, *, older_than: timedelta) -> list[UUID]:
+    """Uploaded videos nobody took for a while (lost queue message). Bumps their time, so each is
+    queued again at most once per `older_than`."""
+    rows = await db.scalars(
+        update(Video)
+        .where(
+            Video.status == VideoStatus.UPLOADED,
+            Video.status_changed_at < func.now() - older_than,
+        )
+        .values(status_changed_at=func.now())
+        .returning(Video.id)
+    )
+    return list(rows)
