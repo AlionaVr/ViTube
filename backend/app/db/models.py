@@ -2,5 +2,6 @@
 
 from app.db.base import Base
 from app.modules.users.models import User
+from app.modules.videos.models import Video, VideoAccess
 
-__all__ = ["Base", "User"]
+__all__ = ["Base", "User", "Video", "VideoAccess"]

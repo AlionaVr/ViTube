@@ -6,7 +6,7 @@
 
 **Decision.**
 
-- PostgreSQL keeps metadata and object keys only.
+- PostgreSQL keeps metadata only. Object keys are built from ids (below), so they aren't stored.
 - Bytes live in MinIO (self-hosted, S3-compatible), with a Docker volume.
 - MinIO is not exposed. Browsers reach it only via nginx `/media/*` after an access
   check ([0004](0004-media-access-auth-request.md)).

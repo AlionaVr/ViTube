@@ -48,9 +48,16 @@ async def verify_csrf(request: Request, session: CurrentSession) -> None:
             raise Forbidden("Missing or wrong CSRF token")
 
 
-async def current_user(session: CurrentSession, db: DbSession) -> User:
-    """The signed-in user, read from the DB on each request: role changes apply at once."""
-    user = await users.get_by_id(db, session.user_id) if session else None
+async def optional_user(session: CurrentSession, db: DbSession) -> User | None:
+    """The signed-in user or None. Read from the DB each time: role changes apply at once."""
+    return await users.get_by_id(db, session.user_id) if session else None
+
+
+OptionalUser = Annotated[User | None, Depends(optional_user)]
+
+
+async def current_user(user: OptionalUser) -> User:
+    """The signed-in user; guests get 401."""
     if user is None:
         raise Unauthorized()
     return user
