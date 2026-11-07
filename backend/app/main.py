@@ -1,11 +1,12 @@
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
 
 from fastapi import Depends, FastAPI
 
 from app.core.config import get_settings
 from app.core.errors import register_error_handlers
 from app.core.redis import create_redis
+from app.core.storage import get_storage_settings, open_storage
 from app.db.session import create_engine, create_sessionmaker
 from app.modules.auth.config import get_auth_settings
 from app.modules.auth.deps import verify_csrf
@@ -22,11 +23,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.sessionmaker = create_sessionmaker(engine)
     app.state.redis = create_redis(settings)
     app.state.sessions = SessionStore(app.state.redis, auth_settings.session_secret)
-    try:
+    async with AsyncExitStack() as stack:  # closes everything in reverse order on shutdown
+        stack.push_async_callback(engine.dispose)
+        stack.push_async_callback(app.state.redis.aclose)
+        app.state.storage = await stack.enter_async_context(open_storage(get_storage_settings()))
         yield
-    finally:
-        await app.state.redis.aclose()
-        await engine.dispose()
 
 
 app = FastAPI(

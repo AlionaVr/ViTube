@@ -1,4 +1,4 @@
-"""Shared fixtures: real Postgres and Redis in Docker (testcontainers), the app, an HTTP client.
+"""Shared fixtures: real Postgres, Redis and MinIO in Docker (testcontainers), the app, a client.
 
 Like production: the superuser runs the migrate job (migrations, then the app role), and the app
 itself runs as vitube_app. So every test also checks that the app role has the grants it needs.
@@ -17,15 +17,19 @@ from httpx2 import ASGITransport, AsyncClient
 from redis.asyncio import Redis
 from sqlalchemy import make_url, text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
+from testcontainers.community.minio import MinioContainer
 from testcontainers.community.postgres import PostgresContainer
 from testcontainers.community.redis import RedisContainer
 
 from app.core.config import get_settings
+from app.core.storage import get_storage_settings
 from app.db.models import Base
 from app.db.roles import APP_ROLE
 from app.main import app as vitube_app
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
+MINIO_IMAGE = "pgsty/minio:RELEASE.2026-08-04T00-00-00Z"  # same as compose.yaml
+BUCKET = "vitube"
 
 
 @dataclass(frozen=True)
@@ -36,10 +40,11 @@ class Services:
 
 @pytest.fixture(scope="session")
 def services() -> Iterator[Services]:
-    """Start Postgres and Redis once per run (same images as compose.yaml); run the migrate job."""
+    """Start Postgres, Redis and MinIO once per run (as in compose.yaml); run the migrate job."""
     with (
         PostgresContainer("postgres:18-alpine", driver="asyncpg") as postgres,
         RedisContainer("redis:8-alpine") as redis,
+        MinioContainer(MINIO_IMAGE) as minio,
         pytest.MonkeyPatch.context() as env,
     ):
         admin_url = postgres.get_connection_url()
@@ -52,6 +57,12 @@ def services() -> Iterator[Services]:
         host, port = redis.get_container_host_ip(), redis.get_exposed_port(6379)
         env.setenv("REDIS_URL", f"redis://{host}:{port}/0")
         env.setenv("SESSION_SECRET", "test-session-secret-0123456789abcdef")
+        minio.get_client().make_bucket(BUCKET)
+        minio_config = minio.get_config()
+        env.setenv("S3_ENDPOINT_URL", f"http://{minio_config['endpoint']}")
+        env.setenv("S3_ACCESS_KEY", minio_config["access_key"])
+        env.setenv("S3_SECRET_KEY", minio_config["secret_key"])
+        env.setenv("S3_BUCKET", BUCKET)
         # Same steps as the migrate job. Subprocesses: alembic's env.py calls asyncio.run().
         job_env = {**os.environ, "DATABASE_URL": admin_url, "POSTGRES_APP_PASSWORD": app_password}
         for args in (["alembic", "upgrade", "head"], ["app.db.roles"]):
@@ -59,7 +70,9 @@ def services() -> Iterator[Services]:
                 [sys.executable, "-m", *args], cwd=BACKEND_DIR, env=job_env, check=True
             )
         env.setenv("DATABASE_URL", app_url)
-        get_settings.cache_clear()  # settings are cached; rebuild them from the new env
+        # Settings are cached; rebuild them from the new env.
+        get_settings.cache_clear()
+        get_storage_settings.cache_clear()
         yield Services(admin_url, app_url)
 
 

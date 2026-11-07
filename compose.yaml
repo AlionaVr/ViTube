@@ -30,6 +30,13 @@ x-backend: &backend
     DATABASE_URL: postgresql+asyncpg://vitube_app:${POSTGRES_APP_PASSWORD:?}@postgres:5432/${POSTGRES_DB:?}
     REDIS_URL: redis://:${REDIS_PASSWORD:?}@redis:6379/0
 
+# MinIO user of api and worker: objects in the bucket only, no admin rights (like vitube_app in Postgres).
+x-storage-env: &storage-env
+  S3_ENDPOINT_URL: http://minio:9000
+  S3_ACCESS_KEY: vitube-app
+  S3_SECRET_KEY: ${MINIO_APP_PASSWORD:?}
+  S3_BUCKET: ${S3_BUCKET:?}
+
 x-minio-image: &minio-image pgsty/minio:RELEASE.2026-08-04T00-00-00Z  # community fork, see ADR 0002
 
 services:
@@ -82,7 +89,7 @@ services:
       timeout: 3s
       retries: 10
 
-  # One-shot: create the bucket, then exit.
+  # One-shot: create the bucket and the app user, then exit. Safe to re-run; sets the password each time.
   minio-init:
     <<: *hardened
     image: *minio-image
@@ -93,12 +100,30 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:?}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?}
+      MINIO_APP_PASSWORD: ${MINIO_APP_PASSWORD:?}
       S3_BUCKET: ${S3_BUCKET:?}
       MC_CONFIG_DIR: /tmp/.mc  # the root FS is read-only
     entrypoint: [ "/bin/sh", "-c" ]
     command:
-      - mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"
-        && mc mb --ignore-existing "local/$$S3_BUCKET"
+      - |
+        set -e
+        mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"
+        mc mb --ignore-existing "local/$$S3_BUCKET"
+        # The app user may touch objects in the bucket only: no bucket policies, no admin API.
+        cat > /tmp/app-policy.json <<EOF
+        {
+          "Version": "2012-10-17",
+          "Statement": [{
+            "Effect": "Allow",
+            "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject",
+                       "s3:AbortMultipartUpload", "s3:ListMultipartUploadParts"],
+            "Resource": ["arn:aws:s3:::$$S3_BUCKET/*"]
+          }]
+        }
+        EOF
+        mc admin policy create local vitube-app /tmp/app-policy.json
+        mc admin user add local vitube-app "$$MINIO_APP_PASSWORD"
+        mc admin policy attach local vitube-app --user vitube-app
 
   # One-shot: apply DB migrations, then set up the app role, then exit. api and worker start after it.
   migrate:
@@ -122,7 +147,7 @@ services:
     init: true  # PID 1 that forwards signals and reaps child processes
     networks: [ web, data ]
     environment:
-      <<: *backend-env
+      <<: [ *backend-env, *storage-env ]
       SESSION_SECRET: ${SESSION_SECRET:?}  # only the api handles sessions
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
     depends_on:
@@ -145,6 +170,8 @@ services:
 
   worker:
     <<: *backend
+    environment:
+      <<: [ *backend-env, *storage-env ]
     # Few processes: each ffmpeg job already uses all CPU cores.
     command: [ "celery", "-A", "app.worker.celery_app:celery_app", "worker", "--concurrency=2", "--loglevel=INFO" ]
     init: true
