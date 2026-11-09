@@ -4,6 +4,7 @@ from typing import Annotated
 from fastapi import Path
 from pydantic import BaseModel, Field, StringConstraints
 
+from app.modules.reactions.schemas import Rating
 from app.modules.users.models import User
 from app.modules.users.schemas import ChannelSummary
 from app.modules.videos.models import DESCRIPTION_MAX, TITLE_MAX, Video, VideoStatus, Visibility
@@ -67,6 +68,12 @@ class VideoOut(BaseModel):
             created_at=video.created_at,
             channel=ChannelSummary.of(owner),
         )
+
+
+class VideoDetail(VideoOut):
+    """The watch page: the video and what this viewer did with it."""
+
+    my_rating: Rating
 
 
 class AccessGrant(BaseModel):

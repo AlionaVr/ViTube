@@ -178,6 +178,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/videos/{public_id}/rating": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Like or dislike a video
+         * @description "none" takes the rating back. Sending the same rating again changes nothing.
+         */
+        put: operations["rate_video_api_videos__public_id__rating_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -248,6 +268,21 @@ export interface components {
             password: string;
         };
         /**
+         * Rating
+         * @enum {string}
+         */
+        Rating: "like" | "dislike" | "none";
+        /** RatingIn */
+        RatingIn: {
+            rating: components["schemas"]["Rating"];
+        };
+        /** RatingOut */
+        RatingOut: {
+            /** Like Count */
+            like_count: number;
+            my_rating: components["schemas"]["Rating"];
+        };
+        /**
          * Role
          * @description Nested roles (ADR 0009): each one has all rights of the ones before it.
          *
@@ -297,6 +332,53 @@ export interface components {
             description: string;
             /** @default private */
             visibility: components["schemas"]["Visibility"];
+        };
+        /**
+         * VideoDetail
+         * @description The watch page: the video and what this viewer did with it.
+         */
+        VideoDetail: {
+            /**
+             * Id
+             * @description Public id, as in /watch?v=<id>
+             */
+            id: string;
+            /** Title */
+            title: string;
+            /** Description */
+            description: string;
+            visibility: components["schemas"]["Visibility"];
+            status: components["schemas"]["VideoStatus"];
+            /**
+             * Error Message
+             * @description Why processing failed
+             */
+            error_message: string | null;
+            /** Duration Sec */
+            duration_sec: number | null;
+            /**
+             * Thumbnail Url
+             * @description Set once the video is ready
+             */
+            thumbnail_url: string | null;
+            /**
+             * Media Url
+             * @description MP4 with Range support; set once ready
+             */
+            media_url: string | null;
+            /** View Count */
+            view_count: number;
+            /** Like Count */
+            like_count: number;
+            /** Comment Count */
+            comment_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            channel: components["schemas"]["ChannelSummary"];
+            my_rating: components["schemas"]["Rating"];
         };
         /** VideoOut */
         VideoOut: {
@@ -547,7 +629,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["VideoOut"];
+                    "application/json": components["schemas"]["VideoDetail"];
                 };
             };
             /** @description Validation Error */
@@ -686,6 +768,42 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rate_video_api_videos__public_id__rating_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Public video id */
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RatingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RatingOut"];
+                };
             };
             /** @description Validation Error */
             422: {

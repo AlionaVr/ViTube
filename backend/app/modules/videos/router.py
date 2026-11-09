@@ -17,6 +17,7 @@ from app.modules.videos.schemas import (
     PublicId,
     UploadLimits,
     VideoCreate,
+    VideoDetail,
     VideoOut,
     VideoUpdate,
 )
@@ -47,8 +48,8 @@ async def create_draft(
     return await service.create_draft(db, redis, user, body)
 
 
-@router.get("/{public_id}", response_model=VideoOut, summary="A video the viewer may watch")
-async def get_video(public_id: PublicId, user: OptionalUser, db: DbSession) -> VideoOut:
+@router.get("/{public_id}", response_model=VideoDetail, summary="A video the viewer may watch")
+async def get_video(public_id: PublicId, user: OptionalUser, db: DbSession) -> VideoDetail:
     return await service.get_video(db, user, public_id)
 
 

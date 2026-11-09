@@ -211,7 +211,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VideoOut"
+                  "$ref": "#/components/schemas/VideoDetail"
                 }
               }
             }
@@ -435,6 +435,62 @@
         }
       }
     },
+    "/api/videos/{public_id}/rating": {
+      "put": {
+        "tags": [
+          "ratings"
+        ],
+        "summary": "Like or dislike a video",
+        "description": "\"none\" takes the rating back. Sending the same rating again changes nothing.",
+        "operationId": "rate_video_api_videos__public_id__rating_put",
+        "parameters": [
+          {
+            "name": "public_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{11}$",
+              "description": "Public video id",
+              "title": "Public Id"
+            },
+            "description": "Public video id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RatingIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RatingOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/health": {
       "get": {
         "tags": [
@@ -565,6 +621,44 @@
         ],
         "title": "NewAccount"
       },
+      "Rating": {
+        "type": "string",
+        "enum": [
+          "like",
+          "dislike",
+          "none"
+        ],
+        "title": "Rating"
+      },
+      "RatingIn": {
+        "properties": {
+          "rating": {
+            "$ref": "#/components/schemas/Rating"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rating"
+        ],
+        "title": "RatingIn"
+      },
+      "RatingOut": {
+        "properties": {
+          "like_count": {
+            "type": "integer",
+            "title": "Like Count"
+          },
+          "my_rating": {
+            "$ref": "#/components/schemas/Rating"
+          }
+        },
+        "type": "object",
+        "required": [
+          "like_count",
+          "my_rating"
+        ],
+        "title": "RatingOut"
+      },
       "Role": {
         "type": "string",
         "enum": [
@@ -680,6 +774,119 @@
         ],
         "title": "VideoCreate",
         "description": "A draft: metadata first, the file comes next with PUT /api/videos/{id}/file."
+      },
+      "VideoDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Public id, as in /watch?v=<id>"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/Visibility"
+          },
+          "status": {
+            "$ref": "#/components/schemas/VideoStatus"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message",
+            "description": "Why processing failed"
+          },
+          "duration_sec": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Sec"
+          },
+          "thumbnail_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnail Url",
+            "description": "Set once the video is ready"
+          },
+          "media_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Media Url",
+            "description": "MP4 with Range support; set once ready"
+          },
+          "view_count": {
+            "type": "integer",
+            "title": "View Count"
+          },
+          "like_count": {
+            "type": "integer",
+            "title": "Like Count"
+          },
+          "comment_count": {
+            "type": "integer",
+            "title": "Comment Count"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "channel": {
+            "$ref": "#/components/schemas/ChannelSummary"
+          },
+          "my_rating": {
+            "$ref": "#/components/schemas/Rating"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "description",
+          "visibility",
+          "status",
+          "error_message",
+          "duration_sec",
+          "thumbnail_url",
+          "media_url",
+          "view_count",
+          "like_count",
+          "comment_count",
+          "created_at",
+          "channel",
+          "my_rating"
+        ],
+        "title": "VideoDetail",
+        "description": "The watch page: the video and what this viewer did with it."
       },
       "VideoOut": {
         "properties": {

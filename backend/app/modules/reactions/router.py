@@ -1,0 +1,23 @@
+"""Likes and dislikes."""
+
+from fastapi import APIRouter
+
+from app.db.session import DbSession
+from app.modules.auth.deps import CurrentUser
+from app.modules.reactions import service
+from app.modules.reactions.schemas import RatingIn, RatingOut
+from app.modules.videos.schemas import PublicId
+
+router = APIRouter(prefix="/api", tags=["ratings"])
+
+
+@router.put(
+    "/videos/{public_id}/rating",
+    response_model=RatingOut,
+    summary="Like or dislike a video",
+    description='"none" takes the rating back. Sending the same rating again changes nothing.',
+)
+async def rate_video(
+    public_id: PublicId, body: RatingIn, user: CurrentUser, db: DbSession
+) -> RatingOut:
+    return await service.rate_video(db, user, public_id, body.rating)
