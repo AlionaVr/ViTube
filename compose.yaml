@@ -6,7 +6,7 @@ x-hardened: &hardened
   security_opt: [ "no-new-privileges:true" ]
   cap_drop: [ ALL ]
   read_only: true
-  tmpfs: [ /tmp ]
+  tmpfs: [ "/tmp:size=64m" ]  # RAM: capped; big work files go to volumes
   pids_limit: 256  # stops a fork bomb
 
 # Third-party data services start as root, fix data dir owners, then drop to their own user:
@@ -17,8 +17,8 @@ x-data-service: &data-service
   cap_drop: [ ALL ]
   networks: [ data ]
 
-# One image for api, worker and migrate. Only api builds it: Compose labels an image with
-# the service that built it, so three builds would give three images under one tag.
+# api and migrate share one image, built by api: Compose labels an image with the service that
+# built it, so two builds would give two images under one tag. The worker builds its own (+ ffmpeg).
 x-backend: &backend
   <<: *hardened
   image: vitube-backend
@@ -29,6 +29,13 @@ x-backend: &backend
     # vitube_app: data only, no DDL (ADR 0010). The role is set up by the migrate job.
     DATABASE_URL: postgresql+asyncpg://vitube_app:${POSTGRES_APP_PASSWORD:?}@postgres:5432/${POSTGRES_DB:?}
     REDIS_URL: redis://:${REDIS_PASSWORD:?}@redis:6379/0
+
+# MinIO user of api and worker: objects in the bucket only, no admin rights (like vitube_app in Postgres).
+x-storage-env: &storage-env
+  S3_ENDPOINT_URL: http://minio:9000
+  S3_ACCESS_KEY: vitube-app
+  S3_SECRET_KEY: ${MINIO_APP_PASSWORD:?}
+  S3_BUCKET: ${S3_BUCKET:?}
 
 x-minio-image: &minio-image pgsty/minio:RELEASE.2026-08-04T00-00-00Z  # community fork, see ADR 0002
 
@@ -70,6 +77,7 @@ services:
   minio:
     <<: *data-service
     image: *minio-image
+    networks: [ data, media ]  # media: nginx reads videos and thumbnails (ADR 0004)
     command: [ "server", "/data" ]
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:?}
@@ -82,7 +90,7 @@ services:
       timeout: 3s
       retries: 10
 
-  # One-shot: create the bucket, then exit.
+  # One-shot: create the bucket and the app user, then exit. Safe to re-run; sets the password each time.
   minio-init:
     <<: *hardened
     image: *minio-image
@@ -93,12 +101,44 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:?}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?}
+      MINIO_APP_PASSWORD: ${MINIO_APP_PASSWORD:?}
       S3_BUCKET: ${S3_BUCKET:?}
       MC_CONFIG_DIR: /tmp/.mc  # the root FS is read-only
     entrypoint: [ "/bin/sh", "-c" ]
     command:
-      - mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"
-        && mc mb --ignore-existing "local/$$S3_BUCKET"
+      - |
+        set -e
+        mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"
+        mc mb --ignore-existing "local/$$S3_BUCKET"
+        # The app user may touch objects in the bucket only: no bucket policies, no admin API.
+        cat > /tmp/app-policy.json <<EOF
+        {
+          "Version": "2012-10-17",
+          "Statement": [{
+            "Effect": "Allow",
+            "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject",
+                       "s3:AbortMultipartUpload", "s3:ListMultipartUploadParts"],
+            "Resource": ["arn:aws:s3:::$$S3_BUCKET/*"]
+          }]
+        }
+        EOF
+        mc admin policy create local vitube-app /tmp/app-policy.json
+        mc admin user add local vitube-app "$$MINIO_APP_PASSWORD"
+        mc admin policy attach local vitube-app --user vitube-app
+        # Anonymous reads of processed files only, for nginx on the internal "media" network after
+        # the API's check (ADR 0004). Originals stay unreadable.
+        cat > /tmp/media-read.json <<EOF
+        {
+          "Version": "2012-10-17",
+          "Statement": [{
+            "Effect": "Allow",
+            "Principal": {"AWS": ["*"]},
+            "Action": ["s3:GetObject"],
+            "Resource": ["arn:aws:s3:::$$S3_BUCKET/videos/*", "arn:aws:s3:::$$S3_BUCKET/thumbs/*"]
+          }]
+        }
+        EOF
+        mc anonymous set-json /tmp/media-read.json "local/$$S3_BUCKET"
 
   # One-shot: apply DB migrations, then set up the app role, then exit. api and worker start after it.
   migrate:
@@ -118,13 +158,18 @@ services:
     <<: *backend
     build:
       context: ./backend
+      target: app
       provenance: false  # build metadata has a timestamp: the image ID would change on every build
     init: true  # PID 1 that forwards signals and reaps child processes
+    # Uploads hold at most 32 × 16 MiB (ADR 0006); the rest is the app. A leak can't take the host.
+    mem_limit: 1g
     networks: [ web, data ]
     environment:
-      <<: *backend-env
+      <<: [ *backend-env, *storage-env ]
       SESSION_SECRET: ${SESSION_SECRET:?}  # only the api handles sessions
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-1024}
+      MAX_VIDEO_DURATION_SEC: ${MAX_VIDEO_DURATION_SEC:-1800}
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -145,8 +190,27 @@ services:
 
   worker:
     <<: *backend
-    # Few processes: each ffmpeg job already uses all CPU cores.
-    command: [ "celery", "-A", "app.worker.celery_app:celery_app", "worker", "--concurrency=2", "--loglevel=INFO" ]
+    build:
+      context: ./backend
+      target: worker
+      provenance: false
+    image: vitube-worker
+    environment:
+      <<: [ *backend-env, *storage-env ]
+      MAX_VIDEO_DURATION_SEC: ${MAX_VIDEO_DURATION_SEC:-1800}
+      MAX_VIDEO_HEIGHT: ${MAX_VIDEO_HEIGHT:-720}
+      SCRATCH_DIR: /scratch
+    volumes:
+      - worker-scratch:/scratch  # ffmpeg's work files: up to a few GB, too big for RAM
+    # Two ffmpeg jobs up to 4K need ~1-1.5 GB each; a decoder bomb is killed, not the host.
+    mem_limit: 3g
+    # A lower CPU share, not a cap: transcoding uses idle cores but yields to api and nginx.
+    cpu_shares: 256
+    # Few processes: each ffmpeg job already uses all CPU cores. -B: the sweeper's schedule runs
+    # here too (ADR 0003); fine with one worker container.
+    command:
+      [ "celery", "-A", "app.worker.celery_app:celery_app", "worker", "-B", "--schedule", "/tmp/celerybeat-schedule",
+        "--concurrency=2", "--loglevel=INFO" ]
     init: true
     depends_on:
       migrate:
@@ -171,7 +235,12 @@ services:
       provenance: false  # same as for the backend: stable image ID
     image: vitube-nginx
     restart: unless-stopped
-    networks: [ edge, web ]
+    networks: [ edge, web, media ]
+    environment:
+      MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-1024}
+      S3_BUCKET: ${S3_BUCKET:?}
+      NGINX_ENVSUBST_FILTER: ^(MAX_UPLOAD_SIZE_MB|S3_BUCKET)$$  # only these; nginx's own $$vars stay
+    tmpfs: [ "/tmp:size=64m", "/etc/nginx/conf.d:uid=101,gid=101" ]  # the rendered config; nginx runs as 101
     ports:
       - "${HTTP_PORT:-80}:8080"  # the unprivileged nginx listens on 8080
     depends_on:
@@ -189,8 +258,11 @@ networks:
     internal: true   # nginx <-> api
   data:
     internal: true   # api, worker, migrate <-> Postgres, Redis, MinIO
+  media:
+    internal: true   # nginx -> MinIO, reads of processed files
 
 volumes:
   postgres-data:
   redis-data:
   minio-data:
+  worker-scratch:

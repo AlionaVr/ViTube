@@ -58,6 +58,26 @@ API_PROXY=http://localhost:8000 npm run dev                      # UI on :5173
 In IntelliJ, the same backend run configuration: `uvicorn app.main:app --reload`, working directory `backend/`,
 env file `.env.local`.
 
+## Uploads
+
+Signed in, click **Create** in the header, then pick or drop a video file. The upload starts at once; fill in the
+details meanwhile. The worker converts the video to MP4 (H.264/AAC) and makes a thumbnail; the dialog shows the
+progress and plays the result. A new video is private until you choose Unlisted or Public.
+
+Limits, in `.env` (optional; these are the defaults):
+
+| Variable | Default | |
+|---|---|---|
+| `MAX_UPLOAD_SIZE_MB` | 1024 | file size; checked in the browser, nginx and the API |
+| `MAX_VIDEO_DURATION_SEC` | 1800 | longer videos fail with a reason |
+| `MAX_VIDEO_HEIGHT` | 720 | taller videos are downscaled |
+
+Share a private video with someone (API only for now): `POST /api/videos/<id>/access` with `{"handle": "..."}`;
+`DELETE /api/videos/<id>/access/<handle>` takes it back. Changes apply to their next request.
+
+Updating a deployment made before uploads existed: add `MINIO_APP_PASSWORD=<random, 8+ chars>` to `.env`, then run
+`./install.sh` again.
+
 ## Accounts and roles
 
 Sign up on the site with an email and a password. Roles are `user`, `moderator` and `admin`; each has the rights of

@@ -1,7 +1,5 @@
 from celery import Celery
 
-from app.core.config import get_settings
-
-# Redis is the broker. Video tasks are added in Stage 3.
-celery_app = Celery("vitube", broker=str(get_settings().redis_url))
-celery_app.conf.broker_connection_retry_on_startup = True
+# Settings are read on first use (celeryconfig), so importing this module never needs env vars.
+celery_app = Celery("vitube")
+celery_app.config_from_object("app.worker.celeryconfig")

@@ -1,0 +1,155 @@
+# Template: the nginx image fills in ${MAX_UPLOAD_SIZE_MB} and ${S3_BUCKET} from env at start
+# (NGINX_ENVSUBST_FILTER in compose.yaml).
+
+# Docker DNS: re-resolve names at runtime, so a restart with a new IP doesn't break proxying.
+resolver 127.0.0.11 valid=10s ipv6=off;
+
+upstream api {
+    zone api 64k;
+    server api:8000 resolve;
+}
+
+# Network "media" only: nginx never joins "data" (compose.yaml).
+upstream minio {
+    zone minio 64k;
+    server minio:9000 resolve;
+}
+
+# Uploads at once per client IP. Generous on purpose: a whole office behind one NAT shares an IP;
+# the real cap is per account, in the API (ADR 0006).
+limit_conn_zone $binary_remote_addr zone=uploads_per_ip:1m;
+
+server {
+    listen 8080;  # unprivileged image: no root to bind 80; compose maps 80 -> 8080
+    server_tokens off;
+    root /usr/share/nginx/html;
+
+    # Basic hardening. CSP comes with the security stage.
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-Frame-Options DENY always;
+    add_header Referrer-Policy strict-origin-when-cross-origin always;
+
+    # Keeps the port: the API compares Host with Origin (CSRF check).
+    proxy_set_header Host $http_host;
+    # nginx is the edge proxy: overwrite, because uvicorn trusts the leftmost address.
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    location /api/ {
+        proxy_pass http://api;
+    }
+
+    # Video file upload (ADR 0006): passed on to the API as it arrives, never buffered here.
+    location ~ ^/api/videos/[^/]+/file$ {
+        client_max_body_size ${MAX_UPLOAD_SIZE_MB}m;
+        limit_conn uploads_per_ip 10;
+        limit_conn_status 429;
+        proxy_request_buffering off;
+        proxy_http_version 1.1;  # streams a chunked body too
+        proxy_pass http://api;
+    }
+
+    location = /docs {
+        proxy_pass http://api;
+    }
+
+    # Media (ADR 0004): the API decides, nginx streams from MinIO. Every request is checked, with
+    # no cache, so revoked access applies to the next request (each Range request too).
+    location /media/ {
+        auth_request /internal/media-auth;
+        # "Signed in, no access" comes as 403 (auth_request passes on only 401 and 403): outsiders
+        # get 404 and don't learn the video exists. MinIO's own errors lose their XML body, which
+        # names the bucket and keys.
+        error_page 403 404 = @not_found;
+        error_page 400 = @bad_request;
+        error_page 412 = @precondition_failed;
+        error_page 416 = @range_not_satisfiable;
+        error_page 500 502 503 504 = @bad_gateway;
+        proxy_intercept_errors on;
+        limit_except GET {  # and HEAD
+            deny all;
+        }
+        # /media/videos/... -> /<bucket>/videos/...; the trailing "?" drops the query string.
+        rewrite ^/media/(.*)$ /${S3_BUCKET}/$1? break;
+        proxy_pass http://minio;
+        # MinIO needs none of the client's credentials.
+        proxy_set_header Host minio:9000;
+        proxy_set_header Cookie "";
+        proxy_set_header Authorization "";
+        # Only what the browser needs: keep ETag and Last-Modified (revalidation), drop MinIO's own.
+        proxy_hide_header Set-Cookie;
+        proxy_hide_header Strict-Transport-Security;
+        proxy_hide_header X-Amz-Id-2;
+        proxy_hide_header X-Amz-Request-Id;
+        proxy_hide_header X-Ratelimit-Limit;
+        proxy_hide_header X-Ratelimit-Remaining;
+        proxy_hide_header X-Xss-Protection;
+        proxy_hide_header X-Content-Type-Options;  # set below
+        # MinIO allows any origin with credentials: a page on another subdomain or port could read
+        # private videos with the viewer's cookie. Same-origin only.
+        proxy_hide_header Access-Control-Allow-Origin;
+        proxy_hide_header Access-Control-Allow-Credentials;
+        proxy_hide_header Access-Control-Expose-Headers;
+        # Stream to slow clients from memory; never spool big files into the small /tmp.
+        proxy_max_temp_file_size 0;
+        # A location with add_header drops the server's ones: repeat them.
+        add_header X-Content-Type-Options nosniff always;
+        add_header X-Frame-Options DENY always;
+        add_header Referrer-Policy strict-origin-when-cross-origin always;
+        # The browser may keep a copy but asks again before each use: revocation applies.
+        add_header Cache-Control "private, no-cache" always;
+        add_header Cross-Origin-Resource-Policy same-origin always;
+    }
+
+    location = /internal/media-auth {
+        internal;
+        proxy_pass http://api;
+        proxy_pass_request_body off;
+        proxy_set_header Content-Length "";
+        proxy_set_header X-Original-URI $request_uri;
+        # A location with proxy_set_header drops the server's ones: repeat them.
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Answers meant for nginx only.
+    location /internal/ {
+        return 404;
+    }
+
+    location @not_found {
+        return 404;
+    }
+
+    location @bad_request {
+        return 400;
+    }
+
+    location @precondition_failed {
+        return 412;
+    }
+
+    location @range_not_satisfiable {
+        return 416;
+    }
+
+    location @bad_gateway {
+        return 502;
+    }
+
+    # File names have content hashes, so they can be cached forever.
+    location /assets/ {
+        expires 1y;
+    }
+
+    # Always revalidate, so a new deploy is picked up at once.
+    location = /index.html {
+        expires -1;
+    }
+
+    # SPA: unknown paths get index.html, React Router handles them.
+    location / {
+        try_files $uri /index.html;
+    }
+}

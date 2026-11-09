@@ -65,8 +65,8 @@ One access policy, `can_view(user, video)`, is used everywhere.
 | Table             | Key fields / constraints                                                                                                                             |
 |-------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `users`           | email, handle (citext, unique), password_hash, role, is_banned, avatar, banner                                                                       |
-| `videos`          | public_id (11 chars), owner, title, description, visibility, status, is_hidden, duration, keys, counters, `search_vector` (GIN), title trigram (GIN) |
-| `video_access`    | (video, user), granted_by                                                                                                                            |
+| `videos`          | public_id (11 chars), owner, title, description, visibility, status, is_hidden, duration, counters, `search_vector` (GIN), title trigram (GIN)       |
+| `video_access`    | (video, user); only the owner grants                                                                                                                 |
 | `video_reactions` | (user, video), value ±1                                                                                                                              |
 | `comments`        | video, author, parent (replies), is_deleted                                                                                                          |
 | `subscriptions`   | (subscriber, channel), check: not self                                                                                                               |
@@ -77,6 +77,7 @@ One access policy, `can_view(user, video)`, is used everywhere.
 | `audit_log`       | actor, action, target, details jsonb                                                                                                                 |
 
 Not in Postgres: sessions, rate limits and view de-duplication live in Redis.
+Object keys are built from `videos.id` ([ADR 0002](adr/0002-object-storage-minio.md)), so they aren't stored.
 
 ## Roadmap
 

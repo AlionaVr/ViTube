@@ -21,6 +21,8 @@ jobs:
         with:
           enable-cache: true
       - run: uv sync --locked
+      - name: ffmpeg for the worker pipeline tests
+        run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends ffmpeg
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run pyright
@@ -68,6 +70,18 @@ jobs:
         run: |
           curl -fsS http://localhost/api/health
           curl -fsS -o /dev/null http://localhost/docs
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          enable-cache: true
+      - name: ffmpeg for the sample video
+        run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends ffmpeg
+      - name: End to end through nginx (upload, processing, playback, access)
+        working-directory: backend
+        env:
+          E2E_BASE_URL: http://localhost
+        run: |
+          uv sync --locked
+          uv run pytest tests/e2e -v
       - name: Models match migrations
         run: docker compose run --rm migrate alembic check
       - name: Migrations roll back and apply again

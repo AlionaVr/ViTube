@@ -33,9 +33,28 @@
   border-radius: 4px;
 }
 
+/* "+ Create": a tonal pill; only the icon on narrow screens, as on YouTube. */
+.create {
+  margin-right: 8px;
+}
+
 /* The search box folds into an icon next to the end buttons. */
 @media (max-width: 656px) {
   .end {
     flex: none;
+  }
+
+  .create {
+    width: 36px; /* as tall as the pill: a circle */
+    padding: 0;
+    border-radius: 50%;
+  }
+
+  .createLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
   }
 }

@@ -17,7 +17,7 @@ export class ApiError extends Error {
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
 
-function readCookie(name: string): string | undefined {
+export function readCookie(name: string): string | undefined {
   const prefix = `${name}=`
   return document.cookie
     .split('; ')
@@ -57,7 +57,7 @@ export async function unwrap<T>(answer: Promise<Answer<T>>): Promise<T> {
   return data as T
 }
 
-function messageOf(error: unknown): string | undefined {
+export function messageOf(error: unknown): string | undefined {
   // Our errors: {"detail": "..."}. FastAPI's input errors: {"detail": [{"msg": "..."}]}.
   if (typeof error !== 'object' || error === null || !('detail' in error)) return undefined
   const { detail } = error
