@@ -227,6 +227,17 @@ describe('UploadDialog', () => {
     expect(FakeXhr.last!.url).toBe('/api/videos/abcdefghijk/file')
   })
 
+  it('asks to wait when too many uploads are going on', async () => {
+    const dialog = await openDialog()
+    await pick(dialog, file())
+
+    await answerUpload(429, null) // nginx's per-IP limit: HTML, no JSON
+
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+      'Too many uploads at once. Wait for one to finish.',
+    )
+  })
+
   it('says why processing failed', async () => {
     detail = video({ status: 'failed', error_message: 'The file is not a video' })
     const dialog = await openDialog()

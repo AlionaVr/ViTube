@@ -39,6 +39,11 @@ class Conflict(DomainError):
     detail = "Conflict"
 
 
+class RequestTimeout(DomainError):
+    status_code = 408
+    detail = "The request took too long"
+
+
 class PayloadTooLarge(DomainError):
     status_code = 413
     detail = "Request body too large"

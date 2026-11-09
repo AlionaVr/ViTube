@@ -161,6 +161,8 @@ services:
       target: app
       provenance: false  # build metadata has a timestamp: the image ID would change on every build
     init: true  # PID 1 that forwards signals and reaps child processes
+    # Uploads hold at most 32 × 16 MiB (ADR 0006); the rest is the app. A leak can't take the host.
+    mem_limit: 1g
     networks: [ web, data ]
     environment:
       <<: [ *backend-env, *storage-env ]
@@ -200,6 +202,10 @@ services:
       SCRATCH_DIR: /scratch
     volumes:
       - worker-scratch:/scratch  # ffmpeg's work files: up to a few GB, too big for RAM
+    # Two ffmpeg jobs up to 4K need ~1-1.5 GB each; a decoder bomb is killed, not the host.
+    mem_limit: 3g
+    # A lower CPU share, not a cap: transcoding uses idle cores but yields to api and nginx.
+    cpu_shares: 256
     # Few processes: each ffmpeg job already uses all CPU cores. -B: the sweeper's schedule runs
     # here too (ADR 0003); fine with one worker container.
     command:

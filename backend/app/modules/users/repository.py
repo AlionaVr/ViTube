@@ -13,6 +13,11 @@ async def get_by_id(db: AsyncSession, user_id: UUID) -> User | None:
     return await db.get(User, user_id)
 
 
+async def lock(db: AsyncSession, user_id: UUID) -> None:
+    """SELECT ... FOR UPDATE: other transactions that lock this user wait until ours ends."""
+    await db.execute(select(User.id).where(User.id == user_id).with_for_update())
+
+
 async def get_by_email(db: AsyncSession, email: str) -> User | None:
     # citext: the match ignores case.
     return await db.scalar(select(User).where(User.email == email))

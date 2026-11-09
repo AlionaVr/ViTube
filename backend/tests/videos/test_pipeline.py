@@ -34,12 +34,9 @@ def ffmpeg(*args: str) -> None:
     )
 
 
-def probe(path: Path) -> dict[str, Any]:
-    out = subprocess.run(  # noqa: S603
-        ["ffprobe", "-v", "error", "-show_streams", "-show_format", "-of", "json", str(path)],  # noqa: S607
-        check=True,
-        capture_output=True,
-    ).stdout
+def probe(path: Path, *extra: str) -> dict[str, Any]:
+    command = ["ffprobe", "-v", "error", *extra, "-show_streams", "-show_format", "-of", "json"]
+    out = subprocess.run([*command, str(path)], check=True, capture_output=True).stdout  # noqa: S603
     return json.loads(out)
 
 
@@ -77,6 +74,35 @@ def samples(tmp_path_factory: pytest.TempPathFactory) -> Path:
         str(root / "portrait.webm"),
     )
     ffmpeg("-f", "lavfi", "-i", "sine=duration=1", "-c:a", "aac", str(root / "audio.m4a"))
+    # A codec outside the decoder list (lossless FFV1).
+    ffmpeg(
+        "-f", "lavfi", "-i", "testsrc=duration=1:size=320x240:rate=25",
+        "-c:v", "ffv1", str(root / "ffv1.mkv"),
+    )  # fmt: skip
+    # A cover picture as the first video stream, the real video second.
+    ffmpeg("-f", "lavfi", "-i", "testsrc=size=96x96", "-frames:v", "1", str(root / "cover.jpg"))
+    ffmpeg(
+        "-f", "lavfi", "-i", "testsrc=duration=2:size=640x360:rate=25", "-c:v", "libx264",
+        str(root / "real.mp4"),
+    )  # fmt: skip
+    ffmpeg(
+        "-i", str(root / "real.mp4"), "-i", str(root / "cover.jpg"),
+        "-map", "0", "-map", "1", "-c", "copy", "-disposition:v:1", "attached_pic",
+        "-movflags", "+faststart", str(root / "cover.mp4"),
+    )  # fmt: skip
+    move_cover_first(root / "cover.mp4")
+    # Small frames in the header, then 8192x8192 ones: the probe sees only the small size.
+    ffmpeg(
+        "-f", "lavfi", "-i", "testsrc=duration=1:size=320x240:rate=25",
+        "-c:v", "libx264", "-f", "mpegts", str(root / "small.ts"),
+    )  # fmt: skip
+    ffmpeg(
+        "-f", "lavfi", "-i", "color=c=gray:size=8192x8192:duration=0.2:rate=25",
+        "-c:v", "libx264", "-preset", "ultrafast", "-f", "mpegts", str(root / "big.ts"),
+    )  # fmt: skip
+    (root / "bigframes.ts").write_bytes(
+        (root / "small.ts").read_bytes() + (root / "big.ts").read_bytes()
+    )
     (root / "text.mp4").write_text("not a video at all")
     # A playlist posing as a video: without the format allowlist ffmpeg could read local files.
     (root / "playlist.mp4").write_text(
@@ -123,18 +149,36 @@ async def download(s3: S3Client, key: str, path: Path) -> Path:
     return path
 
 
-def top_level_boxes(path: Path) -> list[str]:
-    """MP4 box types in file order (ISO BMFF: 4-byte size, 4-byte type)."""
-    data, boxes, offset = path.read_bytes(), [], 0
-    while offset + 8 <= len(data):
+def boxes(data: bytes, start: int, end: int) -> list[tuple[str, int, int]]:
+    """MP4 boxes in order as (type, start, end) (ISO BMFF: 4-byte size, 4-byte type)."""
+    found, offset = [], start
+    while offset + 8 <= end:
         size = int.from_bytes(data[offset : offset + 4], "big")
-        boxes.append(data[offset + 4 : offset + 8].decode())
         if size == 1:  # 64-bit size follows
             size = int.from_bytes(data[offset + 8 : offset + 16], "big")
+        elif size == 0:  # runs to the end
+            size = end - offset
         if size < 8:
             break
+        found.append((data[offset + 4 : offset + 8].decode(), offset, offset + size))
         offset += size
-    return boxes
+    return found
+
+
+def top_level_boxes(path: Path) -> list[str]:
+    data = path.read_bytes()
+    return [kind for kind, _, _ in boxes(data, 0, len(data))]
+
+
+def move_cover_first(path: Path) -> None:
+    """Puts moov's udta, where MP4 keeps cover art, before the track: the cover becomes stream 0.
+
+    moov keeps its size and place, so the media offsets in it stay right.
+    """
+    data = path.read_bytes()
+    _, start, end = next(box for box in boxes(data, 0, len(data)) if box[0] == "moov")
+    children = sorted(boxes(data, start + 8, end), key=lambda box: box[0] != "udta")
+    path.write_bytes(data[: start + 8] + b"".join(data[a:b] for _, a, b in children) + data[end:])
 
 
 async def test_hd_video_becomes_a_720p_mp4_with_thumbnail(
@@ -205,6 +249,49 @@ async def test_a_real_playlist_is_refused(samples: Path) -> None:
 
     with pytest.raises(pipeline.BadVideo):
         await pipeline._probe(playlist)  # pyright: ignore[reportPrivateUsage]
+
+
+async def test_a_codec_outside_the_decoder_list_is_refused(
+    db: AsyncSession, storage: Storage, samples: Path
+) -> None:
+    video = await uploaded(db, storage, samples / "ffv1.mkv")
+
+    await pipeline.process(video.id)
+
+    video = await reload(db, video)
+    assert video.status is VideoStatus.FAILED
+
+
+async def test_the_real_video_is_converted_not_the_cover_picture(
+    db: AsyncSession, storage: Storage, s3: S3Client, samples: Path, tmp_path: Path
+) -> None:
+    assert probe(samples / "cover.mp4")["streams"][0]["disposition"]["attached_pic"] == 1
+    found = await pipeline._probe(samples / "cover.mp4")  # pyright: ignore[reportPrivateUsage]
+    assert (found.width, found.height) == (640, 360)
+    video = await uploaded(db, storage, samples / "cover.mp4")
+
+    await pipeline.process(video.id)
+
+    video = await reload(db, video)
+    assert video.status is VideoStatus.READY
+    output = probe(await download(s3, video.media_key, tmp_path / "out.mp4"))
+    assert [(s["width"], s["height"]) for s in output["streams"]] == [(640, 360)]
+    assert video.duration_sec == 2
+
+
+async def test_frames_over_8k_later_in_the_file_are_not_decoded(
+    db: AsyncSession, storage: Storage, s3: S3Client, samples: Path, tmp_path: Path
+) -> None:
+    video = await uploaded(db, storage, samples / "bigframes.ts")
+
+    await pipeline.process(video.id)
+
+    video = await reload(db, video)
+    assert video.status is VideoStatus.READY
+    # Only the 25 small frames: the decoder refused the big ones instead of allocating them.
+    output = await download(s3, video.media_key, tmp_path / "out.mp4")
+    streams = probe(output, "-count_frames")["streams"]
+    assert [(s["width"], s["height"], s["nb_read_frames"]) for s in streams] == [(320, 240, "25")]
 
 
 async def test_a_video_over_the_duration_limit_fails(

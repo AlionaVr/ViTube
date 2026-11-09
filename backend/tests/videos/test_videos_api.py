@@ -2,8 +2,10 @@
 
 import re
 import secrets
-from collections.abc import AsyncIterator, Callable, Iterator, Mapping
+from collections.abc import AsyncIterator, Callable, Coroutine, Iterator, Mapping
 from dataclasses import dataclass
+from datetime import timedelta
+from typing import Any
 from uuid import UUID
 
 import anyio
@@ -11,12 +13,13 @@ import pytest
 from botocore.exceptions import ClientError
 from fastapi import FastAPI
 from httpx2 import ASGITransport, AsyncClient, Cookies, Response
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from types_aiobotocore_s3 import S3Client
 
 from app.core.rate_limit import RateLimit
+from app.core.slots import Slots
 from app.core.storage import PART_SIZE, get_storage_settings, open_s3_client
 from app.modules.users.models import Role
 from app.modules.videos import service
@@ -342,7 +345,10 @@ async def test_draft_needs_our_origin_and_the_csrf_token(
     assert await db.scalar(select(func.count()).select_from(Video)) == 0
 
 
-async def test_21st_draft_in_an_hour_is_refused(owner: AsyncClient) -> None:
+async def test_21st_draft_in_an_hour_is_refused(
+    owner: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(service, "OPEN_DRAFTS_MAX", 100)  # only the hourly limit is tested here
     for _ in range(20):
         await create_draft(owner)
 
@@ -985,3 +991,144 @@ async def test_unsharing_an_unknown_handle_is_fine(owner: AsyncClient, db: Async
     video = await video_in(owner, db, VideoStatus.READY)
 
     assert (await unshare(owner, video.public_id, "no-such-user")).status_code == 204
+
+
+# --- Upload limits per user and in total (ADR 0006) ---
+
+
+async def test_unfinished_drafts_are_capped(
+    owner: AsyncClient, db: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(service, "OPEN_DRAFTS_MAX", 2)
+    first = await create_draft(owner)
+    await create_draft(owner)
+
+    refused = await post_draft(owner)
+    assert refused.status_code == 409
+    assert refused.json() == {"detail": "You have 2 unfinished uploads. Finish one first."}
+
+    # A draft that got its file no longer counts; nor does one abandoned over a day ago.
+    await set_status(db, first, VideoStatus.UPLOADED)
+    second = await create_draft(owner)
+    await db.execute(
+        update(Video)
+        .where(Video.public_id == second)
+        .values(created_at=func.now() - timedelta(days=2))
+    )
+    await db.commit()
+    assert (await post_draft(owner)).status_code == 201
+
+
+async def test_parallel_drafts_cannot_pass_the_cap(
+    owner: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(service, "OPEN_DRAFTS_MAX", 3)
+    codes: list[int] = []
+
+    async def one() -> None:
+        codes.append((await post_draft(owner)).status_code)
+
+    async with anyio.create_task_group() as tasks:
+        for _ in range(8):
+            tasks.start_soon(one)
+
+    assert sorted(codes) == [201] * 3 + [409] * 5
+
+
+async def hold_an_upload(
+    client: AsyncClient, public_id: str, results: dict[str, Response]
+) -> tuple[anyio.Event, anyio.Event, Callable[[], Coroutine[Any, Any, None]]]:
+    """An upload that stops mid-body until `go_on` is set; `started` says its slot is taken."""
+    started, go_on = anyio.Event(), anyio.Event()
+
+    async def body() -> AsyncIterator[bytes]:
+        yield b"first half "
+        started.set()
+        await go_on.wait()
+        yield b"second half"
+
+    async def run() -> None:
+        results[public_id] = await upload(client, public_id, body())
+
+    return started, go_on, run
+
+
+async def test_uploads_at_once_are_capped_per_user(
+    owner: AsyncClient, monkeypatch: pytest.MonkeyPatch, queued: list[Queued]
+) -> None:
+    monkeypatch.setattr(service, "UPLOADS_PER_USER", Slots("uploads_user", limit=1, ttl=60))
+    first, second = await create_draft(owner), await create_draft(owner)
+    results: dict[str, Response] = {}
+    started, go_on, run = await hold_an_upload(owner, first, results)
+
+    with anyio.fail_after(10):
+        async with anyio.create_task_group() as tasks:
+            tasks.start_soon(run)
+            await started.wait()
+            results["refused"] = await upload(owner, second, b"another file")
+            go_on.set()
+
+    assert results["refused"].status_code == 429
+    assert results["refused"].json() == {
+        "detail": "Too many uploads at once. Wait for one to finish."
+    }
+    assert results[first].status_code == 200
+    # The finished upload gave its slot back.
+    assert (await upload(owner, second, b"another file")).status_code == 200
+
+
+async def test_uploads_at_once_are_capped_in_total(
+    owner: AsyncClient, stranger: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(service, "UPLOADS_TOTAL", Slots("uploads_total", limit=1, ttl=60))
+    mine, theirs = await create_draft(owner), await create_draft(stranger)
+    results: dict[str, Response] = {}
+    started, go_on, run = await hold_an_upload(owner, mine, results)
+
+    with anyio.fail_after(10):
+        async with anyio.create_task_group() as tasks:
+            tasks.start_soon(run)
+            await started.wait()
+            results["refused"] = await upload(stranger, theirs, b"their file")
+            go_on.set()
+
+    assert results["refused"].status_code == 429
+    assert (await upload(stranger, theirs, b"their file")).status_code == 200
+
+
+async def test_a_failed_upload_gives_its_slot_back(
+    owner: AsyncClient, monkeypatch: pytest.MonkeyPatch, draft: Video
+) -> None:
+    monkeypatch.setattr(service, "UPLOADS_PER_USER", Slots("uploads_user", limit=1, ttl=60))
+
+    async def broken_body() -> AsyncIterator[bytes]:
+        yield b"x" * 1024
+        raise ConnectionResetError("client went away")
+
+    with pytest.raises(ConnectionResetError):
+        await upload(owner, draft.public_id, broken_body())
+
+    assert (await upload(owner, draft.public_id, b"the whole file")).status_code == 200
+
+
+async def test_upload_over_the_deadline_is_refused(
+    owner: AsyncClient,
+    db: AsyncSession,
+    s3: S3Client,
+    queued: list[Queued],
+    monkeypatch: pytest.MonkeyPatch,
+    draft: Video,
+) -> None:
+    monkeypatch.setattr(service, "UPLOAD_DEADLINE_SEC", 0.5)
+
+    async def trickle() -> AsyncIterator[bytes]:
+        yield b"x" * PART_SIZE  # one part already in MinIO
+        await anyio.sleep_forever()  # then nothing more: a client holding the slot
+        yield b""  # pragma: no cover
+
+    with anyio.fail_after(10):
+        response = await upload(owner, draft.public_id, trickle())
+
+    assert response.status_code == 408
+    await assert_still_a_draft(db, s3, queued, draft)
+    assert (await upload(owner, draft.public_id, b"the whole file")).status_code == 200

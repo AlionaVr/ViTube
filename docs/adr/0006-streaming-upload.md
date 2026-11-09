@@ -24,6 +24,14 @@
   | `MAX_VIDEO_DURATION_SEC` | 1800 |
   | `MAX_VIDEO_HEIGHT` | 720 (taller videos are downscaled) |
 
+- Fixed limits against memory and slot exhaustion (in code):
+    - at most 10 drafts still waiting for a file per user, counted over a day (abandoned ones stop counting);
+    - 3 uploads at once per user and 32 in total, as Redis slots: freed when the upload ends however it ends, and by
+      expiry (5 min without bytes) if the api dies. Per account, not per IP, so a NAT doesn't share them;
+    - 2 h per upload (1 GiB at ~1.2 Mbit/s), so a trickling client can't hold a slot;
+    - nginx: 10 uploads at once per IP, generous for offices behind NAT;
+    - the api has a 1 GB memory limit (32 uploads × 16 MiB is ~512 MiB).
+  Per-user disk quotas are a later stage.
 - Checked in layers:
     1. frontend `file.size` (UX only);
     2. nginx `client_max_body_size` (413), from the same `MAX_UPLOAD_SIZE_MB`;

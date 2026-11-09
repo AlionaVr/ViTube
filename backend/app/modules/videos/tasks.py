@@ -3,9 +3,17 @@
 import asyncio
 from uuid import UUID
 
+from celery.signals import worker_init
+
 from app.modules.videos import pipeline
 from app.modules.videos.service import PROCESS_TASK
 from app.worker.celery_app import celery_app
+
+
+@worker_init.connect
+def clear_scratch(**_: object) -> None:
+    """Before any job runs: a killed worker leaves its work files on the volume."""
+    pipeline.clear_scratch()
 
 
 @celery_app.task(name=PROCESS_TASK)

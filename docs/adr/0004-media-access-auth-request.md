@@ -15,6 +15,8 @@ up app workers, so nginx streams and the app only decides.
 - No cache: every request, each Range request too, is checked, so revoked access applies to the next request.
   Browsers get `Cache-Control: private, no-cache`: a kept copy is checked again before use. *(Amended 2026-11-07:
   was a 30 s cache of positive answers.)*
+- Same origin only: no CORS headers, `Cross-Origin-Resource-Policy: same-origin`. MinIO's error bodies (XML with
+  bucket and key names) never reach the browser.
 - Only processed files are served (`videos/`, `thumbs/`), never originals. MinIO allows anonymous reads of these
   two prefixes; only nginx can reach it, over the internal `media` network. `/internal/*` is not reachable from
   outside.

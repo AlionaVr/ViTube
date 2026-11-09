@@ -43,6 +43,10 @@ function transferError(error: unknown, limits: UploadLimits | undefined): string
   if (error instanceof ApiError && error.status === 413 && limits) {
     return `This file is larger than ${formatSize(limits.max_size_bytes)}.`
   }
+  // The API's slots or nginx's per-IP limit (HTML, no text of ours): the same advice.
+  if (error instanceof ApiError && error.status === 429) {
+    return 'Too many uploads at once. Wait for one to finish.'
+  }
   if (error instanceof ApiError && error.status !== 0) return error.message
   return 'Upload failed. Check your connection and try again.'
 }

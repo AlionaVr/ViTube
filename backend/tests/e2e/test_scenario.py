@@ -136,6 +136,14 @@ def test_upload_processing_playback_and_access(
     image = owner.get(thumbnail)
     assert (image.status_code, image.headers["content-type"]) == (200, "image/jpeg")
 
+    # Same origin only; MinIO's error bodies (bucket and key names) don't reach the browser.
+    cross = owner.get(media, headers={"Origin": "https://evil.example", "Range": "bytes=0-99"})
+    assert "access-control-allow-origin" not in cross.headers
+    assert cross.headers["cross-origin-resource-policy"] == "same-origin"
+    beyond = owner.get(media, headers={"Range": "bytes=999999999-"})
+    assert beyond.status_code == 416
+    assert b"<Error>" not in beyond.content
+
     # Private: a guest must sign in, a stranger learns nothing; originals are never served.
     assert guest.get(page).status_code == 404
     assert guest.get(media).status_code == 401

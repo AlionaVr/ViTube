@@ -1,13 +1,16 @@
 """Video processing in the worker (ADR 0003): probe, transcode to MP4, thumbnail, store, ready.
 
-Each step trusts nothing about the upload: ffmpeg reads it with a fixed list of formats and only
-local files, so a playlist posing as a video can't make it fetch URLs or read other files.
+Each step trusts nothing about the upload. ffmpeg reads it with fixed lists of formats and decoders,
+local files only and a pixel cap, and runs without the worker's secrets in its environment.
 """
 
 import asyncio
+import contextlib
 import json
 import logging
 import math
+import os
+import shutil
 import tempfile
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -28,15 +31,28 @@ from app.modules.videos.models import Video, VideoStatus
 log = logging.getLogger(__name__)
 
 MAX_ATTEMPTS = 3  # then FAILED: a file that kills the worker can't loop forever
-FFMPEG_TIMEOUT_SEC = 2 * 3600
+JOB_TIMEOUT = timedelta(hours=2)  # the whole job: download, ffmpeg runs, upload
 # The sweeper (ADR 0003): a lost queue message, and a job whose worker is gone.
 UPLOADED_GRACE = timedelta(minutes=5)
-PROCESSING_LEASE = timedelta(hours=3)  # longer than any run: ffmpeg's timeout plus transfers
+PROCESSING_LEASE = timedelta(hours=3)  # longer than a job may run, so its worker is gone
 # Demuxers for real video containers. No playlists (hls, concat), images or raw streams.
 INPUT_FORMATS = "mov,matroska,avi,flv,mpegts,mpeg,asf,ogg"
-SAFE_INPUT = ["-protocol_whitelist", "file", "-format_whitelist", INPUT_FORMATS]
-MAX_PIXELS = 7680 * 4320  # 8K
+# Decoders for what phones, cameras and screen recorders produce: fewer parsers of untrusted bytes.
+DECODERS = (
+    "h264,hevc,vp8,vp9,av1,libdav1d,mpeg4,msmpeg4v3,mpeg2video,mpeg1video,prores,mjpeg,vc1,wmv3,"
+    "theora,aac,mp3float,mp3,opus,vorbis,ac3,eac3,flac,alac,pcm_s16le,pcm_s16be,pcm_s24le,"
+    "pcm_f32le,wmav2"
+)
+MAX_PIXELS = 7680 * 4320  # 8K; the decoder refuses bigger frames, wherever they are in the file
+SAFE_INPUT = [
+    "-protocol_whitelist", "file",
+    "-format_whitelist", INPUT_FORMATS,
+    "-codec_whitelist", DECODERS,
+    "-max_pixels", str(MAX_PIXELS),
+]  # fmt: skip
+TOOL_ENV = {"PATH": os.environ.get("PATH", "/usr/bin:/bin")}  # no DB, Redis or S3 secrets
 THUMBNAIL_HEIGHT = 360
+SCRATCH_PREFIX = "job-"
 
 
 class BadVideo(Exception):
@@ -65,11 +81,13 @@ async def process(video_id: UUID) -> None:
     """Process one uploaded video. Safe to run twice: only the run that claims it works."""
     async with _session() as db, open_storage(get_storage_settings()) as storage:
         attempt = await videos.claim(db, video_id)
+        video = await db.get_one(Video, video_id) if attempt is not None else None
+        # Nothing stays open while ffmpeg runs: the DB ends transactions idle for 60 s.
         await db.commit()
-        if attempt is None:
+        if attempt is None or video is None:
             log.info("Video %s is not waiting for processing; skipped", video_id)
             return
-        await _run(db, storage, await db.get_one(Video, video_id), attempt)
+        await _run(db, storage, video, attempt)
 
 
 async def take_back_stuck() -> list[UUID]:
@@ -83,10 +101,23 @@ async def take_back_stuck() -> list[UUID]:
     return back + waiting
 
 
+def clear_scratch() -> None:
+    """Remove work dirs a killed job left behind. Called when the worker starts."""
+    for path in get_video_settings().scratch_dir.glob(f"{SCRATCH_PREFIX}*"):
+        shutil.rmtree(path, ignore_errors=True)
+
+
 async def _run(db: AsyncSession, storage: Storage, video: Video, attempt: int) -> None:
     video_id = video.id
+    deadline = asyncio.timeout(JOB_TIMEOUT.total_seconds())
     try:
-        duration = await _transcode(storage, video)
+        try:
+            async with deadline:
+                duration = await _transcode(storage, video)
+        except TimeoutError:
+            if deadline.expired():  # ours, not a library's own timeout
+                raise BadVideo("Processing took too long") from None
+            raise
     except BadVideo as error:
         log.info("Video %s failed: %s", video_id, error)
         await videos.finish(
@@ -110,20 +141,21 @@ async def _run(db: AsyncSession, storage: Storage, video: Video, attempt: int) -
 async def _transcode(storage: Storage, video: Video) -> int:
     """Original → MP4 + thumbnail in MinIO. Returns the duration in whole seconds."""
     settings = get_video_settings()
-    with tempfile.TemporaryDirectory(dir=settings.scratch_dir) as work:
+    with tempfile.TemporaryDirectory(prefix=SCRATCH_PREFIX, dir=settings.scratch_dir) as work:
         original, output, thumbnail = (Path(work) / f for f in ("original", "out.mp4", "thumb.jpg"))
         await storage.download(video.original_key, original)
         probe = await _probe(original)
         if probe.duration > settings.max_video_duration_sec:
             raise BadVideo(f"The video is longer than {_minutes(settings.max_video_duration_sec)}")
-        if probe.width * probe.height > MAX_PIXELS:
+        if probe.width * probe.height > MAX_PIXELS:  # quick answer; -max_pixels covers the rest
             raise BadVideo("The video resolution is above 8K")
         # Flag-value pairs on one line each.
         # fmt: off
         await _ffmpeg(
             *SAFE_INPUT,
             "-i", str(original),
-            "-map", "0:v:0", "-map", "0:a:0?",  # the first video and audio streams, if any
+            # The probed stream: "V" skips cover pictures. Audio, if any.
+            "-map", "0:V:0", "-map", "0:a:0?",
             # Height ≤ the limit, never upscaled; even sizes for H.264 4:2:0.
             "-vf", f"scale=-2:'min({settings.max_video_height},trunc(ih/2)*2)'",
             "-fpsmax", "60",
@@ -151,23 +183,16 @@ async def _transcode(storage: Storage, video: Video) -> int:
 
 
 async def _probe(path: Path) -> Probe:
-    entries = "format=duration:stream=codec_type,width,height:stream_disposition=attached_pic"
     # fmt: off
     out = await _run_tool(
         "ffprobe", "-v", "error", *SAFE_INPUT,
-        "-show_entries", entries,
+        "-select_streams", "V:0",  # the first real video stream, not a cover picture
+        "-show_entries", "format=duration:stream=width,height",
         "-of", "json", str(path),
     )
     # fmt: on
     info = json.loads(out)
-    video = next(
-        (
-            s
-            for s in info.get("streams", [])
-            if s.get("codec_type") == "video" and not s.get("disposition", {}).get("attached_pic")
-        ),
-        None,
-    )
+    video = next(iter(info.get("streams", [])), None)
     try:
         duration = float(info["format"]["duration"])
     except (KeyError, ValueError):
@@ -183,19 +208,21 @@ async def _ffmpeg(*args: str) -> None:
 
 async def _run_tool(*command: str) -> str:
     process = await asyncio.create_subprocess_exec(
-        *command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+        *command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, env=TOOL_ENV
     )
     try:
-        out, err = await asyncio.wait_for(process.communicate(), FFMPEG_TIMEOUT_SEC)
-    except TimeoutError:
-        process.kill()
+        out, err = await process.communicate()
+    except BaseException:  # the job's deadline: don't leave ffmpeg running
+        with contextlib.suppress(ProcessLookupError):  # it may have just exited
+            process.kill()
         await process.wait()
-        raise BadVideo("Processing took too long") from None
+        raise
     if process.returncode != 0:
-        # The details go to the log only: they may name paths and internals.
-        log.warning("%s exited with %s: %s", command[0], process.returncode, err.decode()[-2000:])
+        # The details go to the log only: they may name paths and internals. %r: one line.
+        tail = err.decode(errors="replace")[-2000:]
+        log.warning("%s exited with %s: %r", command[0], process.returncode, tail)
         raise BadVideo("The file is not a video or is damaged")
-    return out.decode()
+    return out.decode(errors="replace")  # odd bytes in tags must not look like a crash
 
 
 def _minutes(seconds: int) -> str:

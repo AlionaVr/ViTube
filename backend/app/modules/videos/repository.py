@@ -29,6 +29,16 @@ async def has_access(db: AsyncSession, video_id: UUID, user_id: UUID) -> bool:
     return bool(await db.scalar(query))
 
 
+async def count_open_drafts(db: AsyncSession, owner_id: UUID, *, within: timedelta) -> int:
+    """The owner's drafts still waiting for a file, made in the last `within`."""
+    query = select(func.count()).where(
+        Video.owner_id == owner_id,
+        Video.status == VideoStatus.UPLOADING,
+        Video.created_at > func.now() - within,
+    )
+    return await db.scalar(query) or 0
+
+
 async def grant_access(db: AsyncSession, video_id: UUID, user_id: UUID) -> None:
     statement = insert(VideoAccess).values(video_id=video_id, user_id=user_id)
     await db.execute(statement.on_conflict_do_nothing())  # granting twice is fine
