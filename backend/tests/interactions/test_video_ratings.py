@@ -9,6 +9,7 @@ from httpx2 import AsyncClient, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.rate_limit import RateLimit
 from app.modules.reactions import service
 from app.modules.reactions.models import VideoReaction
 from app.modules.videos.models import Video, VideoStatus, Visibility
@@ -18,6 +19,7 @@ from tests.interactions.conftest import (
     MakeViewers,
     csrf,
     meet_after,
+    posted,
     user_by_email,
 )
 from tests.videos.factories import get_video, grant, make_video
@@ -221,3 +223,25 @@ async def test_unfinished_video_cannot_be_rated_even_by_its_owner(
     page = await owner.get(f"/api/videos/{video.public_id}")
     assert page.status_code == 200
     assert (page.json()["status"], page.json()["my_rating"]) == (status.value, "none")
+
+
+async def test_ratings_are_limited_per_account(
+    owner: AsyncClient,
+    viewer: AsyncClient,
+    video: Video,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(service, "RATINGS_PER_USER", RateLimit("rating", limit=3, window=60))
+    comment = (await posted(owner, video, "Root"))["id"]
+    for rating in ("like", "none", "like"):
+        await rated(viewer, video, rating)
+
+    too_many = await rate(viewer, video, "none")
+    assert too_many.status_code == 429
+    assert int(too_many.headers["Retry-After"]) > 0
+    # One budget for videos and comments; other accounts have their own.
+    on_comment = await viewer.put(
+        f"/api/comments/{comment}/rating", json={"rating": "like"}, headers=csrf(viewer)
+    )
+    assert on_comment.status_code == 429
+    assert (await rate(owner, video, "like")).status_code == 200

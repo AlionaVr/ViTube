@@ -10,8 +10,16 @@ from app.modules.reactions.schemas import Rating
 from app.modules.users.models import User
 from app.modules.users.schemas import ChannelSummary
 
+# No control characters but tab and newlines: Postgres refuses NUL (a 500, not a 422),
+# and the others only garble the page.
 CommentText = Annotated[
-    str, StringConstraints(strip_whitespace=True, min_length=1, max_length=TEXT_MAX)
+    str,
+    StringConstraints(
+        strip_whitespace=True,
+        min_length=1,
+        max_length=TEXT_MAX,
+        pattern=r"^[^\x00-\x08\x0b\x0c\x0e-\x1f\x7f]*$",
+    ),
 ]
 
 

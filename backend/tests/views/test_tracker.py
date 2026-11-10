@@ -79,6 +79,14 @@ async def test_short_video_threshold_is_its_length(redis: Redis, clock: Clock) -
     assert await tracker.finish(redis, VIDEO, GUEST, 10)
 
 
+async def test_sub_second_video_still_needs_playback(redis: Redis, clock: Clock) -> None:
+    await tracker.start(redis, VIDEO, GUEST)
+
+    assert not await tracker.finish(redis, VIDEO, GUEST, 0)  # 0: shorter than a second
+    clock.advance(tracker.MIN_WATCH_SECONDS / tracker.MAX_SPEED)
+    assert await tracker.finish(redis, VIDEO, GUEST, 0)
+
+
 async def test_unknown_duration_needs_the_full_threshold(redis: Redis, clock: Clock) -> None:
     await tracker.start(redis, VIDEO, GUEST)
     clock.advance(WAIT - 0.1)

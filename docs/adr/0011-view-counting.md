@@ -8,7 +8,7 @@ calls the API. Many people can share one IP (NAT).
 **Decision.**
 
 - A view needs playback. The client reports `start` when playback begins and `finish` after the threshold:
-  min(30 s, video length). The server stores the start time in Redis and counts `finish` only if at least
+  min(30 s, video length), at least 1 s (lengths round down: a sub-second video has 0). The server stores the start time in Redis and counts `finish` only if at least
   threshold / 2 has passed (the player's top speed is 2x).
 - One view per viewer and video in 24 h: Redis `SET NX EX`, so of parallel requests exactly one counts.
 - The viewer is the user id when signed in, whatever the IP, and the IP for guests. Keys are hashed.

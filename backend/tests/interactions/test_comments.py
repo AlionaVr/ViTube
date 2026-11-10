@@ -109,7 +109,11 @@ async def test_guest_reads_but_cannot_write(
     assert await comment_count(db, video) == 0
 
 
-@pytest.mark.parametrize("text", ["", "  \n\t ", "x" * (TEXT_MAX + 1)])
+@pytest.mark.parametrize(
+    "text",
+    ["", "  \n\t ", "x" * (TEXT_MAX + 1), "a\x00b", "a\x1b[31mred"],
+    ids=["empty", "blank", "too-long", "nul", "terminal-escape"],
+)
 async def test_bad_text_is_refused(
     viewer: AsyncClient, video: Video, db: AsyncSession, text: str
 ) -> None:
@@ -119,6 +123,12 @@ async def test_bad_text_is_refused(
 
 async def test_longest_text_is_taken(viewer: AsyncClient, video: Video) -> None:
     assert (await post(viewer, video, "x" * TEXT_MAX)).status_code == 201
+
+
+async def test_tabs_and_newlines_are_kept(viewer: AsyncClient, video: Video) -> None:
+    text = "Line one\n\tline two\r\nend"
+
+    assert (await posted(viewer, video, f"  {text}  "))["text"] == text
 
 
 async def test_comment_needs_the_csrf_token(viewer: AsyncClient, video: Video) -> None:

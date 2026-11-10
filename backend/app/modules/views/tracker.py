@@ -11,6 +11,8 @@ from uuid import UUID
 from redis.asyncio import Redis
 
 WATCH_SECONDS = 30  # playback that makes a view, or the whole video if it is shorter
+# Durations round down, so a sub-second video has 0: it still needs a moment of playback.
+MIN_WATCH_SECONDS = 1
 MAX_SPEED = 2  # the player's fastest rate: 30 s of video can play in 15 s
 VIEW_WINDOW = 24 * 60 * 60  # one view per viewer and video in this many seconds
 START_TTL = 6 * 60 * 60  # a start older than this is forgotten
@@ -41,6 +43,7 @@ async def finish(redis: Redis, video_id: UUID, viewer: str, duration_sec: int | 
     if started is None:
         return False
     threshold = WATCH_SECONDS if duration_sec is None else min(WATCH_SECONDS, duration_sec)
+    threshold = max(threshold, MIN_WATCH_SECONDS)
     if now() - float(started) < threshold / MAX_SPEED:
         return False
     # NX: of parallel requests exactly one sets the key, so a view counts once.
