@@ -40,7 +40,9 @@ async def rated(client: AsyncClient, video: Video, rating: str) -> dict[str, obj
 async def stored(db: AsyncSession, video: Video) -> tuple[int, list[int]]:
     """The committed like_count and the stored ratings of the video."""
     like_count = (await get_video(db, video.public_id)).like_count
-    values = await db.scalars(select(VideoReaction.value).where(VideoReaction.video_id == video.id))
+    values = await db.scalars(
+        select(VideoReaction.value).where(VideoReaction.target_id == video.id)
+    )
     return like_count, sorted(values)
 
 
@@ -83,7 +85,7 @@ async def test_rated_at_moves_only_when_the_rating_changes(
     viewer: AsyncClient, video: Video, db: AsyncSession
 ) -> None:
     async def rated_at() -> datetime:
-        query = select(VideoReaction.rated_at).where(VideoReaction.video_id == video.id)
+        query = select(VideoReaction.rated_at).where(VideoReaction.target_id == video.id)
         return (await db.execute(query)).scalar_one()
 
     await rated(viewer, video, "like")

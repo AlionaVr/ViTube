@@ -491,6 +491,60 @@
         }
       }
     },
+    "/api/comments/{comment_id}/rating": {
+      "put": {
+        "tags": [
+          "ratings"
+        ],
+        "summary": "Like or dislike a comment",
+        "description": "\"none\" takes the rating back. Sending the same rating again changes nothing.",
+        "operationId": "rate_comment_api_comments__comment_id__rating_put",
+        "parameters": [
+          {
+            "name": "comment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Comment Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RatingIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RatingOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/videos/{public_id}/comments": {
       "get": {
         "tags": [
@@ -809,6 +863,9 @@
             "type": "integer",
             "title": "Like Count"
           },
+          "my_rating": {
+            "$ref": "#/components/schemas/Rating"
+          },
           "reply_count": {
             "type": "integer",
             "title": "Reply Count"
@@ -822,6 +879,7 @@
           "text",
           "published_at",
           "like_count",
+          "my_rating",
           "reply_count"
         ],
         "title": "CommentOut"

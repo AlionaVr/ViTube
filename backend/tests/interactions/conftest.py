@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 from fastapi import FastAPI
-from httpx2 import ASGITransport, AsyncClient
+from httpx2 import ASGITransport, AsyncClient, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -39,6 +39,45 @@ def csrf(client: AsyncClient) -> dict[str, str]:
 async def signup(client: AsyncClient, email: str) -> None:
     response = await client.post("/api/auth/signup", json={"email": email, "password": PASSWORD})
     assert response.status_code == 201
+
+
+# --- Comments ---
+
+
+async def post(
+    client: AsyncClient, video: Video, text: str = "Nice video", parent_id: object = None
+) -> Response:
+    body = {"text": text} | ({"parent_id": str(parent_id)} if parent_id else {})
+    return await client.post(
+        f"/api/videos/{video.public_id}/comments", json=body, headers=csrf(client)
+    )
+
+
+async def posted(
+    client: AsyncClient, video: Video, text: str = "Nice video", parent_id: object = None
+) -> dict[str, object]:
+    response = await post(client, video, text, parent_id)
+    assert response.status_code == 201
+    return response.json()
+
+
+async def comments_of(
+    client: AsyncClient, video: Video, sort: str = "top", cursor: str | None = None
+) -> Response:
+    params = {"sort": sort} | ({"cursor": cursor} if cursor else {})
+    return await client.get(f"/api/videos/{video.public_id}/comments", params=params)
+
+
+async def replies_to(
+    client: AsyncClient, comment_id: object, cursor: str | None = None
+) -> Response:
+    params = {"cursor": cursor} if cursor else {}
+    return await client.get(f"/api/comments/{comment_id}/replies", params=params)
+
+
+def ids(response: Response) -> list[str]:
+    assert response.status_code == 200
+    return [item["id"] for item in response.json()["items"]]
 
 
 def meet_after(

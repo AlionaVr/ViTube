@@ -1,5 +1,6 @@
 """Comment rules. The service commits, like @Transactional."""
 
+from collections.abc import Sequence
 from typing import Annotated
 from uuid import UUID
 
@@ -10,7 +11,11 @@ from app.core.errors import NotFound
 from app.core.pagination import Page, decode_cursor, split_page
 from app.modules.comments import repository as comments
 from app.modules.comments.models import Comment
+from app.modules.comments.repository import CommentRow
 from app.modules.comments.schemas import CommentIn, CommentOut, CommentSort
+from app.modules.reactions import repository as reactions
+from app.modules.reactions.models import CommentReaction
+from app.modules.reactions.schemas import Rating
 from app.modules.users.models import User
 from app.modules.videos import repository as videos
 from app.modules.videos.interactions import get_ready, is_ready
@@ -33,19 +38,17 @@ async def list_comments(
         before = decode_cursor(cursor, tuple[UUID])[0] if cursor else None
         rows = await comments.list_newest(db, video.id, before=before, limit=PAGE_SIZE + 1)
         page, next_cursor = split_page(rows, PAGE_SIZE, lambda row: (row[0].id,))
-    items = [CommentOut.of(comment, author, video.owner_id) for comment, author in page]
-    return Page(items=items, next_cursor=next_cursor)
+    return Page(items=await _items(db, user, page, video), next_cursor=next_cursor)
 
 
 async def list_replies(
     db: AsyncSession, user: User | None, comment_id: UUID, cursor: str | None
 ) -> Page[CommentOut]:
-    root, video = await _get_readable(db, user, comment_id)
+    root, video = await get_readable(db, user, comment_id)
     after = decode_cursor(cursor, tuple[UUID])[0] if cursor else None
     rows = await comments.list_replies(db, root.id, after=after, limit=PAGE_SIZE + 1)
     page, next_cursor = split_page(rows, PAGE_SIZE, lambda row: (row[0].id,))
-    items = [CommentOut.of(comment, author, video.owner_id) for comment, author in page]
-    return Page(items=items, next_cursor=next_cursor)
+    return Page(items=await _items(db, user, page, video), next_cursor=next_cursor)
 
 
 async def add_comment(db: AsyncSession, user: User, public_id: str, data: CommentIn) -> CommentOut:
@@ -69,7 +72,7 @@ async def add_comment(db: AsyncSession, user: User, public_id: str, data: Commen
     return CommentOut.of(comment, user, video.owner_id)
 
 
-async def _get_readable(
+async def get_readable(
     db: AsyncSession, user: User | None, comment_id: UUID
 ) -> tuple[Comment, Video]:
     """The comment and its video, or NotFound if either is missing or hidden from the viewer."""
@@ -78,3 +81,14 @@ async def _get_readable(
     if comment is None or video is None or not await is_ready(db, user, video):
         raise NotFound("Comment not found")
     return comment, video
+
+
+async def _items(
+    db: AsyncSession, user: User | None, page: Sequence[CommentRow], video: Video
+) -> list[CommentOut]:
+    ids = [comment.id for comment, _ in page]
+    mine = await reactions.get_values(db, CommentReaction, ids, user.id) if user and ids else {}
+    return [
+        CommentOut.of(comment, author, video.owner_id, Rating.of(mine.get(comment.id)))
+        for comment, author in page
+    ]

@@ -1,4 +1,6 @@
-"""Likes and dislikes."""
+"""Likes and dislikes of videos and comments."""
+
+from uuid import UUID
 
 from fastapi import APIRouter
 
@@ -21,3 +23,15 @@ async def rate_video(
     public_id: PublicId, body: RatingIn, user: CurrentUser, db: DbSession
 ) -> RatingOut:
     return await service.rate_video(db, user, public_id, body.rating)
+
+
+@router.put(
+    "/comments/{comment_id}/rating",
+    response_model=RatingOut,
+    summary="Like or dislike a comment",
+    description='"none" takes the rating back. Sending the same rating again changes nothing.',
+)
+async def rate_comment(
+    comment_id: UUID, body: RatingIn, user: CurrentUser, db: DbSession
+) -> RatingOut:
+    return await service.rate_comment(db, user, comment_id, body.rating)

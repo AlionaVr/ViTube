@@ -198,6 +198,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/comments/{comment_id}/rating": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Like or dislike a comment
+         * @description "none" takes the rating back. Sending the same rating again changes nothing.
+         */
+        put: operations["rate_comment_api_comments__comment_id__rating_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/videos/{public_id}/comments": {
         parameters: {
             query?: never;
@@ -306,6 +326,7 @@ export interface components {
             published_at: string;
             /** Like Count */
             like_count: number;
+            my_rating: components["schemas"]["Rating"];
             /** Reply Count */
             reply_count: number;
         };
@@ -869,6 +890,41 @@ export interface operations {
             path: {
                 /** @description Public video id */
                 public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RatingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RatingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rate_comment_api_comments__comment_id__rating_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comment_id: string;
             };
             cookie?: never;
         };

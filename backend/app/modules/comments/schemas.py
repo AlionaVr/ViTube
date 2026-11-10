@@ -6,6 +6,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field, StringConstraints
 
 from app.modules.comments.models import TEXT_MAX, Comment
+from app.modules.reactions.schemas import Rating
 from app.modules.users.models import User
 from app.modules.users.schemas import ChannelSummary
 
@@ -33,10 +34,13 @@ class CommentOut(BaseModel):
     text: str
     published_at: datetime
     like_count: int
+    my_rating: Rating
     reply_count: int
 
     @classmethod
-    def of(cls, comment: Comment, author: User, video_owner_id: UUID) -> "CommentOut":
+    def of(
+        cls, comment: Comment, author: User, video_owner_id: UUID, my_rating: Rating = Rating.NONE
+    ) -> "CommentOut":
         return cls(
             id=comment.id,
             author=ChannelSummary.of(author),
@@ -44,5 +48,6 @@ class CommentOut(BaseModel):
             text=comment.text,
             published_at=comment.created_at,
             like_count=comment.like_count,
+            my_rating=my_rating,
             reply_count=comment.reply_count,
         )
