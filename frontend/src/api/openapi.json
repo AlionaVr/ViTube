@@ -733,6 +733,84 @@
         }
       }
     },
+    "/api/videos/{public_id}/views/start": {
+      "post": {
+        "tags": [
+          "views"
+        ],
+        "summary": "Playback started",
+        "description": "Send when playback begins. A later `views` call counts only after enough time.",
+        "operationId": "start_view_api_videos__public_id__views_start_post",
+        "parameters": [
+          {
+            "name": "public_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{11}$",
+              "description": "Public video id",
+              "title": "Public Id"
+            },
+            "description": "Public video id"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/videos/{public_id}/views": {
+      "post": {
+        "tags": [
+          "views"
+        ],
+        "summary": "Playback reached the view threshold",
+        "description": "Send after min(30 s, video length) of playback. Counts once per viewer and video a day; the server checks the time since `views/start` itself.",
+        "operationId": "count_view_api_videos__public_id__views_post",
+        "parameters": [
+          {
+            "name": "public_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{11}$",
+              "description": "Public video id",
+              "title": "Public Id"
+            },
+            "description": "Public video id"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/health": {
       "get": {
         "tags": [

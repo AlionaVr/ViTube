@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 from fastapi import FastAPI
-from httpx2 import ASGITransport, AsyncClient, Response
+from httpx2 import ASGITransport, AsyncClient, Cookies, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,11 +23,13 @@ VIEWER_EMAIL = "viewer@example.com"
 MakeViewers = Callable[[int], Awaitable[list[AsyncClient]]]
 
 
-def browser(app: FastAPI, ip: str) -> AsyncClient:
-    """A client like another browser: its own IP and cookies."""
+def browser(app: FastAPI, ip: str, cookies: Cookies | None = None) -> AsyncClient:
+    """A client like another browser: its own IP and cookies (or a copy of another's session)."""
     transport = ASGITransport(app=app, client=(ip, 1234))
     headers = {"Origin": "http://test"}  # as a browser sends it from our pages
-    return AsyncClient(transport=transport, base_url="http://test", headers=headers)
+    return AsyncClient(
+        transport=transport, base_url="http://test", headers=headers, cookies=cookies
+    )
 
 
 def csrf(client: AsyncClient) -> dict[str, str]:
