@@ -19,13 +19,20 @@ from app.core.errors import Conflict, DomainError, NotFound, PayloadTooLarge, Re
 from app.core.rate_limit import RateLimit
 from app.core.slots import Slots, hold
 from app.core.storage import Storage
+from app.modules.reactions import service as reactions
 from app.modules.users import repository as users
 from app.modules.users.models import User
 from app.modules.videos import repository as videos
 from app.modules.videos.access import get_viewable
 from app.modules.videos.config import get_video_settings
 from app.modules.videos.models import Video, VideoStatus
-from app.modules.videos.schemas import UploadLimits, VideoCreate, VideoOut, VideoUpdate
+from app.modules.videos.schemas import (
+    UploadLimits,
+    VideoCreate,
+    VideoDetail,
+    VideoOut,
+    VideoUpdate,
+)
 from app.worker.celery_app import celery_app
 
 log = logging.getLogger(__name__)
@@ -76,9 +83,10 @@ async def create_draft(db: AsyncSession, redis: Redis, user: User, data: VideoCr
     raise RuntimeError("No free public id found")  # 2^64 ids: practically never
 
 
-async def get_video(db: AsyncSession, user: User | None, public_id: str) -> VideoOut:
+async def get_video(db: AsyncSession, user: User | None, public_id: str) -> VideoDetail:
     video = await get_viewable(db, user, public_id)
-    return VideoOut.of(video, await videos.get_owner(db, video))
+    out = VideoOut.of(video, await videos.get_owner(db, video))
+    return VideoDetail(**dict(out), my_rating=await reactions.my_rating(db, user, video.id))
 
 
 async def update_video(
