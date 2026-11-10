@@ -198,6 +198,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/videos/{public_id}/comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A video's comments, without replies */
+        get: operations["list_comments_api_videos__public_id__comments_get"];
+        put?: never;
+        /** Comment on a video or reply to a comment */
+        post: operations["add_comment_api_videos__public_id__comments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/comments/{comment_id}/replies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Replies to a comment, oldest first */
+        get: operations["list_replies_api_comments__comment_id__replies_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -239,6 +274,46 @@ export interface components {
             /** Avatar Url */
             avatar_url: string | null;
         };
+        /** CommentIn */
+        CommentIn: {
+            /** Text */
+            text: string;
+            /**
+             * Parent Id
+             * @description The comment to reply to. A reply to a reply joins its thread.
+             */
+            parent_id?: string | null;
+        };
+        /** CommentOut */
+        CommentOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            author: components["schemas"]["ChannelSummary"];
+            /**
+             * By Owner
+             * @description Written by the video's owner
+             */
+            by_owner: boolean;
+            /** Text */
+            text: string;
+            /**
+             * Published At
+             * Format: date-time
+             */
+            published_at: string;
+            /** Like Count */
+            like_count: number;
+            /** Reply Count */
+            reply_count: number;
+        };
+        /**
+         * CommentSort
+         * @enum {string}
+         */
+        CommentSort: "top" | "new";
         /**
          * Credentials
          * @description Sign in. No length rule here: it applies to new passwords only.
@@ -266,6 +341,13 @@ export interface components {
             email: string;
             /** Password */
             password: string;
+        };
+        /** Page[CommentOut] */
+        Page_CommentOut_: {
+            /** Items */
+            items: components["schemas"]["CommentOut"][];
+            /** Next Cursor */
+            next_cursor: string | null;
         };
         /**
          * Rating
@@ -803,6 +885,112 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RatingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_comments_api_videos__public_id__comments_get: {
+        parameters: {
+            query?: {
+                sort?: components["schemas"]["CommentSort"];
+                /** @description next_cursor of the last page */
+                cursor?: string | null;
+            };
+            header?: never;
+            path: {
+                /** @description Public video id */
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_CommentOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_comment_api_videos__public_id__comments_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Public video id */
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommentIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_replies_api_comments__comment_id__replies_get: {
+        parameters: {
+            query?: {
+                /** @description next_cursor of the last page */
+                cursor?: string | null;
+            };
+            header?: never;
+            path: {
+                comment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_CommentOut_"];
                 };
             };
             /** @description Validation Error */

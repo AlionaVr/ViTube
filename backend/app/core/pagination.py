@@ -2,6 +2,9 @@
 
 The cursor holds the sort key of the last item, so the next query starts right after it
 (`WHERE (a, b) < (:a, :b)`). Unlike OFFSET, new rows on top don't shift pages.
+
+Pages are exact only if a row's sort key never changes. With a changing key (e.g. like count)
+a row can move past the cursor: it is skipped, or shows twice. Clients drop repeats by id.
 """
 
 import base64
