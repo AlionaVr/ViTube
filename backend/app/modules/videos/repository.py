@@ -72,6 +72,13 @@ async def list_up_next(
     )
 
 
+async def _allow_title_typos(db: AsyncSession) -> None:
+    # SET LOCAL: this transaction only. `%>` reads the threshold from it, so its index still works.
+    await db.execute(
+        select(func.set_config("pg_trgm.word_similarity_threshold", str(TYPO_SIMILARITY), True))
+    )
+
+
 async def search(
     db: AsyncSession, words: str, *, after: tuple[float, UUID] | None, limit: int
 ) -> Sequence[RankedRow]:
@@ -79,10 +86,7 @@ async def search(
 
     Rank: full-text rank (title over description) plus how close the title is to the words.
     """
-    # SET LOCAL: this transaction only. `%>` reads the threshold from it, so its index still works.
-    await db.execute(
-        select(func.set_config("pg_trgm.word_similarity_threshold", str(TYPO_SIMILARITY), True))
-    )
+    await _allow_title_typos(db)
     query = func.websearch_to_tsquery(literal(SEARCH_CONFIG, REGCONFIG), words)
     rank = func.ts_rank(Video.search_vector, query) + func.word_similarity(words, Video.title)
     statement = _WITH_OWNER.add_columns(rank).where(
@@ -91,6 +95,20 @@ async def search(
     if after is not None:
         statement = statement.where(tuple_(rank, Video.id) < tuple_(*after))
     return (await db.execute(statement.order_by(rank.desc(), Video.id.desc()).limit(limit))).all()
+
+
+async def suggest_titles(db: AsyncSession, words: str, *, limit: int) -> list[str]:
+    """Titles of listed videos close to the words, closest first; each title once."""
+    await _allow_title_typos(db)
+    closeness = func.word_similarity(words, Video.title)
+    statement = (
+        select(Video.title, closeness)
+        .where(*LISTED, Video.title.bool_op("%>")(words))
+        .distinct()
+        .order_by(closeness.desc(), Video.title)
+        .limit(limit)
+    )
+    return list(await db.scalars(statement))
 
 
 async def listed_categories(db: AsyncSession) -> set[Category]:

@@ -230,6 +230,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/search/suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Titles of public videos close to what is typed, closest first */
+        get: operations["suggest_api_search_suggestions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/videos/{public_id}/rating": {
         parameters: {
             query?: never;
@@ -1161,6 +1178,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Page_SearchResult_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    suggest_api_search_suggestions_get: {
+        parameters: {
+            query: {
+                /** @description Words to find in titles and descriptions */
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
                 };
             };
             /** @description Validation Error */

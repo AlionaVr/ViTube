@@ -9,6 +9,7 @@ from app.modules.search.schemas import SearchResult
 from app.modules.videos import repository as videos
 
 PAGE_SIZE = 20
+SUGGESTIONS = 10
 
 
 async def search(db: AsyncSession, words: str, cursor: str | None) -> Page[SearchResult]:
@@ -18,3 +19,7 @@ async def search(db: AsyncSession, words: str, cursor: str | None) -> Page[Searc
     return Page(
         items=[SearchResult.of(video, owner) for video, owner, _ in page], next_cursor=next_cursor
     )
+
+
+async def suggest(db: AsyncSession, words: str) -> list[str]:
+    return await videos.suggest_titles(db, words, limit=SUGGESTIONS)

@@ -655,6 +655,56 @@
         }
       }
     },
+    "/api/search/suggestions": {
+      "get": {
+        "tags": [
+          "search"
+        ],
+        "summary": "Titles of public videos close to what is typed, closest first",
+        "operationId": "suggest_api_search_suggestions_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "description": "Words to find in titles and descriptions",
+              "title": "Q"
+            },
+            "description": "Words to find in titles and descriptions"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Response Suggest Api Search Suggestions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/videos/{public_id}/rating": {
       "put": {
         "tags": [
