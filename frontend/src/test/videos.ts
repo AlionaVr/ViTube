@@ -32,6 +32,7 @@ export function detail(n: number, overrides: Partial<Video> = {}): Video {
     like_count: 120,
     comment_count: 1,
     my_rating: 'none',
+    channel_terminated: false,
     ...overrides,
   }
 }

@@ -221,43 +221,6 @@ a.meta:hover {
   overflow-wrap: anywhere;
 }
 
-.reasonList {
-  margin: 16px 0 0;
-  padding: 0;
-  border: none;
-}
-
-.legend {
-  margin-bottom: 4px;
-  padding: 0;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 20px;
-}
-
-.option {
-  padding: 6px 0;
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  font-size: 14px;
-  line-height: 20px;
-  cursor: pointer;
-}
-
-.option input {
-  width: 20px;
-  height: 20px;
-  margin: 0;
-  flex: none;
-  accent-color: var(--color-text);
-}
-
-.option input:focus-visible {
-  outline: 2px solid var(--color-focus);
-  outline-offset: 2px;
-}
-
 .error {
   margin: 12px 0 0;
   color: var(--color-error);
@@ -338,25 +301,6 @@ a.meta:hover {
 .menuItem:focus-visible {
   outline: none;
   background: var(--color-hover-strong);
-}
-
-.optionWithHint {
-  align-items: flex-start;
-}
-
-.optionWithHint input {
-  margin-top: 1px;
-}
-
-.optionLabel {
-  display: block;
-}
-
-.optionHint {
-  display: block;
-  color: var(--color-text-secondary);
-  font-size: 13px;
-  line-height: 18px;
 }
 
 .reasonField {

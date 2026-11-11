@@ -121,3 +121,14 @@
   height: 24px;
   background: var(--color-divider);
 }
+
+/* ⋯ is a tonal circle, like Share next to it; the element raises it over IconButton's look. */
+button.more {
+  width: 36px;
+  height: 36px;
+  background: var(--color-tonal);
+}
+
+button.more:hover {
+  background: var(--color-tonal-hover);
+}

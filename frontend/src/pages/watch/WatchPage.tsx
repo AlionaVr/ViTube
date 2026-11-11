@@ -44,6 +44,28 @@ function NotReady({ video }: { video: Video }) {
   return <PlayerNotice title="Processing video">It will play here once it’s ready.</PlayerNotice>
 }
 
+/** The owner and moderators open a restricted video to review it: say who else can't. */
+function RestrictionNotice({ video }: { video: Video }) {
+  const [title, text] = video.channel_terminated
+    ? [
+        'Channel terminated',
+        'Only moderators can see this channel’s videos. Likes, comments and views are off until an admin reinstates the channel.',
+      ]
+    : [
+        'Hidden by a moderator',
+        'Only the channel owner and moderators can see this video. Likes, comments and views are off until a moderator restores it.',
+      ]
+  return (
+    <div className={styles.notice} role="note">
+      <Icon name="shieldPerson" />
+      <div>
+        <p className={styles.noticeTitle}>{title}</p>
+        <p className={styles.noticeText}>{text}</p>
+      </div>
+    </div>
+  )
+}
+
 function InfoSkeleton() {
   return (
     <div aria-busy="true" aria-label="Loading video">
@@ -70,6 +92,8 @@ export default function WatchPage() {
   const next = related.data?.pages[0]?.items[0]
   const notFound = video.error instanceof ApiError && video.error.status === 404
   const ready = video.data?.status === 'ready'
+  // Restricted (ADR 0009): frozen for everyone who can open it.
+  const frozen = !!video.data && (video.data.is_hidden || video.data.channel_terminated)
 
   return (
     <div className={theater ? `${styles.watch} ${styles.theater}` : styles.watch}>
@@ -87,7 +111,7 @@ export default function WatchPage() {
                 theater={theater}
                 onTheaterToggle={toggleTheater}
                 onNext={next && (() => navigate(watchUrl(next.id)))}
-                onPlayed={reportPlayed}
+                onPlayed={frozen ? undefined : reportPlayed}
               />
             ) : (
               <NotReady video={video.data} />
@@ -103,16 +127,17 @@ export default function WatchPage() {
       <div className={styles.below}>
         {video.data ? (
           <>
+            {frozen && <RestrictionNotice video={video.data} />}
             <h1 className={styles.title}>{video.data.title}</h1>
-            {/* Ratings and comments open once the video is ready. */}
-            {ready && <VideoActions video={video.data} />}
+            {/* Ratings and comments open once the video is ready, and not while it's restricted. */}
+            {ready && <VideoActions video={video.data} frozen={frozen} />}
             <Description video={video.data} />
             {!twoColumns && (
               <div className={styles.upNextInline}>
                 <UpNext videoId={id} grid />
               </div>
             )}
-            {ready && <Comments video={video.data} />}
+            {ready && !frozen && <Comments video={video.data} />}
           </>
         ) : video.isPending ? (
           <InfoSkeleton />

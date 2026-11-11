@@ -5,6 +5,7 @@ import type { ModeratedVideo, ReportReason } from '../../moderation/api'
 import { useHideVideo } from '../../moderation/hooks'
 import { REASON_LABELS, REASONS } from '../../moderation/reasons'
 import buttons from '../../styles/buttons.module.css'
+import choices from '../../styles/choices.module.css'
 import styles from './ModerationPage.module.css'
 
 export interface HideTarget {
@@ -45,10 +46,10 @@ function HideForm({ target, onDone }: { target: HideTarget; onDone: () => void }
         Only the owner and moderators will be able to open “{target.video.title}”. Its reports will
         close.
       </p>
-      <fieldset className={styles.reasonList}>
-        <legend className={styles.legend}>Rule it breaks</legend>
+      <fieldset className={choices.list}>
+        <legend className={choices.legend}>Rule it breaks</legend>
         {REASONS.map((value) => (
-          <label key={value} className={styles.option}>
+          <label key={value} className={choices.option}>
             <input
               type="radio"
               name="reason"

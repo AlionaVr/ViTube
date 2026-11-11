@@ -1578,6 +1578,11 @@ export interface components {
             created_at: string;
             channel: components["schemas"]["ChannelSummary"];
             my_rating: components["schemas"]["Rating"];
+            /**
+             * Channel Terminated
+             * @description Its channel was terminated: only moderators see it, and it is frozen
+             */
+            channel_terminated: boolean;
         };
         /** VideoOut */
         VideoOut: {

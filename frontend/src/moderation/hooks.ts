@@ -12,7 +12,9 @@ import {
   listHidden,
   listReports,
   listRestricted,
+  report,
   type ReportReason,
+  type ReportTarget,
   restoreVideo,
   setStatus,
   type UserStatus,
@@ -61,6 +63,23 @@ export function useRestrictedAccounts(status: UserStatus | null) {
     queryFn: ({ pageParam }) => listRestricted(status, pageParam),
     initialPageParam: firstPage,
     getNextPageParam: (page) => page.next_cursor,
+  })
+}
+
+/** A viewer's report; it lands in the moderators' queue. */
+export function useReport() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      target,
+      reason,
+      details,
+    }: {
+      target: ReportTarget
+      reason: ReportReason
+      details: string
+    }) => report(target, reason, details),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: moderationKeys.reports }),
   })
 }
 

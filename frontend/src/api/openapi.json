@@ -4387,6 +4387,11 @@
           },
           "my_rating": {
             "$ref": "#/components/schemas/Rating"
+          },
+          "channel_terminated": {
+            "type": "boolean",
+            "title": "Channel Terminated",
+            "description": "Its channel was terminated: only moderators see it, and it is frozen"
           }
         },
         "type": "object",
@@ -4407,7 +4412,8 @@
           "comment_count",
           "created_at",
           "channel",
-          "my_rating"
+          "my_rating",
+          "channel_terminated"
         ],
         "title": "VideoDetail",
         "description": "The watch page: the video and what this viewer did with it."

@@ -7,6 +7,32 @@ export type ReportCase = components['schemas']['ReportCase']
 export type ModeratedVideo = components['schemas']['ModeratedVideo']
 export type ReportPage = components['schemas']['Page_ReportCase_']
 
+/** What a viewer reports: a video (by its public id) or a comment. */
+export interface ReportTarget {
+  kind: 'video' | 'comment'
+  id: string
+}
+
+/** Flags it for moderators. Reporting the same target again changes nothing. */
+export async function report(
+  target: ReportTarget,
+  reason: ReportReason,
+  details: string,
+): Promise<void> {
+  const body = { reason, details }
+  await unwrap(
+    target.kind === 'video'
+      ? api.POST('/api/videos/{public_id}/report', {
+          params: { path: { public_id: target.id } },
+          body,
+        })
+      : api.POST('/api/comments/{comment_id}/report', {
+          params: { path: { comment_id: target.id } },
+          body,
+        }),
+  )
+}
+
 /** Open reports grouped by video, oldest first. Throws ApiError 403 for a non-moderator. */
 export function listReports(cursor: string | null): Promise<ReportPage> {
   return unwrap(api.GET('/api/moderation/reports', { params: { query: { cursor } } }))

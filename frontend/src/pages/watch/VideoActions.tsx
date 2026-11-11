@@ -15,6 +15,7 @@ import { channelUrl } from '../../videos/paths'
 import type { Video } from '../../videos/types'
 import { useViewer } from '../../viewer/useViewer'
 import Fireworks from './Fireworks'
+import ReportMenu from './ReportMenu'
 import ShareDialog from './ShareDialog'
 import styles from './VideoActions.module.css'
 
@@ -84,8 +85,14 @@ function RatingButtons({ video }: { video: Video }) {
   )
 }
 
-/** Channel on the left; like, dislike and Share on the right. */
-export default function VideoActions({ video }: { video: Video }) {
+/** Channel on the left; like, dislike, Share and ⋯ on the right. Frozen: the channel only. */
+export default function VideoActions({
+  video,
+  frozen = false,
+}: {
+  video: Video
+  frozen?: boolean
+}) {
   const { channel } = video
   const [sharing, setSharing] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -110,43 +117,52 @@ export default function VideoActions({ video }: { video: Video }) {
             {owner.data ? formatSubscribers(owner.data.subscriber_count) : '\u00a0'}
           </span>
         </div>
-        {owner.data && viewer.status !== 'loading' && !own && (
+        {owner.data && viewer.status !== 'loading' && !own && !frozen && (
           <SubscribeButton channel={owner.data} />
         )}
       </div>
 
-      <div className={styles.actions}>
-        <RatingButtons video={video} />
-        <button
-          type="button"
-          className={`${buttons.pill} ${buttons.tonal} ${buttons.iconLeading}`}
-          aria-haspopup="dialog"
-          onClick={() => setSharing(true)}
-        >
-          <Icon name="share" />
-          Share
-        </button>
-        <ShareDialog videoId={video.id} open={sharing} onClose={() => setSharing(false)} />
-        <SignInGate
-          title="Want to watch this again later?"
-          text="Sign in to add this video to a playlist."
-          align="end"
-          onAction={() => setSaving(true)}
-        >
-          {(props) => (
-            <button
-              type="button"
-              className={`${buttons.pill} ${buttons.tonal} ${buttons.iconLeading}`}
-              aria-haspopup="dialog"
-              {...props}
-            >
-              <Icon name={saved ? 'bookmarkFill' : 'bookmark'} />
-              {saved ? 'Saved' : 'Save'}
-            </button>
-          )}
-        </SignInGate>
-        <SaveDialog videoId={video.id} open={saving} onClose={() => setSaving(false)} />
-      </div>
+      {!frozen && (
+        <div className={styles.actions}>
+          <RatingButtons video={video} />
+          <button
+            type="button"
+            className={`${buttons.pill} ${buttons.tonal} ${buttons.iconLeading}`}
+            aria-haspopup="dialog"
+            onClick={() => setSharing(true)}
+          >
+            <Icon name="share" />
+            Share
+          </button>
+          <ShareDialog videoId={video.id} open={sharing} onClose={() => setSharing(false)} />
+          <SignInGate
+            title="Want to watch this again later?"
+            text="Sign in to add this video to a playlist."
+            align="end"
+            onAction={() => setSaving(true)}
+          >
+            {(props) => (
+              <button
+                type="button"
+                className={`${buttons.pill} ${buttons.tonal} ${buttons.iconLeading}`}
+                aria-haspopup="dialog"
+                {...props}
+              >
+                <Icon name={saved ? 'bookmarkFill' : 'bookmark'} />
+                {saved ? 'Saved' : 'Save'}
+              </button>
+            )}
+          </SignInGate>
+          <SaveDialog videoId={video.id} open={saving} onClose={() => setSaving(false)} />
+          <ReportMenu
+            target={{ kind: 'video', id: video.id }}
+            owner={channel.handle}
+            icon="moreHoriz"
+            label="More actions"
+            className={styles.more}
+          />
+        </div>
+      )}
     </div>
   )
 }

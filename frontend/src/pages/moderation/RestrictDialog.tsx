@@ -4,6 +4,7 @@ import type { Account } from '../../moderation/api'
 import Dialog from '../../components/Dialog'
 import { useSetStatus } from '../../moderation/hooks'
 import buttons from '../../styles/buttons.module.css'
+import choices from '../../styles/choices.module.css'
 import styles from './ModerationPage.module.css'
 
 const REASON_MAX = 500
@@ -52,10 +53,10 @@ function RestrictForm({ target, onDone }: { target: Account; onDone: () => void 
     >
       <h2 className={styles.dialogTitle}>Restrict @{target.handle}</h2>
       <p className={styles.dialogText}>Their sessions end at once. You can reinstate them later.</p>
-      <fieldset className={styles.reasonList}>
-        <legend className={styles.legend}>What happens</legend>
+      <fieldset className={choices.list}>
+        <legend className={choices.legend}>What happens</legend>
         {CHOICES.map((choice) => (
-          <label key={choice.status} className={`${styles.option} ${styles.optionWithHint}`}>
+          <label key={choice.status} className={`${choices.option} ${choices.withHint}`}>
             <input
               type="radio"
               name="status"
@@ -64,14 +65,14 @@ function RestrictForm({ target, onDone }: { target: Account; onDone: () => void 
               onChange={() => setStatus(choice.status)}
             />
             <span>
-              <span className={styles.optionLabel}>{choice.label}</span>
-              <span className={styles.optionHint}>{choice.hint}</span>
+              <span className={choices.label}>{choice.label}</span>
+              <span className={choices.hint}>{choice.hint}</span>
             </span>
           </label>
         ))}
       </fieldset>
       <label className={styles.reasonField}>
-        <span className={styles.legend}>Reason for the audit log</span>
+        <span className={choices.legend}>Reason for the audit log</span>
         <textarea
           value={reason}
           maxLength={REASON_MAX}

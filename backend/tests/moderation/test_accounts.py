@@ -205,7 +205,9 @@ async def test_a_terminated_channels_videos_are_gone_for_all_but_staff(
         assert await found(outsider, "dragon") == []
     assert await media_auth(viewer, video) == 403  # nginx shows 404
     assert await media_auth(guest, video) == 401
-    assert (await moderator.get(f"/api/videos/{video.public_id}")).status_code == 200
+    response = await moderator.get(f"/api/videos/{video.public_id}")
+    assert response.status_code == 200
+    assert response.json()["channel_terminated"] is True  # the page shows it frozen
     assert await media_auth(moderator, video) == 200
     path = f"/api/videos/{video.public_id}/comments"
     response = await moderator.post(path, json={"text": "Hi"}, headers=csrf(moderator))

@@ -115,6 +115,9 @@ class VideoDetail(VideoOut):
     """The watch page: the video and what this viewer did with it."""
 
     my_rating: Rating
+    channel_terminated: bool = Field(
+        description="Its channel was terminated: only moderators see it, and it is frozen"
+    )
 
 
 class AccessGrant(BaseModel):

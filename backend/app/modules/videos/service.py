@@ -149,8 +149,12 @@ async def list_categories(db: AsyncSession) -> list[Category]:
 
 async def get_video(db: AsyncSession, user: User | None, public_id: str) -> VideoDetail:
     video = await get_viewable(db, user, public_id)
-    out = VideoOut.of(video, await videos.get_owner(db, video))
-    return VideoDetail(**dict(out), my_rating=await reactions.my_rating(db, user, video.id))
+    owner = await videos.get_owner(db, video)
+    return VideoDetail(
+        **dict(VideoOut.of(video, owner)),
+        my_rating=await reactions.my_rating(db, user, video.id),
+        channel_terminated=owner.status is UserStatus.TERMINATED,
+    )
 
 
 async def update_video(

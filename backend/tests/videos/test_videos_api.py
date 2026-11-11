@@ -274,7 +274,10 @@ async def test_draft_is_created_private_and_waiting_for_its_file(client: AsyncCl
         "channel": {"handle": handle, "name": handle, "avatar_url": None},
     }
     # The watch page data adds what this viewer did with the video.
-    assert (await client.get(f"/api/videos/{body['id']}")).json() == body | {"my_rating": "none"}
+    assert (await client.get(f"/api/videos/{body['id']}")).json() == body | {
+        "my_rating": "none",
+        "channel_terminated": False,
+    }
 
 
 async def test_draft_keeps_the_given_details(owner: AsyncClient) -> None:
@@ -425,7 +428,7 @@ async def test_owner_edits_details_in_any_status(
     assert body["category"] == "music"
     assert body["status"] == status.value
     page = await owner.get(f"/api/videos/{video.public_id}")
-    assert page.json() == body | {"my_rating": "none"}
+    assert page.json() == body | {"my_rating": "none", "channel_terminated": False}
 
 
 async def test_null_and_missing_fields_are_left_as_they_are(owner: AsyncClient) -> None:
