@@ -35,6 +35,12 @@
   border-radius: 4px;
 }
 
+.subscribers {
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--color-text-secondary);
+}
+
 .actions {
   display: flex;
   align-items: center;

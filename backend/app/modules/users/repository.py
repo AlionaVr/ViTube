@@ -14,8 +14,12 @@ async def get_by_id(db: AsyncSession, user_id: UUID) -> User | None:
 
 
 async def lock(db: AsyncSession, user_id: UUID) -> None:
-    """SELECT ... FOR UPDATE: other transactions that lock this user wait until ours ends."""
-    await db.execute(select(User.id).where(User.id == user_id).with_for_update())
+    """SELECT ... FOR NO KEY UPDATE: other transactions that lock this user wait until ours ends.
+
+    Not FOR UPDATE: that would also block foreign key checks (KEY SHARE) of rows that point at
+    the user, e.g. someone subscribing to them.
+    """
+    await db.execute(select(User.id).where(User.id == user_id).with_for_update(key_share=True))
 
 
 async def get_by_email(db: AsyncSession, email: str) -> User | None:

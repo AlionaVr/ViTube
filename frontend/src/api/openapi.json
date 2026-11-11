@@ -1135,6 +1135,923 @@
         }
       }
     },
+    "/api/channels/{handle}": {
+      "get": {
+        "tags": [
+          "channels"
+        ],
+        "summary": "A channel's page header",
+        "operationId": "get_channel_api_channels__handle__get",
+        "parameters": [
+          {
+            "name": "handle",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._-]{3,30}$",
+              "description": "Channel handle, without the @",
+              "title": "Handle"
+            },
+            "description": "Channel handle, without the @"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChannelOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/channels/{handle}/videos": {
+      "get": {
+        "tags": [
+          "channels"
+        ],
+        "summary": "A channel's public videos",
+        "description": "Only public, ready videos: the same for every viewer, the owner too.",
+        "operationId": "list_videos_api_channels__handle__videos_get",
+        "parameters": [
+          {
+            "name": "handle",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._-]{3,30}$",
+              "description": "Channel handle, without the @",
+              "title": "Handle"
+            },
+            "description": "Channel handle, without the @"
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/VideoSort",
+              "default": "latest"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "next_cursor of the last page",
+              "title": "Cursor"
+            },
+            "description": "next_cursor of the last page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_VideoSummary_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/channels/{handle}/subscription": {
+      "put": {
+        "tags": [
+          "channels"
+        ],
+        "summary": "Subscribe to a channel",
+        "description": "Subscribing again changes nothing.",
+        "operationId": "subscribe_api_channels__handle__subscription_put",
+        "parameters": [
+          {
+            "name": "handle",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._-]{3,30}$",
+              "description": "Channel handle, without the @",
+              "title": "Handle"
+            },
+            "description": "Channel handle, without the @"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubscriptionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "channels"
+        ],
+        "summary": "Unsubscribe from a channel",
+        "description": "Unsubscribing again changes nothing.",
+        "operationId": "unsubscribe_api_channels__handle__subscription_delete",
+        "parameters": [
+          {
+            "name": "handle",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._-]{3,30}$",
+              "description": "Channel handle, without the @",
+              "title": "Handle"
+            },
+            "description": "Channel handle, without the @"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubscriptionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me/subscriptions": {
+      "get": {
+        "tags": [
+          "channels"
+        ],
+        "summary": "Channels you subscribed to, A to Z",
+        "operationId": "list_subscriptions_api_me_subscriptions_get",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "next_cursor of the last page",
+              "title": "Cursor"
+            },
+            "description": "next_cursor of the last page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_SubscribedChannel_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/feed/subscriptions": {
+      "get": {
+        "tags": [
+          "channels"
+        ],
+        "summary": "New public videos of the channels you subscribed to",
+        "operationId": "list_feed_api_feed_subscriptions_get",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "next_cursor of the last page",
+              "title": "Cursor"
+            },
+            "description": "next_cursor of the last page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_VideoSummary_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/playlists": {
+      "post": {
+        "tags": [
+          "playlists"
+        ],
+        "summary": "Create a playlist",
+        "operationId": "create_playlist_api_playlists_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaylistCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaylistOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/playlists/{playlist_id}": {
+      "get": {
+        "tags": [
+          "playlists"
+        ],
+        "summary": "A playlist",
+        "operationId": "get_playlist_api_playlists__playlist_id__get",
+        "parameters": [
+          {
+            "name": "playlist_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Playlist id, as in /playlist?list=<id>",
+              "title": "Playlist Id"
+            },
+            "description": "Playlist id, as in /playlist?list=<id>"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaylistOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "playlists"
+        ],
+        "summary": "Change your playlist",
+        "description": "Only the given fields change. Watch later can't be changed (400).",
+        "operationId": "update_playlist_api_playlists__playlist_id__patch",
+        "parameters": [
+          {
+            "name": "playlist_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Playlist id, as in /playlist?list=<id>",
+              "title": "Playlist Id"
+            },
+            "description": "Playlist id, as in /playlist?list=<id>"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaylistUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaylistOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "playlists"
+        ],
+        "summary": "Delete your playlist",
+        "description": "The videos stay; only the list goes. Watch later can't be deleted (400).",
+        "operationId": "delete_playlist_api_playlists__playlist_id__delete",
+        "parameters": [
+          {
+            "name": "playlist_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Playlist id, as in /playlist?list=<id>",
+              "title": "Playlist Id"
+            },
+            "description": "Playlist id, as in /playlist?list=<id>"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/playlists/{playlist_id}/items": {
+      "get": {
+        "tags": [
+          "playlists"
+        ],
+        "summary": "A playlist's videos, in order",
+        "description": "Only the videos this viewer may watch.",
+        "operationId": "list_items_api_playlists__playlist_id__items_get",
+        "parameters": [
+          {
+            "name": "playlist_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Playlist id, as in /playlist?list=<id>",
+              "title": "Playlist Id"
+            },
+            "description": "Playlist id, as in /playlist?list=<id>"
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "next_cursor of the last page",
+              "title": "Cursor"
+            },
+            "description": "next_cursor of the last page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_PlaylistItemOut_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/playlists/{playlist_id}/items/{public_id}": {
+      "put": {
+        "tags": [
+          "playlists"
+        ],
+        "summary": "Add a video to the end of your playlist",
+        "description": "Adding it again changes nothing.",
+        "operationId": "add_video_api_playlists__playlist_id__items__public_id__put",
+        "parameters": [
+          {
+            "name": "playlist_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Playlist id, as in /playlist?list=<id>",
+              "title": "Playlist Id"
+            },
+            "description": "Playlist id, as in /playlist?list=<id>"
+          },
+          {
+            "name": "public_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{11}$",
+              "description": "Public video id",
+              "title": "Public Id"
+            },
+            "description": "Public video id"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "playlists"
+        ],
+        "summary": "Remove a video from your playlist",
+        "description": "Removing it again, or a video that isn't there, changes nothing.",
+        "operationId": "remove_video_api_playlists__playlist_id__items__public_id__delete",
+        "parameters": [
+          {
+            "name": "playlist_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Playlist id, as in /playlist?list=<id>",
+              "title": "Playlist Id"
+            },
+            "description": "Playlist id, as in /playlist?list=<id>"
+          },
+          {
+            "name": "public_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{11}$",
+              "description": "Public video id",
+              "title": "Public Id"
+            },
+            "description": "Public video id"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "playlists"
+        ],
+        "summary": "Move a video in your playlist",
+        "description": "Just before another video of the playlist, or to the end with `before: null`.",
+        "operationId": "move_video_api_playlists__playlist_id__items__public_id__patch",
+        "parameters": [
+          {
+            "name": "playlist_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Playlist id, as in /playlist?list=<id>",
+              "title": "Playlist Id"
+            },
+            "description": "Playlist id, as in /playlist?list=<id>"
+          },
+          {
+            "name": "public_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{11}$",
+              "description": "Public video id",
+              "title": "Public Id"
+            },
+            "description": "Public video id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ItemMove"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/channels/{handle}/playlists": {
+      "get": {
+        "tags": [
+          "playlists"
+        ],
+        "summary": "A channel's public playlists, newest first",
+        "description": "The same list for every viewer, the owner too; covers are per viewer.",
+        "operationId": "list_channel_playlists_api_channels__handle__playlists_get",
+        "parameters": [
+          {
+            "name": "handle",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._-]{3,30}$",
+              "description": "Channel handle, without the @",
+              "title": "Handle"
+            },
+            "description": "Channel handle, without the @"
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "next_cursor of the last page",
+              "title": "Cursor"
+            },
+            "description": "next_cursor of the last page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_PlaylistOut_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me/playlists": {
+      "get": {
+        "tags": [
+          "playlists"
+        ],
+        "summary": "Your playlists, newest first",
+        "operationId": "list_mine_api_me_playlists_get",
+        "parameters": [
+          {
+            "name": "video",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9_-]{11}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "A public video id: mark the playlists with it",
+              "title": "Video"
+            },
+            "description": "A public video id: mark the playlists with it"
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "next_cursor of the last page",
+              "title": "Cursor"
+            },
+            "description": "next_cursor of the last page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_MyPlaylist_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me/watch-later": {
+      "get": {
+        "tags": [
+          "playlists"
+        ],
+        "summary": "Your Watch later playlist",
+        "description": "Every user has one; its id opens it like any other playlist.",
+        "operationId": "get_watch_later_api_me_watch_later_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaylistOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/videos/{public_id}/saved": {
+      "get": {
+        "tags": [
+          "playlists"
+        ],
+        "summary": "Whether a video is in any of your playlists",
+        "operationId": "is_saved_api_videos__public_id__saved_get",
+        "parameters": [
+          {
+            "name": "public_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{11}$",
+              "description": "Public video id",
+              "title": "Public Id"
+            },
+            "description": "Public video id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/health": {
       "get": {
         "tags": [
@@ -1199,6 +2116,60 @@
         ],
         "title": "Category",
         "description": "YouTube's upload categories, in its order."
+      },
+      "ChannelOut": {
+        "properties": {
+          "handle": {
+            "type": "string",
+            "title": "Handle"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "joined_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Joined At"
+          },
+          "subscriber_count": {
+            "type": "integer",
+            "title": "Subscriber Count"
+          },
+          "video_count": {
+            "type": "integer",
+            "title": "Video Count",
+            "description": "Public, ready videos: what the Videos tab lists"
+          },
+          "is_subscribed": {
+            "type": "boolean",
+            "title": "Is Subscribed",
+            "description": "False for guests and on your own channel"
+          }
+        },
+        "type": "object",
+        "required": [
+          "handle",
+          "name",
+          "avatar_url",
+          "joined_at",
+          "subscriber_count",
+          "video_count",
+          "is_subscribed"
+        ],
+        "title": "ChannelOut",
+        "description": "The channel page header. The watch page reads it for the subscriber count too."
       },
       "ChannelSummary": {
         "properties": {
@@ -1352,6 +2323,109 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "ItemMove": {
+        "properties": {
+          "before": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{11}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Before",
+            "description": "The playlist's video to put it before; null: at the end"
+          }
+        },
+        "type": "object",
+        "required": [
+          "before"
+        ],
+        "title": "ItemMove"
+      },
+      "MyPlaylist": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/Visibility"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/PlaylistKind",
+            "description": "watch_later: the owner's own, can't be renamed or deleted"
+          },
+          "video_count": {
+            "type": "integer",
+            "title": "Video Count",
+            "description": "All items, also those this viewer may not watch"
+          },
+          "thumbnail_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnail Url",
+            "description": "The first video this viewer may watch"
+          },
+          "owner": {
+            "$ref": "#/components/schemas/ChannelSummary"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "contains_video": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contains Video",
+            "description": "With ?video=: whether it is in this playlist"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "description",
+          "visibility",
+          "kind",
+          "video_count",
+          "thumbnail_url",
+          "owner",
+          "created_at",
+          "updated_at",
+          "contains_video"
+        ],
+        "title": "MyPlaylist"
+      },
       "NewAccount": {
         "properties": {
           "email": {
@@ -1401,6 +2475,90 @@
         ],
         "title": "Page[CommentOut]"
       },
+      "Page_MyPlaylist_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/MyPlaylist"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "Page[MyPlaylist]"
+      },
+      "Page_PlaylistItemOut_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PlaylistItemOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "Page[PlaylistItemOut]"
+      },
+      "Page_PlaylistOut_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PlaylistOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "Page[PlaylistOut]"
+      },
       "Page_SearchResult_": {
         "properties": {
           "items": {
@@ -1428,6 +2586,34 @@
           "next_cursor"
         ],
         "title": "Page[SearchResult]"
+      },
+      "Page_SubscribedChannel_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SubscribedChannel"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "Page[SubscribedChannel]"
       },
       "Page_VideoOut_": {
         "properties": {
@@ -1485,6 +2671,171 @@
         ],
         "title": "Page[VideoSummary]"
       },
+      "PlaylistCreate": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 150,
+            "minLength": 1,
+            "pattern": "^[^\\x00-\\x1f\\x7f]*$",
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 5000,
+            "pattern": "^[^\\x00-\\x08\\x0b\\x0c\\x0e-\\x1f\\x7f]*$",
+            "title": "Description",
+            "default": ""
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/Visibility",
+            "default": "private"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title"
+        ],
+        "title": "PlaylistCreate"
+      },
+      "PlaylistItemOut": {
+        "properties": {
+          "video": {
+            "$ref": "#/components/schemas/VideoSummary"
+          },
+          "added_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Added At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "video",
+          "added_at"
+        ],
+        "title": "PlaylistItemOut"
+      },
+      "PlaylistKind": {
+        "type": "string",
+        "enum": [
+          "user",
+          "watch_later"
+        ],
+        "title": "PlaylistKind"
+      },
+      "PlaylistOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/Visibility"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/PlaylistKind",
+            "description": "watch_later: the owner's own, can't be renamed or deleted"
+          },
+          "video_count": {
+            "type": "integer",
+            "title": "Video Count",
+            "description": "All items, also those this viewer may not watch"
+          },
+          "thumbnail_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnail Url",
+            "description": "The first video this viewer may watch"
+          },
+          "owner": {
+            "$ref": "#/components/schemas/ChannelSummary"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "description",
+          "visibility",
+          "kind",
+          "video_count",
+          "thumbnail_url",
+          "owner",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "PlaylistOut"
+      },
+      "PlaylistUpdate": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 150,
+                "minLength": 1,
+                "pattern": "^[^\\x00-\\x1f\\x7f]*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 5000,
+                "pattern": "^[^\\x00-\\x08\\x0b\\x0c\\x0e-\\x1f\\x7f]*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "visibility": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Visibility"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "PlaylistUpdate",
+        "description": "Changes only the given fields; null leaves a field as it is."
+      },
       "Rating": {
         "type": "string",
         "enum": [
@@ -1532,6 +2883,20 @@
         ],
         "title": "Role",
         "description": "Nested roles (ADR 0009): each one has all rights of the ones before it.\n\nA plain Enum, not StrEnum: there `>=` compares strings (\"user\" > \"moderator\")."
+      },
+      "SavedOut": {
+        "properties": {
+          "saved": {
+            "type": "boolean",
+            "title": "Saved",
+            "description": "In any of your playlists, Watch later too"
+          }
+        },
+        "type": "object",
+        "required": [
+          "saved"
+        ],
+        "title": "SavedOut"
       },
       "SearchResult": {
         "properties": {
@@ -1582,6 +2947,60 @@
         ],
         "title": "SearchResult",
         "description": "A result row also shows the start of the description."
+      },
+      "SubscribedChannel": {
+        "properties": {
+          "handle": {
+            "type": "string",
+            "title": "Handle"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "subscriber_count": {
+            "type": "integer",
+            "title": "Subscriber Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "handle",
+          "name",
+          "avatar_url",
+          "subscriber_count"
+        ],
+        "title": "SubscribedChannel",
+        "description": "A row of the viewer's subscriptions."
+      },
+      "SubscriptionOut": {
+        "properties": {
+          "subscriber_count": {
+            "type": "integer",
+            "title": "Subscriber Count"
+          },
+          "is_subscribed": {
+            "type": "boolean",
+            "title": "Is Subscribed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "subscriber_count",
+          "is_subscribed"
+        ],
+        "title": "SubscriptionOut"
       },
       "UploadLimits": {
         "properties": {
@@ -1921,6 +3340,15 @@
           "channel"
         ],
         "title": "VideoOut"
+      },
+      "VideoSort": {
+        "type": "string",
+        "enum": [
+          "latest",
+          "popular",
+          "oldest"
+        ],
+        "title": "VideoSort"
       },
       "VideoStatus": {
         "type": "string",

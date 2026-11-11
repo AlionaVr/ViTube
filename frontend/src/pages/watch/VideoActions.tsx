@@ -1,14 +1,19 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
 
+import { useChannel } from '../../channels/hooks'
+import SubscribeButton from '../../channels/SubscribeButton'
 import Avatar from '../../components/Avatar'
 import Icon from '../../components/Icon'
 import SignInGate from '../../components/SignInGate'
-import { formatCompact, formatExact } from '../../lib/format'
+import { formatCompact, formatExact, formatSubscribers } from '../../lib/format'
+import { useSaved } from '../../playlists/hooks'
+import SaveDialog from '../../playlists/SaveDialog'
 import buttons from '../../styles/buttons.module.css'
 import { useRateVideo } from '../../videos/hooks'
 import { channelUrl } from '../../videos/paths'
 import type { Video } from '../../videos/types'
+import { useViewer } from '../../viewer/useViewer'
 import Fireworks from './Fireworks'
 import ShareDialog from './ShareDialog'
 import styles from './VideoActions.module.css'
@@ -83,6 +88,12 @@ function RatingButtons({ video }: { video: Video }) {
 export default function VideoActions({ video }: { video: Video }) {
   const { channel } = video
   const [sharing, setSharing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  // The channel page's cache entry: subscribing here or there updates both.
+  const owner = useChannel(channel.handle)
+  const viewer = useViewer()
+  const own = viewer.status === 'authenticated' && viewer.user.handle === channel.handle
+  const saved = useSaved(video.id, viewer.status === 'authenticated').data ?? false
 
   return (
     <div className={styles.row}>
@@ -94,7 +105,14 @@ export default function VideoActions({ video }: { video: Video }) {
           <Link to={channelUrl(channel.handle)} className={styles.channelName}>
             {channel.name}
           </Link>
+          {/* A space while loading keeps the row's height. */}
+          <span className={styles.subscribers}>
+            {owner.data ? formatSubscribers(owner.data.subscriber_count) : '\u00a0'}
+          </span>
         </div>
+        {owner.data && viewer.status !== 'loading' && !own && (
+          <SubscribeButton channel={owner.data} />
+        )}
       </div>
 
       <div className={styles.actions}>
@@ -109,6 +127,25 @@ export default function VideoActions({ video }: { video: Video }) {
           Share
         </button>
         <ShareDialog videoId={video.id} open={sharing} onClose={() => setSharing(false)} />
+        <SignInGate
+          title="Want to watch this again later?"
+          text="Sign in to add this video to a playlist."
+          align="end"
+          onAction={() => setSaving(true)}
+        >
+          {(props) => (
+            <button
+              type="button"
+              className={`${buttons.pill} ${buttons.tonal} ${buttons.iconLeading}`}
+              aria-haspopup="dialog"
+              {...props}
+            >
+              <Icon name={saved ? 'bookmarkFill' : 'bookmark'} />
+              {saved ? 'Saved' : 'Save'}
+            </button>
+          )}
+        </SignInGate>
+        <SaveDialog videoId={video.id} open={saving} onClose={() => setSaving(false)} />
       </div>
     </div>
   )

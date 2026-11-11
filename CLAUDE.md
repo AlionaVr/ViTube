@@ -76,6 +76,11 @@ FastAPI + PostgreSQL + MinIO + Celery + React. Deployed with `./install.sh` (Doc
   nullable value.
 - Media uses ready tools (native `<video>`, MinIO behind nginx for Range); never an own streaming engine.
 - Dev and demo data work offline: local files, no external hosts at runtime; big files stay out of git.
+- Every action that changes state shows feedback where the user is, as YouTube does: a toast and a changed
+  control (a filled bookmark, "Saved"). A box ticking silently is not enough.
+- Icons are laconic one-line glyphs from the app's set. When the metaphor is a matter of taste, the user picks
+  it from previews.
+- Standard per-user collections (e.g. Watch later) exist from sign-up: plan them with the feature.
 
 ## Secrets and `.env`
 

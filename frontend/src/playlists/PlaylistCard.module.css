@@ -1,0 +1,120 @@
+.card {
+  min-width: 0;
+  /* Room for the stack above the cover. */
+  padding-top: 8px;
+}
+
+/* Two cards behind the cover, narrower the farther they are: a collection, as on YouTube. */
+.cover {
+  position: relative;
+  display: block;
+}
+
+.cover::before,
+.cover::after {
+  content: '';
+  position: absolute;
+  height: 4px;
+  border-radius: 4px 4px 0 0;
+  background: var(--color-text);
+}
+
+.cover::before {
+  top: -8px;
+  inset-inline: 24px;
+  opacity: 0.15;
+}
+
+.cover::after {
+  top: -4px;
+  inset-inline: 12px;
+  opacity: 0.3;
+}
+
+.image {
+  position: relative;
+  z-index: 1;
+  aspect-ratio: 16 / 9;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--color-placeholder);
+  color: var(--color-text-secondary);
+}
+
+.image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.badge {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 1;
+  padding: 1px 4px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-radius: 4px;
+  background: rgb(0 0 0 / 0.6);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+}
+
+.title {
+  margin: 12px 0 4px;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 22px;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.line {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-text-secondary);
+}
+
+.full {
+  width: fit-content;
+  display: block;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-text-secondary);
+}
+
+.full:hover {
+  color: var(--color-text);
+}
+
+.card a:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.ghost {
+  margin-bottom: 12px;
+}
+
+.ghostLine {
+  height: 20px;
+  margin-bottom: 8px;
+  border-radius: 4px;
+  background: var(--color-placeholder);
+}
+
+.ghostShort {
+  width: 60%;
+}

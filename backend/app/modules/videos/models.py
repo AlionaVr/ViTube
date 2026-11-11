@@ -9,7 +9,6 @@ from sqlalchemy import (
     CheckConstraint,
     Computed,
     DateTime,
-    Enum,
     ForeignKey,
     Index,
     Integer,
@@ -23,6 +22,7 @@ from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
+from app.db.types import str_enum
 
 TITLE_MAX = 100  # YouTube's limits
 DESCRIPTION_MAX = 5000
@@ -74,18 +74,6 @@ LISTED_SQL = "visibility = 'public' AND status = 'ready'"
 SEARCH_CONFIG = "english"
 
 
-def _str_enum(enum_class: type[enum.StrEnum], name: str) -> Enum:
-    # varchar + CHECK, not a Postgres enum: adding a value is a plain migration.
-    return Enum(
-        enum_class,
-        name=name,
-        native_enum=False,
-        create_constraint=True,
-        length=16,
-        values_callable=lambda members: [member.value for member in members],
-    )
-
-
 class Video(Base):
     __tablename__ = "videos"
     __table_args__ = (
@@ -114,6 +102,8 @@ class Video(Base):
         # The home feed, newest first: all listed videos, and by category.
         Index("ix_videos_listed_id", "id", postgresql_where=text(LISTED_SQL)),
         Index("ix_videos_listed_category_id", "category", "id", postgresql_where=text(LISTED_SQL)),
+        # A channel's listed videos: its Videos tab, video count, subscriptions feed, Up next.
+        Index("ix_videos_listed_owner_id_id", "owner_id", "id", postgresql_where=text(LISTED_SQL)),
         # Search (ADR 0007): full text, and title trigrams for typos and suggestions.
         Index(
             "ix_videos_listed_search_vector",
@@ -138,13 +128,13 @@ class Video(Base):
     title: Mapped[str] = mapped_column(Text)
     description: Mapped[str] = mapped_column(Text, server_default="")
     visibility: Mapped[Visibility] = mapped_column(
-        _str_enum(Visibility, "visibility"), server_default=Visibility.PRIVATE.value
+        str_enum(Visibility, "visibility"), server_default=Visibility.PRIVATE.value
     )
     status: Mapped[VideoStatus] = mapped_column(
-        _str_enum(VideoStatus, "status"), server_default=VideoStatus.UPLOADING.value
+        str_enum(VideoStatus, "status"), server_default=VideoStatus.UPLOADING.value
     )
     category: Mapped[Category] = mapped_column(
-        _str_enum(Category, "category"), server_default=Category.PEOPLE.value
+        str_enum(Category, "category"), server_default=Category.PEOPLE.value
     )
     # Set by a DB trigger on every status change; the sweeper finds stuck jobs by it (ADR 0003).
     status_changed_at: Mapped[datetime] = mapped_column(

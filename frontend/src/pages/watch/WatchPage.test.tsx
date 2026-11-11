@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { ANNA, json, mockApi } from '../../test/api'
+import { channel } from '../../test/channels'
 import { renderApp } from '../../test/render'
 import { setScreenWidth } from '../../test/screen'
 import { comment, detail, page, summary } from '../../test/videos'
@@ -15,9 +16,16 @@ const GUEST = { 'GET /api/auth/me': () => json(401, { detail: 'Sign in required'
 /** The API of one watch page; the rating and new comments behave like the server's. */
 function mockWatch(video: Video = VIDEO, viewer = SIGNED_IN) {
   const base = `/api/videos/${video.id}`
+  const owner = `/api/channels/${video.channel.handle}`
+  const subscribed = (is_subscribed: boolean) => () =>
+    json(200, { subscriber_count: 2 + (is_subscribed ? 1 : 0), is_subscribed })
   return mockApi({
     ...viewer,
     [`GET ${base}`]: () => json(200, video),
+    [`GET ${owner}`]: () => json(200, channel({ ...video.channel, subscriber_count: 2 })),
+    [`GET ${base}/saved`]: () => json(200, { saved: false }),
+    [`PUT ${owner}/subscription`]: subscribed(true),
+    [`DELETE ${owner}/subscription`]: subscribed(false),
     [`GET ${base}/related`]: () => json(200, page([2, 3, 4].map((n) => summary(n)))),
     [`GET ${base}/comments`]: () => json(200, page([comment(1)])),
     [`POST ${base}/comments`]: async (request) => {
@@ -117,6 +125,27 @@ describe('WatchPage', () => {
     )
     expect(like).toHaveAttribute('aria-pressed', 'false')
     expect(like).toHaveTextContent('120')
+  })
+
+  it('shows the channel’s subscribers and subscribes from here', async () => {
+    mockWatch()
+    await openWatch()
+    expect(await screen.findByText('2 subscribers')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Subscribe' }))
+
+    expect(await screen.findByRole('button', { name: /Subscribed/ })).toBeInTheDocument()
+    expect(screen.getByText('3 subscribers')).toBeInTheDocument()
+  })
+
+  it('shows no Subscribe on your own video', async () => {
+    const own = detail(1, { channel: { handle: ANNA.handle, name: ANNA.handle, avatar_url: null } })
+    mockWatch(own)
+    await openWatch(own)
+
+    expect(await screen.findByText('2 subscribers')).toBeInTheDocument()
+    await screen.findByRole('button', { name: 'Account menu' }) // the viewer is known
+    expect(screen.queryByRole('button', { name: /Subscribe/ })).not.toBeInTheDocument()
   })
 
   it('expands and collapses the description', async () => {

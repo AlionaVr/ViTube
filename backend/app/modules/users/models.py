@@ -4,7 +4,7 @@ import enum
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import CheckConstraint, DateTime, Enum, Text, func, text
+from sqlalchemy import CheckConstraint, DateTime, Enum, Integer, Text, func, text
 from sqlalchemy.dialects.postgresql import CITEXT
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -31,6 +31,7 @@ class User(Base):
     __table_args__ = (
         # Cast to text: on citext, ~ ignores case.
         CheckConstraint(r"handle::text ~ '^[a-z0-9._-]{3,30}$'", name="handle_format"),
+        CheckConstraint("subscriber_count >= 0", name="subscriber_count_not_negative"),
     )
 
     # uuidv7(): time-ordered (index-friendly) and not guessable like 1, 2, 3.
@@ -50,4 +51,6 @@ class User(Base):
         ),
         server_default=Role.USER.value,
     )
+    # Updated in place (x = x + n) by subscriptions. Not indexed, so updates stay HOT.
+    subscriber_count: Mapped[int] = mapped_column(Integer, server_default="0")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

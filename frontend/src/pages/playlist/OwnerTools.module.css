@@ -1,0 +1,52 @@
+.tools {
+  margin-top: 16px;
+  display: flex;
+  gap: 8px;
+}
+
+/* On the colored panel: translucent white, as YouTube's round buttons there. */
+.tools .light {
+  background: rgb(255 255 255 / 0.1);
+  color: #fff;
+}
+
+.tools .light:hover {
+  background: rgb(255 255 255 / 0.2);
+}
+
+.tools .light:active {
+  background: rgb(255 255 255 / 0.3);
+}
+
+.heading {
+  margin-bottom: 16px;
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 28px;
+}
+
+.text,
+.note {
+  margin: 0 0 12px;
+  font-size: 14px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+
+.note {
+  color: var(--color-text-secondary);
+}
+
+.error {
+  margin: 0 0 12px;
+  color: var(--color-error);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

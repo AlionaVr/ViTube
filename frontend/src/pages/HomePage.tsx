@@ -9,6 +9,7 @@ import { useInfiniteScroll } from '../hooks/useInfiniteScroll'
 import { CATEGORY_LABELS } from '../videos/categories'
 import { useCategories, useVideoFeed } from '../videos/hooks'
 import type { Category } from '../videos/types'
+import grid from '../styles/grid.module.css'
 import styles from './HomePage.module.css'
 
 const SKELETON_CARDS = 12
@@ -35,7 +36,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className={styles.page}>
+    <div className={grid.page}>
       <title>ViTube</title>
       <div className={styles.chips}>
         {categories.isSuccess && categories.data.length > 0 && (
@@ -43,7 +44,7 @@ export default function HomePage() {
         )}
       </div>
       {feed.isPending ? (
-        <div className={styles.grid} aria-busy="true" aria-label="Loading videos">
+        <div className={grid.feed} aria-busy="true" aria-label="Loading videos">
           {Array.from({ length: SKELETON_CARDS }, (_, i) => (
             <VideoCardSkeleton key={i} />
           ))}
@@ -54,14 +55,14 @@ export default function HomePage() {
         <EmptyState title="No videos yet">Uploaded videos will appear here.</EmptyState>
       ) : (
         <>
-          <div className={styles.grid}>
+          <div className={grid.feed}>
             {videos.map((video) => (
               <VideoCard key={video.id} video={video} />
             ))}
           </div>
           <div ref={sentinel} />
           {feed.isFetchingNextPage && (
-            <div className={styles.more}>
+            <div className={grid.more}>
               <Spinner label="Loading more videos" />
             </div>
           )}

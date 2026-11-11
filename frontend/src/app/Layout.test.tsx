@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { ANNA, json, mockApi } from '../test/api'
+import { channel } from '../test/channels'
 import { renderApp } from '../test/render'
 import { setScreenWidth } from '../test/screen'
 
@@ -68,13 +69,56 @@ describe('Layout', () => {
   })
 
   it('shows the library, subscriptions and account menu to a signed-in viewer', async () => {
-    mockApi({ 'GET /api/auth/me': () => json(200, ANNA) })
+    const anna = { handle: 'anna', name: 'Anna', avatar_url: null, subscriber_count: 3 }
+    mockApi({
+      'GET /api/auth/me': () => json(200, ANNA),
+      'GET /api/me/subscriptions': () => json(200, { items: [anna], next_cursor: null }),
+    })
     renderApp('/')
     expect(await screen.findByRole('button', { name: 'Account menu' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Liked videos' })).toBeInTheDocument()
-    expect(await screen.findByRole('heading', { name: 'Subscriptions' })).toBeInTheDocument()
+    const heading = await screen.findByRole('heading', { name: 'Subscriptions' })
+    expect(within(heading).getByRole('link')).toHaveAttribute('href', '/feed/channels')
+    expect(screen.getByRole('link', { name: 'Anna' })).toHaveAttribute('href', '/@anna')
     expect(screen.queryByText(/Sign in to like videos/)).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Sign in' })).not.toBeInTheDocument()
+  })
+
+  it('shows seven subscriptions in the guide, the rest on Show more', async () => {
+    const subscriptions = Array.from({ length: 9 }, (_, i) => ({
+      handle: `channel${i + 1}`,
+      name: `Channel ${i + 1}`,
+      avatar_url: null,
+      subscriber_count: 1,
+    }))
+    mockApi({
+      'GET /api/auth/me': () => json(200, ANNA),
+      'GET /api/me/subscriptions': () => json(200, { items: subscriptions, next_cursor: null }),
+    })
+    renderApp('/')
+    const guide = within(await screen.findByRole('navigation', { name: 'Main' }))
+    await guide.findByRole('link', { name: 'Channel 1' })
+
+    expect(guide.getByRole('link', { name: 'Channel 7' })).toBeInTheDocument()
+    expect(guide.queryByRole('link', { name: 'Channel 8' })).not.toBeInTheDocument()
+    await userEvent.click(guide.getByRole('button', { name: 'Show 2 more' }))
+    expect(guide.getByRole('link', { name: 'Channel 9' })).toBeInTheDocument()
+    await userEvent.click(guide.getByRole('button', { name: 'Show fewer' }))
+    expect(guide.queryByRole('link', { name: 'Channel 9' })).not.toBeInTheDocument()
+  })
+
+  it('marks the open channel in the guide, whatever the case of its URL', async () => {
+    const anna = { handle: 'anna', name: 'Anna', avatar_url: null, subscriber_count: 3 }
+    mockApi({
+      'GET /api/auth/me': () => json(200, ANNA),
+      'GET /api/me/subscriptions': () => json(200, { items: [anna], next_cursor: null }),
+      'GET /api/channels/ANNA': () => json(200, channel({ handle: 'anna', name: 'Anna' })),
+      'GET /api/channels/ANNA/videos': () => json(200, { items: [], next_cursor: null }),
+    })
+    renderApp('/@ANNA/videos')
+    const guide = within(await screen.findByRole('navigation', { name: 'Main' }))
+
+    expect(await guide.findByRole('link', { name: 'Anna' })).toHaveAttribute('aria-current', 'page')
   })
 
   it('shows the sign-in prompt and button to a guest', async () => {
