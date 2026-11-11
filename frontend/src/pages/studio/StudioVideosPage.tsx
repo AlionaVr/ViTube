@@ -94,6 +94,7 @@ function VideoTable({
         <colgroup>
           <col className={styles.videoColumn} />
           <col className={styles.visibilityColumn} />
+          <col className={styles.restrictionsColumn} />
           <col className={styles.statusColumn} />
           <col className={styles.dateColumn} />
           <col className={styles.countColumn} />
@@ -104,6 +105,7 @@ function VideoTable({
           <tr>
             <th scope="col">Video</th>
             <th scope="col">Visibility</th>
+            <th scope="col">Restrictions</th>
             <th scope="col">Status</th>
             <th scope="col">Date</th>
             <th scope="col" className={styles.number}>
@@ -147,6 +149,8 @@ function VideoRow({ video }: { video: OwnVideo }) {
       </td>
       {/* As in Studio: a draft (no file yet, or its upload was cut off) shows as such here. */}
       <td>{video.status === 'uploading' ? 'Draft' : VISIBILITY_LABELS[video.visibility]}</td>
+      {/* Studio's column; the one restriction here is a moderator's (ADR 0009). */}
+      <td>{video.is_hidden ? 'Hidden by a moderator' : 'None'}</td>
       <td>
         <Status video={video} />
       </td>
@@ -190,7 +194,7 @@ function SkeletonRow() {
           </div>
         </div>
       </td>
-      <td colSpan={6} />
+      <td colSpan={7} />
     </tr>
   )
 }
