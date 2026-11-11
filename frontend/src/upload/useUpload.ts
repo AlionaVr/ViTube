@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 
 import { ApiError } from '../api/client'
+import { pollWhileProcessing } from '../videos/hooks'
 import {
   createDraft,
   getUploadLimits,
@@ -9,7 +10,6 @@ import {
   type OwnVideo,
   type UploadLimits,
   uploadFile,
-  type VideoStatus,
 } from './api'
 import { formatSize } from './format'
 
@@ -19,9 +19,6 @@ export type Transfer =
   | { phase: 'sending'; progress: number }
   | { phase: 'stored' }
   | { phase: 'failed'; message: string }
-
-const POLL_MS = 2000
-const WAITING: readonly VideoStatus[] = ['uploaded', 'processing']
 
 export const uploadKeys = {
   limits: ['videos', 'upload-limits'] as const,
@@ -64,13 +61,12 @@ export function useUpload() {
   const [pickError, setPickError] = useState<string | null>(null)
   const abort = useRef<AbortController | null>(null)
 
-  // Processing status: asked every 2 s while the worker has the video.
+  // Processing status, while the worker has the video.
   const video = useQuery({
     queryKey: uploadKeys.video(draft?.id ?? ''),
     queryFn: () => getVideo(draft!.id),
     enabled: draft !== null && transfer.phase === 'stored',
-    refetchInterval: (query) =>
-      query.state.data && WAITING.includes(query.state.data.status) ? POLL_MS : false,
+    refetchInterval: pollWhileProcessing,
   })
 
   // Closing the dialog mid-upload stops the request.

@@ -35,12 +35,6 @@
   border-radius: 4px;
 }
 
-.subscribers {
-  font-size: 12px;
-  line-height: 18px;
-  color: var(--color-text-secondary);
-}
-
 .actions {
   display: flex;
   align-items: center;
@@ -97,16 +91,4 @@
   width: 1px;
   height: 24px;
   background: var(--color-divider);
-}
-
-.confirm {
-  margin: 0 0 24px;
-  font-size: 16px;
-  line-height: 22px;
-}
-
-.confirmActions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
 }

@@ -22,8 +22,23 @@ export function useVideoFeed(category: Category | null) {
   })
 }
 
+const POLL_MS = 2000
+
+/** While the worker has the video, ask every 2 s: the page shows it once it's ready. */
+export function pollWhileProcessing(query: {
+  state: { data?: { status: Video['status'] } }
+}): number | false {
+  const status = query.state.data?.status
+  return status === 'uploaded' || status === 'processing' ? POLL_MS : false
+}
+
+/** Owners and moderators may open a video that is still processing. */
 export function useVideo(id: string) {
-  return useQuery({ queryKey: videoKeys.detail(id), queryFn: () => getVideo(id) })
+  return useQuery({
+    queryKey: videoKeys.detail(id),
+    queryFn: () => getVideo(id),
+    refetchInterval: pollWhileProcessing,
+  })
 }
 
 export function useRelatedVideos(id: string) {

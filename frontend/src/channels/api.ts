@@ -6,11 +6,3 @@ import type { ChannelSummary } from './types'
 export function listSubscriptions(): Promise<ChannelSummary[]> {
   return server.listSubscriptions()
 }
-
-/** Throws ApiError 401 for a guest. */
-export function setSubscribed(
-  handle: string,
-  subscribed: boolean,
-): Promise<{ subscriber_count: number; is_subscribed: boolean }> {
-  return server.setSubscribed(handle, subscribed)
-}
