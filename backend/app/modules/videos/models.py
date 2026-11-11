@@ -7,6 +7,7 @@ from uuid import UUID
 from sqlalchemy import (
     BigInteger,
     CheckConstraint,
+    Computed,
     DateTime,
     Enum,
     ForeignKey,
@@ -18,6 +19,7 @@ from sqlalchemy import (
     func,
     text,
 )
+from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -66,6 +68,9 @@ class Category(enum.StrEnum):
 # repository.LISTED in SQL, for partial indexes; keep the two in sync.
 LISTED_SQL = "visibility = 'public' AND status = 'ready'"
 
+# Word stems for search (ADR 0007): "trailers" finds "trailer". Queries must use the same config.
+SEARCH_CONFIG = "english"
+
 
 def _str_enum(enum_class: type[enum.StrEnum], name: str) -> Enum:
     # varchar + CHECK, not a Postgres enum: adding a value is a plain migration.
@@ -107,6 +112,20 @@ class Video(Base):
         # The home feed, newest first: all listed videos, and by category.
         Index("ix_videos_listed_id", "id", postgresql_where=text(LISTED_SQL)),
         Index("ix_videos_listed_category_id", "category", "id", postgresql_where=text(LISTED_SQL)),
+        # Search (ADR 0007): full text, and title trigrams for typos and suggestions.
+        Index(
+            "ix_videos_listed_search_vector",
+            "search_vector",
+            postgresql_using="gin",
+            postgresql_where=text(LISTED_SQL),
+        ),
+        Index(
+            "ix_videos_listed_title_trgm",
+            "title",
+            postgresql_using="gin",
+            postgresql_ops={"title": "gin_trgm_ops"},
+            postgresql_where=text(LISTED_SQL),
+        ),
     )
 
     # Internal id: object keys and foreign keys. Never in API paths.
@@ -138,6 +157,16 @@ class Video(Base):
     like_count: Mapped[int] = mapped_column(Integer, server_default="0")
     comment_count: Mapped[int] = mapped_column(Integer, server_default="0")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # Postgres builds it from the title (weight A) and description (B). Only search reads it.
+    search_vector: Mapped[str] = mapped_column(
+        TSVECTOR,
+        Computed(
+            f"setweight(to_tsvector('{SEARCH_CONFIG}', title), 'A')"
+            f" || setweight(to_tsvector('{SEARCH_CONFIG}', description), 'B')",
+            persisted=True,
+        ),
+        deferred=True,
+    )
 
     @property
     def original_key(self) -> str:

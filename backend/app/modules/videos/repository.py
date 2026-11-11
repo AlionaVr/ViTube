@@ -4,14 +4,25 @@ from collections.abc import Sequence
 from datetime import timedelta
 from uuid import UUID
 
-from sqlalchemy import Row, Select, delete, exists, func, select, update
-from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy import Row, Select, delete, exists, func, literal, or_, select, tuple_, update
+from sqlalchemy.dialects.postgresql import REGCONFIG, insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.users.models import User
-from app.modules.videos.models import Category, Video, VideoAccess, VideoStatus, Visibility
+from app.modules.videos.models import (
+    SEARCH_CONFIG,
+    Category,
+    Video,
+    VideoAccess,
+    VideoStatus,
+    Visibility,
+)
 
 VideoRow = Row[Video, User]
+RankedRow = Row[Video, User, float]
+
+# Title typos (ADR 0007): pg_trgm's 0.6 misses a swap of two letters ("sintle"); 0.5 finds it.
+TYPO_SIMILARITY = 0.5
 
 # Public lists (feed, search, Up next) show only these. One place: a new rule reaches every list.
 # models.LISTED_SQL repeats it for partial indexes; keep the two in sync.
@@ -59,6 +70,27 @@ async def list_up_next(
     return await _newest(
         db, _WITH_OWNER.where(*LISTED, channel, Video.id != video.id), before, limit
     )
+
+
+async def search(
+    db: AsyncSession, words: str, *, after: tuple[float, UUID] | None, limit: int
+) -> Sequence[RankedRow]:
+    """Listed videos with the words in the title or description, or close to the title; best first.
+
+    Rank: full-text rank (title over description) plus how close the title is to the words.
+    """
+    # SET LOCAL: this transaction only. `%>` reads the threshold from it, so its index still works.
+    await db.execute(
+        select(func.set_config("pg_trgm.word_similarity_threshold", str(TYPO_SIMILARITY), True))
+    )
+    query = func.websearch_to_tsquery(literal(SEARCH_CONFIG, REGCONFIG), words)
+    rank = func.ts_rank(Video.search_vector, query) + func.word_similarity(words, Video.title)
+    statement = _WITH_OWNER.add_columns(rank).where(
+        *LISTED, or_(Video.search_vector.bool_op("@@")(query), Video.title.bool_op("%>")(words))
+    )
+    if after is not None:
+        statement = statement.where(tuple_(rank, Video.id) < tuple_(*after))
+    return (await db.execute(statement.order_by(rank.desc(), Video.id.desc()).limit(limit))).all()
 
 
 async def listed_categories(db: AsyncSession) -> set[Category]:

@@ -23,11 +23,14 @@ async def make_video(
     visibility: Visibility = Visibility.PUBLIC,
     status: VideoStatus = VideoStatus.READY,
     category: Category = Category.PEOPLE,
+    title: str = "A video",
+    description: str = "",
 ) -> Video:
     video = Video(
         public_id=secrets.token_urlsafe(8),  # 11 URL-safe chars
         owner_id=owner.id,
-        title="A video",
+        title=title,
+        description=description,
         visibility=visibility,
         status=status,
         category=category,

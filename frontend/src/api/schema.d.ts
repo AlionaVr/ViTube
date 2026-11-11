@@ -213,6 +213,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search public videos, best match first */
+        get: operations["search_api_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/videos/{public_id}/rating": {
         parameters: {
             query?: never;
@@ -451,6 +468,13 @@ export interface components {
             /** Next Cursor */
             next_cursor: string | null;
         };
+        /** Page[SearchResult] */
+        Page_SearchResult_: {
+            /** Items */
+            items: components["schemas"]["SearchResult"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
         /** Page[VideoSummary] */
         Page_VideoSummary_: {
             /** Items */
@@ -481,6 +505,33 @@ export interface components {
          * @enum {string}
          */
         Role: "user" | "moderator" | "admin";
+        /**
+         * SearchResult
+         * @description A result row also shows the start of the description.
+         */
+        SearchResult: {
+            /**
+             * Id
+             * @description Public id, as in /watch?v=<id>
+             */
+            id: string;
+            /** Title */
+            title: string;
+            /** Thumbnail Url */
+            thumbnail_url: string;
+            /** Duration Sec */
+            duration_sec: number;
+            /** View Count */
+            view_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            channel: components["schemas"]["ChannelSummary"];
+            /** Description */
+            description: string;
+        };
         /** UploadLimits */
         UploadLimits: {
             /** Max Size Bytes */
@@ -1085,6 +1136,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Category"][];
+                };
+            };
+        };
+    };
+    search_api_search_get: {
+        parameters: {
+            query: {
+                /** @description Words to find in titles and descriptions */
+                q: string;
+                /** @description next_cursor of the last page */
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_SearchResult_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
