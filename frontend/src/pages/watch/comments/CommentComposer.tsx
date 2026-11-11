@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react'
+import { type FormEvent, useEffect, useRef, useState } from 'react'
 
 import { useAddComment } from '../../../comments/hooks'
 import Avatar from '../../../components/Avatar'
@@ -14,6 +14,8 @@ interface CommentComposerProps {
   parentId?: string | null
   /** Replies open focused, with the buttons shown. */
   autoFocus?: boolean
+  /** Whom a reply answers: the box starts with their @handle, as on YouTube. */
+  mention?: string
   onDone?: () => void
 }
 
@@ -22,15 +24,23 @@ export default function CommentComposer({
   videoId,
   parentId = null,
   autoFocus = false,
+  mention,
   onDone,
 }: CommentComposerProps) {
   const viewer = useViewer()
   const add = useAddComment(videoId)
-  const [text, setText] = useState('')
+  const [text, setText] = useState(mention ? `@${mention} ` : '')
+  const input = useRef<HTMLTextAreaElement>(null)
   const [active, setActive] = useState(autoFocus)
   const reply = parentId !== null
   const avatarSize = reply ? 24 : 40
   const placeholder = reply ? 'Add a reply…' : 'Add a comment…'
+
+  // Typing goes after the @handle, not before it.
+  useEffect(() => {
+    const element = input.current
+    if (autoFocus && element) element.setSelectionRange(element.value.length, element.value.length)
+  }, [autoFocus])
 
   function finish() {
     setText('')
@@ -73,6 +83,7 @@ export default function CommentComposer({
       <Avatar name={viewer.user.handle} size={avatarSize} />
       <div className={styles.field}>
         <textarea
+          ref={input}
           className={styles.input}
           rows={1}
           placeholder={placeholder}

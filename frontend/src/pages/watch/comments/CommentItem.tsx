@@ -132,6 +132,7 @@ export default function CommentItem({ comment, videoId, threadId }: CommentItemP
           <CommentComposer
             videoId={videoId}
             parentId={threadId ?? comment.id}
+            mention={author.handle}
             autoFocus
             onDone={() => {
               setReplying(false)
