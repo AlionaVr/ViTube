@@ -8,11 +8,14 @@ from app.db.session import DbSession
 from app.modules.auth.deps import CurrentUser, OptionalUser
 from app.modules.playlists import service
 from app.modules.playlists.schemas import (
+    ItemMove,
     MyPlaylist,
     PlaylistCreate,
     PlaylistId,
     PlaylistItemOut,
     PlaylistOut,
+    PlaylistUpdate,
+    SavedOut,
     VideoQuery,
 )
 from app.modules.videos.schemas import PublicId
@@ -35,6 +38,34 @@ async def create_playlist(
 @router.get("/playlists/{playlist_id}", response_model=PlaylistOut, summary="A playlist")
 async def get_playlist(playlist_id: PlaylistId, user: OptionalUser, db: DbSession) -> PlaylistOut:
     return await service.get_playlist(db, user, playlist_id)
+
+
+@router.patch(
+    "/playlists/{playlist_id}",
+    response_model=PlaylistOut,
+    summary="Change your playlist",
+    description="Only the given fields change. Watch later can't be changed (400).",
+)
+async def update_playlist(
+    playlist_id: PlaylistId,
+    body: PlaylistUpdate,
+    user: CurrentUser,
+    db: DbSession,
+    redis: RedisClient,
+) -> PlaylistOut:
+    return await service.update_playlist(db, redis, user, playlist_id, body)
+
+
+@router.delete(
+    "/playlists/{playlist_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete your playlist",
+    description="The videos stay; only the list goes. Watch later can't be deleted (400).",
+)
+async def delete_playlist(
+    playlist_id: PlaylistId, user: CurrentUser, db: DbSession, redis: RedisClient
+) -> None:
+    await service.delete_playlist(db, redis, user, playlist_id)
 
 
 @router.get(
@@ -81,6 +112,23 @@ async def remove_video(
     await service.remove_video(db, redis, user, playlist_id, public_id)
 
 
+@router.patch(
+    "/playlists/{playlist_id}/items/{public_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Move a video in your playlist",
+    description="Just before another video of the playlist, or to the end with `before: null`.",
+)
+async def move_video(
+    playlist_id: PlaylistId,
+    public_id: PublicId,
+    body: ItemMove,
+    user: CurrentUser,
+    db: DbSession,
+    redis: RedisClient,
+) -> None:
+    await service.move_video(db, redis, user, playlist_id, public_id, body.before)
+
+
 @router.get(
     "/me/playlists",
     response_model=Page[MyPlaylist],
@@ -100,3 +148,12 @@ async def list_mine(
 )
 async def get_watch_later(user: CurrentUser, db: DbSession) -> PlaylistOut:
     return await service.get_watch_later(db, user)
+
+
+@router.get(
+    "/videos/{public_id}/saved",
+    response_model=SavedOut,
+    summary="Whether a video is in any of your playlists",
+)
+async def is_saved(public_id: PublicId, user: CurrentUser, db: DbSession) -> SavedOut:
+    return await service.is_saved(db, user, public_id)

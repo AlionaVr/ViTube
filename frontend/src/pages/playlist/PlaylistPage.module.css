@@ -144,6 +144,10 @@
   background: var(--color-hover);
 }
 
+.menu {
+  flex: none;
+}
+
 .number {
   width: 24px;
   flex: none;

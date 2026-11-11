@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Outlet, ScrollRestoration, useLocation } from 'react-router'
 
+import { ToastProvider } from '../components/Toast'
 import { useMediaQuery, WIDE_SCREEN } from '../hooks/useMediaQuery'
 import { useStoredFlag } from '../hooks/useStoredFlag'
 import GuideDrawer from './GuideDrawer'
@@ -21,7 +22,7 @@ export default function Layout() {
   const offset = { full: styles.full, mini: styles.mini, none: '' }[guide]
 
   return (
-    <>
+    <ToastProvider>
       <Header
         sidebarExpanded={persistent ? fullGuide : drawerOpen}
         onMenuClick={() => (persistent ? toggleFullGuide() : setDrawerOpen(true))}
@@ -34,6 +35,6 @@ export default function Layout() {
       </main>
       {/* A new page starts at the top; Back returns to where you were. */}
       <ScrollRestoration />
-    </>
+    </ToastProvider>
   )
 }

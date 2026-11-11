@@ -1532,6 +1532,97 @@
             }
           }
         }
+      },
+      "patch": {
+        "tags": [
+          "playlists"
+        ],
+        "summary": "Change your playlist",
+        "description": "Only the given fields change. Watch later can't be changed (400).",
+        "operationId": "update_playlist_api_playlists__playlist_id__patch",
+        "parameters": [
+          {
+            "name": "playlist_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Playlist id, as in /playlist?list=<id>",
+              "title": "Playlist Id"
+            },
+            "description": "Playlist id, as in /playlist?list=<id>"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaylistUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaylistOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "playlists"
+        ],
+        "summary": "Delete your playlist",
+        "description": "The videos stay; only the list goes. Watch later can't be deleted (400).",
+        "operationId": "delete_playlist_api_playlists__playlist_id__delete",
+        "parameters": [
+          {
+            "name": "playlist_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Playlist id, as in /playlist?list=<id>",
+              "title": "Playlist Id"
+            },
+            "description": "Playlist id, as in /playlist?list=<id>"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/playlists/{playlist_id}/items": {
@@ -1697,6 +1788,65 @@
             }
           }
         }
+      },
+      "patch": {
+        "tags": [
+          "playlists"
+        ],
+        "summary": "Move a video in your playlist",
+        "description": "Just before another video of the playlist, or to the end with `before: null`.",
+        "operationId": "move_video_api_playlists__playlist_id__items__public_id__patch",
+        "parameters": [
+          {
+            "name": "playlist_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Playlist id, as in /playlist?list=<id>",
+              "title": "Playlist Id"
+            },
+            "description": "Playlist id, as in /playlist?list=<id>"
+          },
+          {
+            "name": "public_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{11}$",
+              "description": "Public video id",
+              "title": "Public Id"
+            },
+            "description": "Public video id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ItemMove"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/me/playlists": {
@@ -1785,6 +1935,51 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PlaylistOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/videos/{public_id}/saved": {
+      "get": {
+        "tags": [
+          "playlists"
+        ],
+        "summary": "Whether a video is in any of your playlists",
+        "operationId": "is_saved_api_videos__public_id__saved_get",
+        "parameters": [
+          {
+            "name": "public_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{11}$",
+              "description": "Public video id",
+              "title": "Public Id"
+            },
+            "description": "Public video id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -2062,6 +2257,28 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "ItemMove": {
+        "properties": {
+          "before": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{11}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Before",
+            "description": "The playlist's video to put it before; null: at the end"
+          }
+        },
+        "type": "object",
+        "required": [
+          "before"
+        ],
+        "title": "ItemMove"
       },
       "MyPlaylist": {
         "properties": {
@@ -2482,6 +2699,50 @@
         ],
         "title": "PlaylistOut"
       },
+      "PlaylistUpdate": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 150,
+                "minLength": 1,
+                "pattern": "^[^\\x00-\\x1f\\x7f]*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 5000,
+                "pattern": "^[^\\x00-\\x08\\x0b\\x0c\\x0e-\\x1f\\x7f]*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "visibility": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Visibility"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "PlaylistUpdate",
+        "description": "Changes only the given fields; null leaves a field as it is."
+      },
       "Rating": {
         "type": "string",
         "enum": [
@@ -2529,6 +2790,20 @@
         ],
         "title": "Role",
         "description": "Nested roles (ADR 0009): each one has all rights of the ones before it.\n\nA plain Enum, not StrEnum: there `>=` compares strings (\"user\" > \"moderator\")."
+      },
+      "SavedOut": {
+        "properties": {
+          "saved": {
+            "type": "boolean",
+            "title": "Saved",
+            "description": "In any of your playlists, Watch later too"
+          }
+        },
+        "type": "object",
+        "required": [
+          "saved"
+        ],
+        "title": "SavedOut"
       },
       "SearchResult": {
         "properties": {

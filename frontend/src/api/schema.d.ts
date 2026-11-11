@@ -502,10 +502,18 @@ export interface paths {
         get: operations["get_playlist_api_playlists__playlist_id__get"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Delete your playlist
+         * @description The videos stay; only the list goes. Watch later can't be deleted (400).
+         */
+        delete: operations["delete_playlist_api_playlists__playlist_id__delete"];
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Change your playlist
+         * @description Only the given fields change. Watch later can't be changed (400).
+         */
+        patch: operations["update_playlist_api_playlists__playlist_id__patch"];
         trace?: never;
     };
     "/api/playlists/{playlist_id}/items": {
@@ -549,7 +557,11 @@ export interface paths {
         delete: operations["remove_video_api_playlists__playlist_id__items__public_id__delete"];
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Move a video in your playlist
+         * @description Just before another video of the playlist, or to the end with `before: null`.
+         */
+        patch: operations["move_video_api_playlists__playlist_id__items__public_id__patch"];
         trace?: never;
     };
     "/api/me/playlists": {
@@ -581,6 +593,23 @@ export interface paths {
          * @description Every user has one; its id opens it like any other playlist.
          */
         get: operations["get_watch_later_api_me_watch_later_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/videos/{public_id}/saved": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Whether a video is in any of your playlists */
+        get: operations["is_saved_api_videos__public_id__saved_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -723,6 +752,14 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** ItemMove */
+        ItemMove: {
+            /**
+             * Before
+             * @description The playlist's video to put it before; null: at the end
+             */
+            before: string | null;
         };
         /** MyPlaylist */
         MyPlaylist: {
@@ -887,6 +924,17 @@ export interface components {
             updated_at: string;
         };
         /**
+         * PlaylistUpdate
+         * @description Changes only the given fields; null leaves a field as it is.
+         */
+        PlaylistUpdate: {
+            /** Title */
+            title?: string | null;
+            /** Description */
+            description?: string | null;
+            visibility?: components["schemas"]["Visibility"] | null;
+        };
+        /**
          * Rating
          * @enum {string}
          */
@@ -909,6 +957,14 @@ export interface components {
          * @enum {string}
          */
         Role: "user" | "moderator" | "admin";
+        /** SavedOut */
+        SavedOut: {
+            /**
+             * Saved
+             * @description In any of your playlists, Watch later too
+             */
+            saved: boolean;
+        };
         /**
          * SearchResult
          * @description A result row also shows the start of the description.
@@ -2166,6 +2222,72 @@ export interface operations {
             };
         };
     };
+    delete_playlist_api_playlists__playlist_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Playlist id, as in /playlist?list=<id> */
+                playlist_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_playlist_api_playlists__playlist_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Playlist id, as in /playlist?list=<id> */
+                playlist_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlaylistUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaylistOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_items_api_playlists__playlist_id__items_get: {
         parameters: {
             query?: {
@@ -2265,6 +2387,42 @@ export interface operations {
             };
         };
     };
+    move_video_api_playlists__playlist_id__items__public_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Playlist id, as in /playlist?list=<id> */
+                playlist_id: string;
+                /** @description Public video id */
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ItemMove"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_mine_api_me_playlists_get: {
         parameters: {
             query?: {
@@ -2315,6 +2473,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PlaylistOut"];
+                };
+            };
+        };
+    };
+    is_saved_api_videos__public_id__saved_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Public video id */
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

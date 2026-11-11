@@ -12,7 +12,7 @@ from app.modules.playlists.models import WATCH_LATER_TITLE, Playlist, PlaylistKi
 from app.modules.users.models import User
 from app.modules.videos.models import Visibility
 from tests.interactions.conftest import OWNER_EMAIL, user_by_email
-from tests.playlists.conftest import add, create, item_ids
+from tests.playlists.conftest import add, create, item_ids, remove
 from tests.videos.factories import make_user, make_video
 
 
@@ -111,3 +111,37 @@ async def test_bad_cursor_is_refused(owner: AsyncClient) -> None:
     )
 
     assert response.status_code == 400
+
+
+# --- Saved anywhere ---
+
+
+async def saved(client: AsyncClient, public_id: str) -> object:
+    response = await client.get(f"/api/videos/{public_id}/saved")
+    assert response.status_code == 200, response.text
+    return response.json()["saved"]
+
+
+async def test_saved_is_true_while_the_video_is_in_any_own_playlist(
+    owner: AsyncClient, viewer: AsyncClient, db: AsyncSession
+) -> None:
+    video = await make_video(db, await make_user(db, "bob"))
+    watch_later = (await owner.get("/api/me/watch-later")).json()["id"]
+    mine = await create(owner)
+    assert await saved(owner, video.public_id) is False
+
+    await add(owner, watch_later, video)
+    await add(owner, mine, video)
+    assert await saved(owner, video.public_id) is True
+    assert await saved(viewer, video.public_id) is False  # someone else's playlists don't count
+
+    await remove(owner, watch_later, video)
+    assert await saved(owner, video.public_id) is True
+    await remove(owner, mine, video)
+    assert await saved(owner, video.public_id) is False
+
+
+async def test_saved_needs_a_user_and_a_valid_id(owner: AsyncClient, guest: AsyncClient) -> None:
+    assert await saved(owner, "nosuchvide0") is False
+    assert (await guest.get("/api/videos/nosuchvide0/saved")).status_code == 401
+    assert (await owner.get("/api/videos/bad/saved")).status_code == 422

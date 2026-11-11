@@ -1,5 +1,6 @@
 import '@fontsource/roboto/700.css'
 
+import type { ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router'
 
 import { ApiError } from '../../api/client'
@@ -10,14 +11,22 @@ import Icon from '../../components/Icon'
 import Spinner from '../../components/Spinner'
 import Thumbnail from '../../components/Thumbnail'
 import { useInfiniteScroll } from '../../hooks/useInfiniteScroll'
+import { useToast } from '../../hooks/useToast'
 import { formatTimeAgo, formatVideoCount, formatViews } from '../../lib/format'
-import { usePlaylist, usePlaylistItems, useWatchLater } from '../../playlists/hooks'
+import {
+  useMoveInPlaylist,
+  usePlaylist,
+  usePlaylistItems,
+  useRemoveFromPlaylist,
+  useWatchLater,
+} from '../../playlists/hooks'
 import type { Playlist, PlaylistItem } from '../../playlists/types'
 import { VISIBILITY } from '../../playlists/visibility'
 import buttons from '../../styles/buttons.module.css'
 import { channelUrl, watchUrl } from '../../videos/paths'
 import { useViewer } from '../../viewer/useViewer'
 import SignInToSee from '../feed/SignInToSee'
+import { type ItemActions, ItemMenu, PlaylistTools } from './OwnerTools'
 import styles from './PlaylistPage.module.css'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -26,7 +35,17 @@ function Missing() {
   return <EmptyState title="The playlist does not exist." />
 }
 
-function Header({ playlist, first }: { playlist: Playlist; first: PlaylistItem | undefined }) {
+const NOT_CHANGED = 'Couldn’t change the playlist. Try again.'
+
+function Header({
+  playlist,
+  first,
+  own,
+}: {
+  playlist: Playlist
+  first: PlaylistItem | undefined
+  own: boolean
+}) {
   const { label, icon } = VISIBILITY[playlist.visibility]
   const { owner } = playlist
   return (
@@ -57,6 +76,8 @@ function Header({ playlist, first }: { playlist: Playlist; first: PlaylistItem |
         <span>Updated {formatTimeAgo(playlist.updated_at)}</span>
       </p>
       {playlist.description && <p className={styles.description}>{playlist.description}</p>}
+      {/* Watch later can't be edited or deleted. */}
+      {own && playlist.kind === 'user' && <PlaylistTools playlist={playlist} />}
       {first && (
         <Link to={watchUrl(first.video.id)} className={`${buttons.pill} ${styles.playAll}`}>
           <Icon name="play" />
@@ -79,7 +100,7 @@ function HeaderSkeleton() {
   )
 }
 
-function Row({ item, number }: { item: PlaylistItem; number: number }) {
+function Row({ item, number, menu }: { item: PlaylistItem; number: number; menu?: ReactNode }) {
   const { video } = item
   return (
     <li className={styles.item}>
@@ -98,6 +119,7 @@ function Row({ item, number }: { item: PlaylistItem; number: number }) {
           </p>
         </div>
       </Link>
+      {menu && <div className={styles.menu}>{menu}</div>}
     </li>
   )
 }
@@ -105,6 +127,10 @@ function Row({ item, number }: { item: PlaylistItem; number: number }) {
 function PlaylistView({ id }: { id: string }) {
   const playlist = usePlaylist(id)
   const items = usePlaylistItems(id)
+  const viewer = useViewer()
+  const remove = useRemoveFromPlaylist(id)
+  const move = useMoveInPlaylist(id)
+  const toast = useToast()
   const sentinel = useInfiniteScroll<HTMLDivElement>(
     () => void items.fetchNextPage(),
     items.hasNextPage && !items.isFetchingNextPage && !items.isFetchNextPageError,
@@ -115,10 +141,32 @@ function PlaylistView({ id }: { id: string }) {
     return <ErrorState title="Can’t load this playlist" onRetry={() => void playlist.refetch()} />
   }
   const videos = items.data?.pages.flatMap((page) => page.items) ?? []
+  const own =
+    viewer.status === 'authenticated' && playlist.data?.owner.handle === viewer.user.handle
+
+  // Promises, not mutate callbacks: those skip all but the last call, and a removed row unmounts.
+  function actionsFor(index: number, title: string): ItemActions {
+    const videoId = videos[index].video.id
+    const failed = () => toast(NOT_CHANGED)
+    const moveBefore = (before: string | null) =>
+      void move.mutateAsync({ videoId, before }).catch(failed)
+    return {
+      remove: () =>
+        void remove.mutateAsync(videoId).then(() => toast(`Removed from ${title}`), failed),
+      moveToTop: index > 0 ? () => moveBefore(videos[0].video.id) : undefined,
+      moveToBottom:
+        index < videos.length - 1 || items.hasNextPage ? () => moveBefore(null) : undefined,
+    }
+  }
+
   return (
     <div className={styles.page}>
       <title>{playlist.data ? `${playlist.data.title} - ViTube` : 'ViTube'}</title>
-      {playlist.data ? <Header playlist={playlist.data} first={videos[0]} /> : <HeaderSkeleton />}
+      {playlist.data ? (
+        <Header playlist={playlist.data} first={videos[0]} own={own} />
+      ) : (
+        <HeaderSkeleton />
+      )}
       <section className={styles.items} aria-label="Videos">
         {items.isPending ? (
           <Spinner label="Loading videos" />
@@ -130,7 +178,20 @@ function PlaylistView({ id }: { id: string }) {
           <>
             <ol className={styles.list}>
               {videos.map((item, index) => (
-                <Row key={item.video.id} item={item} number={index + 1} />
+                <Row
+                  key={item.video.id}
+                  item={item}
+                  number={index + 1}
+                  menu={
+                    own &&
+                    playlist.data && (
+                      <ItemMenu
+                        playlist={playlist.data}
+                        actions={actionsFor(index, playlist.data.title)}
+                      />
+                    )
+                  }
+                />
               ))}
             </ol>
             <div ref={sentinel} />

@@ -28,3 +28,11 @@ HTMLDialogElement.prototype.close = function () {
   this.open = false
   this.dispatchEvent(new Event('close'))
 }
+
+// jsdom has no Popover API and hides every [popover]. Enough for tests: show and hide it.
+HTMLElement.prototype.showPopover = function () {
+  this.style.display = 'block'
+}
+HTMLElement.prototype.hidePopover = function () {
+  this.style.display = ''
+}

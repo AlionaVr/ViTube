@@ -7,6 +7,7 @@ import Avatar from '../../components/Avatar'
 import Icon from '../../components/Icon'
 import SignInGate from '../../components/SignInGate'
 import { formatCompact, formatExact, formatSubscribers } from '../../lib/format'
+import { useSaved } from '../../playlists/hooks'
 import SaveDialog from '../../playlists/SaveDialog'
 import buttons from '../../styles/buttons.module.css'
 import { useRateVideo } from '../../videos/hooks'
@@ -92,6 +93,7 @@ export default function VideoActions({ video }: { video: Video }) {
   const owner = useChannel(channel.handle)
   const viewer = useViewer()
   const own = viewer.status === 'authenticated' && viewer.user.handle === channel.handle
+  const saved = useSaved(video.id, viewer.status === 'authenticated').data ?? false
 
   return (
     <div className={styles.row}>
@@ -138,8 +140,8 @@ export default function VideoActions({ video }: { video: Video }) {
               aria-haspopup="dialog"
               {...props}
             >
-              <Icon name="playlistAdd" />
-              Save
+              <Icon name={saved ? 'bookmarkFill' : 'bookmark'} />
+              {saved ? 'Saved' : 'Save'}
             </button>
           )}
         </SignInGate>

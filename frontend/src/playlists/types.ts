@@ -11,3 +11,5 @@ export type PlaylistItem = components['schemas']['PlaylistItemOut']
 export type Visibility = components['schemas']['Visibility']
 
 export type PlaylistCreate = components['schemas']['PlaylistCreate']
+
+export type PlaylistUpdate = components['schemas']['PlaylistUpdate']

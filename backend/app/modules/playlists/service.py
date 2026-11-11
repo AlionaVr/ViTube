@@ -11,19 +11,26 @@ from pydantic import Field
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.errors import Conflict, NotFound
+from app.core.errors import Conflict, DomainError, NotFound
 from app.core.pagination import Page, decode_cursor, split_page
 from app.core.rate_limit import RateLimit
 from app.modules.playlists import repository as playlists
 from app.modules.playlists.models import MAX_VIDEOS, Playlist, PlaylistKind
-from app.modules.playlists.schemas import MyPlaylist, PlaylistCreate, PlaylistItemOut, PlaylistOut
+from app.modules.playlists.schemas import (
+    MyPlaylist,
+    PlaylistCreate,
+    PlaylistItemOut,
+    PlaylistOut,
+    PlaylistUpdate,
+    SavedOut,
+)
 from app.modules.users.models import User
 from app.modules.videos import repository as videos
 from app.modules.videos.interactions import get_ready
 from app.modules.videos.models import Video, Visibility
 from app.modules.videos.schemas import MEDIA_PREFIX, VideoSummary
 
-# Per account. Creating is rare; item writes come one per click.
+# Per account. Creating is rare; other writes come one per click.
 PLAYLISTS_CREATED = RateLimit("playlist_create", limit=20, window=3600)
 PLAYLIST_WRITES = RateLimit("playlist_write", limit=120, window=60)
 ITEMS_PAGE_SIZE = 100  # as YouTube loads a playlist
@@ -43,6 +50,31 @@ async def create(db: AsyncSession, redis: Redis, user: User, data: PlaylistCreat
     )
     await db.commit()
     return PlaylistOut.build(playlist, user, thumbnail_url=None)
+
+
+async def update_playlist(
+    db: AsyncSession, redis: Redis, user: User, playlist_id: UUID, changes: PlaylistUpdate
+) -> PlaylistOut:
+    await PLAYLIST_WRITES.hit(redis, str(user.id))
+    playlist = await _lock_own(db, user, playlist_id)
+    if playlist.kind is PlaylistKind.WATCH_LATER:
+        raise DomainError("Watch later can't be changed")
+    values = changes.model_dump(exclude_none=True)
+    if values:
+        playlist = await playlists.update_playlist(db, playlist.id, values)
+    await db.commit()
+    covers = await playlists.first_videos(db, [playlist.id], user)
+    return PlaylistOut.build(playlist, user, _thumbnail(covers.get(playlist.id)))
+
+
+async def delete_playlist(db: AsyncSession, redis: Redis, user: User, playlist_id: UUID) -> None:
+    """The lock makes item writes running meanwhile finish first or find no playlist (404)."""
+    await PLAYLIST_WRITES.hit(redis, str(user.id))
+    playlist = await _lock_own(db, user, playlist_id)
+    if playlist.kind is PlaylistKind.WATCH_LATER:
+        raise DomainError("Watch later can't be deleted")
+    await playlists.delete_playlist(db, playlist.id)
+    await db.commit()
 
 
 async def get_playlist(db: AsyncSession, viewer: User | None, playlist_id: UUID) -> PlaylistOut:
@@ -76,11 +108,11 @@ async def add_video(
     video = await get_ready(db, user, public_id)
     playlist = await _lock_own(db, user, playlist_id)
     if playlist.video_count >= MAX_VIDEOS:
-        if await playlists.has_item(db, playlist.id, video.id):
+        if await playlists.position_of(db, playlist.id, video.id) is not None:
             return
         raise Conflict(f"A playlist holds at most {MAX_VIDEOS} videos")
     if await playlists.add_item(db, playlist.id, video.id):
-        await playlists.count_changed(db, playlist.id, 1)
+        await playlists.touch(db, playlist.id, count_delta=1)
     await db.commit()
 
 
@@ -92,7 +124,35 @@ async def remove_video(
     video = await videos.get_by_public_id(db, public_id)
     playlist = await _lock_own(db, user, playlist_id)
     if video is not None and await playlists.delete_item(db, playlist.id, video.id):
-        await playlists.count_changed(db, playlist.id, -1)
+        await playlists.touch(db, playlist.id, count_delta=-1)
+    await db.commit()
+
+
+async def move_video(
+    db: AsyncSession,
+    redis: Redis,
+    user: User,
+    playlist_id: UUID,
+    public_id: str,
+    before: str | None,
+) -> None:
+    """Put a video just before another one of the playlist, or at the end (before=None).
+
+    "Before a video", not "at index k": the owner may not see every item (some turned private),
+    so an index on their screen isn't a position. No access check on the videos, as in remove.
+    """
+    await PLAYLIST_WRITES.hit(redis, str(user.id))
+    if before == public_id:
+        raise DomainError("A video can't move before itself")
+    playlist = await _lock_own(db, user, playlist_id)
+    # Positions are read under the lock: what the previous write to this playlist left.
+    video_id, start = await _item(db, playlist, public_id)
+    if before is None:
+        await playlists.move_to_end(db, playlist.id, video_id)
+    else:
+        _, target = await _item(db, playlist, before)
+        await playlists.move_before(db, playlist.id, video_id, start=start, target=target)
+    await playlists.touch(db, playlist.id)
     await db.commit()
 
 
@@ -117,6 +177,12 @@ async def list_mine(
         for playlist in page
     ]
     return Page(items=items, next_cursor=next_cursor)
+
+
+async def is_saved(db: AsyncSession, user: User, public_id: str) -> SavedOut:
+    """No access check: the answer is only about the user's own playlists."""
+    video = await videos.get_by_public_id(db, public_id)
+    return SavedOut(saved=video is not None and await playlists.is_saved(db, user.id, video.id))
 
 
 async def get_watch_later(db: AsyncSession, user: User) -> PlaylistOut:
@@ -144,6 +210,15 @@ async def _lock_own(db: AsyncSession, user: User, playlist_id: UUID) -> Playlist
     if playlist is None:
         raise NotFound("Playlist not found")
     return playlist
+
+
+async def _item(db: AsyncSession, playlist: Playlist, public_id: str) -> tuple[UUID, int]:
+    """The video's id and its position in the playlist, else NotFound."""
+    video = await videos.get_by_public_id(db, public_id)
+    position = await playlists.position_of(db, playlist.id, video.id) if video else None
+    if video is None or position is None:
+        raise NotFound("Video not in this playlist")
+    return video.id, position
 
 
 def _thumbnail(video: Video | None) -> str | None:

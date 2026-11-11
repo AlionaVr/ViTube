@@ -23,6 +23,7 @@ function mockWatch(video: Video = VIDEO, viewer = SIGNED_IN) {
     ...viewer,
     [`GET ${base}`]: () => json(200, video),
     [`GET ${owner}`]: () => json(200, channel({ ...video.channel, subscriber_count: 2 })),
+    [`GET ${base}/saved`]: () => json(200, { saved: false }),
     [`PUT ${owner}/subscription`]: subscribed(true),
     [`DELETE ${owner}/subscription`]: subscribed(false),
     [`GET ${base}/related`]: () => json(200, page([2, 3, 4].map((n) => summary(n)))),

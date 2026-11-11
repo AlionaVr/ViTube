@@ -12,12 +12,10 @@ from app.modules.users.schemas import ChannelSummary
 from app.modules.videos.models import Visibility
 from app.modules.videos.schemas import VideoSummary
 
+VIDEO_ID = r"^[A-Za-z0-9_-]{11}$"  # a public video id, as in /watch?v=<id>
 PlaylistId = Annotated[UUID, Path(description="Playlist id, as in /playlist?list=<id>")]
 VideoQuery = Annotated[
-    str | None,
-    Query(
-        pattern=r"^[A-Za-z0-9_-]{11}$", description="A public video id: mark the playlists with it"
-    ),
+    str | None, Query(pattern=VIDEO_ID, description="A public video id: mark the playlists with it")
 ]
 Title = Annotated[
     str,
@@ -32,6 +30,20 @@ class PlaylistCreate(BaseModel):
     title: Title
     description: Description = ""
     visibility: Visibility = Visibility.PRIVATE
+
+
+class PlaylistUpdate(BaseModel):
+    """Changes only the given fields; null leaves a field as it is."""
+
+    title: Title | None = None
+    description: Description | None = None
+    visibility: Visibility | None = None
+
+
+class ItemMove(BaseModel):
+    before: Annotated[str, StringConstraints(pattern=VIDEO_ID)] | None = Field(
+        description="The playlist's video to put it before; null: at the end"
+    )
 
 
 class PlaylistOut(BaseModel):
@@ -66,6 +78,10 @@ class PlaylistOut(BaseModel):
 
 class MyPlaylist(PlaylistOut):
     contains_video: bool | None = Field(description="With ?video=: whether it is in this playlist")
+
+
+class SavedOut(BaseModel):
+    saved: bool = Field(description="In any of your playlists, Watch later too")
 
 
 class PlaylistItemOut(BaseModel):

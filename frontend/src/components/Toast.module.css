@@ -1,0 +1,46 @@
+/* Reset the popover's defaults (centered box with a border) to a corner. */
+.toast {
+  position: fixed;
+  inset: auto auto 24px 24px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  overflow: visible;
+}
+
+.message {
+  max-width: min(472px, calc(100vw - 48px));
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 8px;
+  background: var(--color-text);
+  color: var(--color-text-inverse);
+  box-shadow: var(--shadow-popup);
+  font-size: 14px;
+  line-height: 20px;
+  animation: rise 150ms ease-out;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .message {
+    animation: none;
+  }
+}
+
+@media (max-width: 656px) {
+  .toast {
+    inset: auto 16px 16px 16px;
+  }
+
+  .message {
+    max-width: none;
+  }
+}

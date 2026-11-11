@@ -8,27 +8,36 @@ import IconButton from '../components/IconButton'
 import Spinner from '../components/Spinner'
 import TextField from '../components/TextField'
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll'
+import { useToast } from '../hooks/useToast'
 import buttons from '../styles/buttons.module.css'
 import { useCreatePlaylist, useMyPlaylists, useSetInPlaylist } from './hooks'
 import { TITLE_MAX } from './limits'
+import { PrivacySelect } from './PlaylistFields'
 import styles from './SaveDialog.module.css'
-import type { Visibility } from './types'
+import type { MyPlaylist, Visibility } from './types'
 import { VISIBILITY } from './visibility'
 
 function NewPlaylistForm({ videoId, onDone }: { videoId: string; onDone: () => void }) {
   const create = useCreatePlaylist()
   const save = useSetInPlaylist(videoId)
+  const toast = useToast()
   const [title, setTitle] = useState('')
   const [visibility, setVisibility] = useState<Visibility>('private')
 
   async function submit(event: FormEvent) {
     event.preventDefault()
+    let playlist
     try {
-      const playlist = await create.mutateAsync({ title, description: '', visibility })
-      save.mutate({ playlistId: playlist.id, saved: true })
-      onDone()
+      playlist = await create.mutateAsync({ title, description: '', visibility })
     } catch {
-      // The form stays open with the server's reason below.
+      return // the form stays open with the server's reason below
+    }
+    onDone()
+    try {
+      await save.mutateAsync({ playlistId: playlist.id, saved: true })
+      toast(`Saved to ${playlist.title}`)
+    } catch {
+      toast(NOT_SAVED)
     }
   }
 
@@ -44,19 +53,7 @@ function NewPlaylistForm({ videoId, onDone }: { videoId: string; onDone: () => v
         autoFocus
         required
       />
-      <label className={styles.privacy}>
-        <span>Privacy</span>
-        <select
-          value={visibility}
-          onChange={(event) => setVisibility(event.target.value as Visibility)}
-        >
-          {(['private', 'unlisted', 'public'] as const).map((value) => (
-            <option key={value} value={value}>
-              {VISIBILITY[value].label}
-            </option>
-          ))}
-        </select>
-      </label>
+      <PrivacySelect value={visibility} onChange={setVisibility} />
       <div className={styles.actions}>
         <button
           type="submit"
@@ -70,9 +67,27 @@ function NewPlaylistForm({ videoId, onDone }: { videoId: string; onDone: () => v
   )
 }
 
+const NOT_SAVED = 'Couldn’t save the video. Try again.'
+
 function Playlists({ videoId }: { videoId: string }) {
   const mine = useMyPlaylists(videoId)
   const save = useSetInPlaylist(videoId)
+  const toast = useToast()
+  // A box is locked while its request runs, so a double click can't add and then remove:
+  // React updates the DOM after each click, before the next one.
+  const [busy, setBusy] = useState<ReadonlySet<string>>(new Set())
+
+  async function toggle(playlist: MyPlaylist, saved: boolean) {
+    setBusy((ids) => new Set(ids).add(playlist.id))
+    try {
+      await save.mutateAsync({ playlistId: playlist.id, saved })
+      toast(saved ? `Saved to ${playlist.title}` : `Removed from ${playlist.title}`)
+    } catch {
+      toast(NOT_SAVED)
+    } finally {
+      setBusy((ids) => new Set([...ids].filter((id) => id !== playlist.id)))
+    }
+  }
   const sentinel = useInfiniteScroll<HTMLLIElement>(
     () => void mine.fetchNextPage(),
     mine.hasNextPage && !mine.isFetchingNextPage && !mine.isFetchNextPageError,
@@ -95,9 +110,8 @@ function Playlists({ videoId }: { videoId: string }) {
                 type="checkbox"
                 className={styles.check}
                 checked={playlist.contains_video ?? false}
-                onChange={(event) =>
-                  save.mutate({ playlistId: playlist.id, saved: event.target.checked })
-                }
+                disabled={busy.has(playlist.id)}
+                onChange={(event) => void toggle(playlist, event.target.checked)}
               />
               <span className={styles.name}>{playlist.title}</span>
               <span className={styles.visibility} role="img" aria-label={label} title={label}>

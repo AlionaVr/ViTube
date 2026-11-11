@@ -22,6 +22,7 @@ function mockSave(handlers: Record<string, (request: Request) => Response | Prom
     [`POST ${base}/views/start`]: () => json(204),
     [`GET /api/channels/${VIDEO.channel.handle}`]: () => json(200, channel()),
     'GET /api/me/subscriptions': () => json(200, page([])),
+    [`GET ${base}/saved`]: () => json(200, { saved: false }),
     ...handlers,
   })
 }
@@ -88,6 +89,8 @@ describe('SaveDialog', () => {
     expect(requests(fetch, 'PUT')).toEqual([`/api/playlists/${mine(2, null).id}/items/${VIDEO.id}`])
     await waitFor(() => expect(second).toBeChecked())
     expect(first).not.toBeChecked()
+    // The last toast stays: each one replaces the one before.
+    expect(await screen.findByRole('status')).toHaveTextContent('Removed from Playlist 1')
     const query = fetch.mock.calls
       .map(([request]) => new URL(request.url))
       .find((url) => url.pathname === '/api/me/playlists')
@@ -121,6 +124,7 @@ describe('SaveDialog', () => {
       visibility: 'public',
     })
     expect(within(dialog).getByRole('button', { name: 'Create new playlist' })).toBeInTheDocument()
+    expect(await screen.findByText('Saved to Trailers')).toBeInTheDocument()
   })
 
   it('keeps the form open with the reason when creating fails', async () => {
@@ -139,5 +143,80 @@ describe('SaveDialog', () => {
       await within(dialog).findByText('Too many attempts. Try again later.'),
     ).toBeInTheDocument()
     expect(within(dialog).getByLabelText('Name')).toHaveValue('Trailers')
+  })
+
+  it('says where the video went', async () => {
+    mockSave({
+      ...SIGNED_IN,
+      'GET /api/me/playlists': () => json(200, page([mine(2, false, { title: 'Trailers' })])),
+      [`PUT /api/playlists/${mine(2, null).id}/items/${VIDEO.id}`]: () => json(204),
+    })
+    const dialog = await openSave()
+
+    await userEvent.click(await within(dialog).findByRole('checkbox', { name: /Trailers/ }))
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Saved to Trailers')
+  })
+
+  it('adds once on a double click, without an error', async () => {
+    let saved = false
+    let answer = () => {}
+    const fetch = mockSave({
+      ...SIGNED_IN,
+      'GET /api/me/playlists': () => json(200, page([mine(2, saved)])),
+      // The answer waits until both clicks are in, as a real request would.
+      [`PUT /api/playlists/${mine(2, null).id}/items/${VIDEO.id}`]: () =>
+        new Promise<Response>((resolve) => {
+          answer = () => {
+            saved = true
+            resolve(json(204))
+          }
+        }),
+    })
+    const dialog = await openSave()
+    const box = await within(dialog).findByRole('checkbox', { name: /Playlist 2/ })
+
+    await userEvent.dblClick(box)
+    answer()
+
+    await waitFor(() => expect(box).toBeEnabled())
+    expect(box).toBeChecked()
+    expect(requests(fetch, 'PUT')).toHaveLength(1)
+    expect(requests(fetch, 'DELETE')).toEqual([])
+    expect(screen.getByRole('status')).toHaveTextContent('Saved to Playlist 2')
+  })
+
+  it('rolls the box back and says so when saving fails', async () => {
+    mockSave({
+      ...SIGNED_IN,
+      'GET /api/me/playlists': () => json(200, page([mine(2, false)])),
+      [`PUT /api/playlists/${mine(2, null).id}/items/${VIDEO.id}`]: () =>
+        json(503, { detail: 'Try again later' }),
+    })
+    const dialog = await openSave()
+    const box = await within(dialog).findByRole('checkbox', { name: /Playlist 2/ })
+
+    await userEvent.click(box)
+
+    expect(await screen.findByText('Couldn’t save the video. Try again.')).toBeInTheDocument()
+    await waitFor(() => expect(box).not.toBeChecked())
+  })
+
+  it('fills the bookmark once the video is saved', async () => {
+    let saved = false
+    mockSave({
+      ...SIGNED_IN,
+      [`GET /api/videos/${VIDEO.id}/saved`]: () => json(200, { saved }),
+      'GET /api/me/playlists': () => json(200, page([mine(2, saved)])),
+      [`PUT /api/playlists/${mine(2, null).id}/items/${VIDEO.id}`]: () => {
+        saved = true
+        return json(204)
+      },
+    })
+    const dialog = await openSave()
+
+    await userEvent.click(await within(dialog).findByRole('checkbox', { name: /Playlist 2/ }))
+
+    expect(await screen.findByRole('button', { name: 'Saved' })).toBeInTheDocument()
   })
 })
