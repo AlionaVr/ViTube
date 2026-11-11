@@ -41,7 +41,7 @@
 
 .chip[aria-pressed='true'] {
   background: var(--color-text);
-  color: var(--color-bg);
+  color: var(--color-text-inverse);
 }
 
 /* Arrows sit on a fade, so chips slide under them. */

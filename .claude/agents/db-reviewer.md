@@ -17,7 +17,9 @@ Check:
   extensions).
 - Migrations are lock-safe: no long exclusive locks on big tables (`CREATE INDEX CONCURRENTLY` on existing tables, in
   an autocommit block; no table rewrites such as type changes). `alembic/env.py` keeps the advisory lock and
-  `lock_timeout`.
+  `lock_timeout`. Until production holds data (decided 2026-11-11), plain `CREATE INDEX` and one-off rewrites are
+  fine: don't flag them. Before the first deploy with real data, `env.py` moves to a session-level advisory lock and
+  indexes on existing tables to `CONCURRENTLY`.
 - New tables need no manual grants: `vitube_app` gets them via default privileges (ADR 0010).
 - Naming is consistent (snake_case, plural tables).
 

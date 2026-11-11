@@ -6,7 +6,9 @@ import IconButton from '../components/IconButton'
 import Spinner from '../components/Spinner'
 import { useModalDialog } from '../hooks/useModalDialog'
 import buttons from '../styles/buttons.module.css'
+import { CATEGORIES, CATEGORY_LABELS } from '../videos/categories'
 import { watchUrl } from '../videos/paths'
+import type { Category } from '../videos/types'
 import { type OwnVideo, updateVideo, type Visibility } from './api'
 import { formatLimits } from './format'
 import styles from './UploadDialog.module.css'
@@ -147,9 +149,11 @@ function Details({
   const [title, setTitle] = useState(video.title)
   const [description, setDescription] = useState(video.description)
   const [visibility, setVisibility] = useState<Visibility>(video.visibility)
+  const [category, setCategory] = useState<Category>(video.category)
   const save = useMutation({
-    mutationFn: () => updateVideo(video.id, { title, description, visibility }),
+    mutationFn: () => updateVideo(video.id, { title, description, visibility, category }),
   })
+  const categoryId = useId()
   const link = `${window.location.origin}${watchUrl(video.id)}`
   const [copied, setCopied] = useState(false)
   // No clipboard API on plain-HTTP sites other than localhost: no button then.
@@ -186,6 +190,32 @@ function Details({
             placeholder="Tell viewers about your video"
             onChange={setDescription}
           />
+          <div>
+            <h3 className={styles.section}>Category</h3>
+            <p className={styles.sectionHint}>
+              Add your video to a category so viewers can find it more easily
+            </p>
+            <div className={`${styles.box} ${styles.selectBox}`}>
+              <label htmlFor={categoryId} className={styles.boxLabel}>
+                Category
+              </label>
+              <select
+                id={categoryId}
+                className={styles.select}
+                value={category}
+                onChange={(event) => setCategory(event.target.value as Category)}
+              >
+                {CATEGORIES.map((id) => (
+                  <option key={id} value={id}>
+                    {CATEGORY_LABELS[id]}
+                  </option>
+                ))}
+              </select>
+              <span className={styles.selectArrow}>
+                <Icon name="chevronDown" />
+              </span>
+            </div>
+          </div>
           <fieldset className={styles.visibility}>
             <legend className={styles.section}>Visibility</legend>
             <p className={styles.sectionHint}>Choose who can watch your video</p>

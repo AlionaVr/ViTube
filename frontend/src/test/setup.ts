@@ -1,3 +1,5 @@
+// First: React DOM must find AnimationEvent when it loads.
+import './animationEvent'
 import '@testing-library/jest-dom/vitest'
 
 import { cleanup } from '@testing-library/react'

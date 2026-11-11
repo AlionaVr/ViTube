@@ -6,9 +6,3 @@ export interface ChannelSummary {
   name: string
   avatar_url: string | null
 }
-
-/** The owner row on the watch page. */
-export interface Channel extends ChannelSummary {
-  subscriber_count: number
-  is_subscribed: boolean
-}

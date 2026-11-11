@@ -6,13 +6,15 @@ import ErrorState from '../components/ErrorState'
 import Spinner from '../components/Spinner'
 import VideoCard, { VideoCardSkeleton } from '../components/VideoCard'
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll'
+import { CATEGORY_LABELS } from '../videos/categories'
 import { useCategories, useVideoFeed } from '../videos/hooks'
+import type { Category } from '../videos/types'
 import styles from './HomePage.module.css'
 
 const SKELETON_CARDS = 12
 
 export default function HomePage() {
-  const [category, setCategory] = useState<string | null>(null)
+  const [category, setCategory] = useState<Category | null>(null)
   const categories = useCategories()
   const feed = useVideoFeed(category)
   const sentinel = useInfiniteScroll<HTMLDivElement>(
@@ -20,13 +22,14 @@ export default function HomePage() {
     feed.hasNextPage && !feed.isFetchingNextPage && !feed.isFetchNextPageError,
   )
 
-  const chips: Chip[] = [
+  // Only categories with videos come back, so a chip never leads to an empty feed.
+  const chips: Chip<Category>[] = [
     { id: null, label: 'All' },
-    ...(categories.data ?? []).map((c) => ({ id: c.id, label: c.name })),
+    ...(categories.data ?? []).map((id) => ({ id, label: CATEGORY_LABELS[id] })),
   ]
   const videos = feed.data?.pages.flatMap((page) => page.items) ?? []
 
-  function selectCategory(id: string | null) {
+  function selectCategory(id: Category | null) {
     setCategory(id)
     window.scrollTo({ top: 0 })
   }
@@ -35,11 +38,10 @@ export default function HomePage() {
     <div className={styles.page}>
       <title>ViTube</title>
       <div className={styles.chips}>
-        {categories.isSuccess && (
+        {categories.isSuccess && categories.data.length > 0 && (
           <ChipBar label="Categories" chips={chips} selected={category} onSelect={selectCategory} />
         )}
       </div>
-
       {feed.isPending ? (
         <div className={styles.grid} aria-busy="true" aria-label="Loading videos">
           {Array.from({ length: SKELETON_CARDS }, (_, i) => (

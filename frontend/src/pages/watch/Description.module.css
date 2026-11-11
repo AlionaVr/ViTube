@@ -32,13 +32,13 @@
   overflow-wrap: anywhere;
 }
 
-/* Two lines by height, not line-clamp: a clamp draws its own "…" on an empty second line. */
+/* Three lines by height, not line-clamp: a clamp draws its own "…" on an empty last line. */
 .text {
-  max-height: 40px;
+  max-height: 60px;
   overflow: hidden;
 }
 
-/* "...more" sits on the last line and fades the text under it. */
+/* "more" sits on the last line and fades the text under it. */
 .more {
   position: absolute;
   right: 12px;

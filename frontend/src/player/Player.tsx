@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useRef, useState } from 'react'
+import { type SyntheticEvent, useEffect, useEffectEvent, useRef, useState } from 'react'
 
 import Icon, { type IconName } from '../components/Icon'
 import { formatDuration } from '../lib/format'
@@ -17,6 +17,8 @@ interface PlayerProps {
   onTheaterToggle: () => void
   /** Shows the Next button (Shift+N). */
   onNext?: () => void
+  /** Called while the video plays, with the seconds played so far. Skipped parts don't count. */
+  onPlayed?: (seconds: number) => void
 }
 
 /** The icon or text that flashes in the middle after an action. */
@@ -35,8 +37,22 @@ function isShortcut(event: KeyboardEvent): boolean {
   return !target.closest('input, textarea, select, [contenteditable="true"], [role="menu"], dialog')
 }
 
+/** Total length of the played ranges: seeking forward adds nothing, replaying a part adds it once. */
+function playedSeconds(played: TimeRanges): number {
+  let total = 0
+  for (let i = 0; i < played.length; i++) total += played.end(i) - played.start(i)
+  return total
+}
+
 /** YouTube-like controls over a native <video>: the browser does the loading and decoding. */
-export default function Player({ src, poster, theater, onTheaterToggle, onNext }: PlayerProps) {
+export default function Player({
+  src,
+  poster,
+  theater,
+  onTheaterToggle,
+  onNext,
+  onPlayed,
+}: PlayerProps) {
   const root = useRef<HTMLDivElement>(null)
   const video = useRef<HTMLVideoElement>(null)
   const media = useMediaState(video)
@@ -121,6 +137,11 @@ export default function Player({ src, poster, theater, onTheaterToggle, onNext }
     }
     saveVolume({ volume: element.volume, muted: element.muted })
     if (show) flash({ icon: element.muted ? 'volumeOff' : 'volumeUp' })
+  }
+
+  function reportPlayed(event: SyntheticEvent<HTMLVideoElement>) {
+    const element = event.currentTarget
+    if (onPlayed && !element.paused) onPlayed(playedSeconds(element.played))
   }
 
   function changeRate(rate: number) {
@@ -230,6 +251,8 @@ export default function Player({ src, poster, theater, onTheaterToggle, onNext }
         playsInline
         onClick={togglePlay}
         onDoubleClick={toggleFullscreen}
+        onPlaying={reportPlayed}
+        onTimeUpdate={reportPlayed}
       />
 
       {media.waiting && !media.error && (
@@ -251,11 +274,7 @@ export default function Player({ src, poster, theater, onTheaterToggle, onNext }
         <div className={styles.error} role="alert">
           <Icon name="error" size={48} />
           <p className={styles.errorTitle}>Can’t play this video</p>
-          <p className={styles.errorHint}>
-            {import.meta.env.DEV
-              ? 'Demo files missing? Run python3 demo-data/download.py.'
-              : 'The video file didn’t load. Try again later.'}
-          </p>
+          <p className={styles.errorHint}>The video file didn’t load. Try again later.</p>
         </div>
       )}
 

@@ -1,14 +1,52 @@
 """Video queries. No commits: the service decides when a transaction ends."""
 
+from collections.abc import Sequence
 from datetime import timedelta
 from uuid import UUID
 
-from sqlalchemy import delete, exists, func, select, update
-from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy import (
+    Row,
+    Select,
+    String,
+    column,
+    delete,
+    exists,
+    func,
+    literal,
+    or_,
+    select,
+    tuple_,
+    update,
+    values,
+)
+from sqlalchemy.dialects.postgresql import REGCONFIG, insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.users.models import User
-from app.modules.videos.models import Video, VideoAccess, VideoStatus, Visibility
+from app.modules.videos.models import (
+    SEARCH_CONFIG,
+    Category,
+    Video,
+    VideoAccess,
+    VideoStatus,
+    Visibility,
+)
+
+VideoRow = Row[Video, User]
+RankedRow = Row[Video, User, float]
+
+# Title typos (ADR 0007): pg_trgm's 0.6 misses a swap of two letters ("sintle"); 0.5 finds it.
+TYPO_SIMILARITY = 0.5
+
+# Public lists (feed, search, Up next) show only these. One place: a new rule reaches every list.
+# Partial indexes use models.LISTED_SQL: LISTED must imply it (may add rules, never drop one).
+# Literals, not bind parameters: a generic plan can't use a partial index for `visibility = $1`.
+LISTED = (
+    Video.visibility == literal(Visibility.PUBLIC, Video.visibility.type, literal_execute=True),
+    Video.status == literal(VideoStatus.READY, Video.status.type, literal_execute=True),
+)
+
+_WITH_OWNER = select(Video, User).join(User, User.id == Video.owner_id)
 
 
 async def get_by_public_id(db: AsyncSession, public_id: str) -> Video | None:
@@ -22,6 +60,94 @@ async def get_by_id(db: AsyncSession, video_id: UUID) -> Video | None:
 async def get_owner(db: AsyncSession, video: Video) -> User:
     # No query when the owner is the signed-in user: the session's identity map has them.
     return await db.get_one(User, video.owner_id)
+
+
+async def _newest(
+    db: AsyncSession, query: Select[Video, User], before: UUID | None, limit: int
+) -> Sequence[VideoRow]:
+    """Newest first (ids are uuidv7: ordered by time), after the cursor."""
+    if before is not None:
+        query = query.where(Video.id < before)
+    return (await db.execute(query.order_by(Video.id.desc()).limit(limit))).all()
+
+
+async def list_newest(
+    db: AsyncSession, *, category: Category | None, before: UUID | None, limit: int
+) -> Sequence[VideoRow]:
+    query = _WITH_OWNER.where(*LISTED)
+    if category is not None:
+        query = query.where(Video.category == category)
+    return await _newest(db, query, before, limit)
+
+
+async def list_up_next(
+    db: AsyncSession, video: Video, *, same_channel: bool, before: UUID | None, limit: int
+) -> Sequence[VideoRow]:
+    """Listed videos but this one: from its channel, or from all the others."""
+    channel = Video.owner_id == video.owner_id if same_channel else Video.owner_id != video.owner_id
+    return await _newest(
+        db, _WITH_OWNER.where(*LISTED, channel, Video.id != video.id), before, limit
+    )
+
+
+async def _allow_title_typos(db: AsyncSession) -> None:
+    # SET LOCAL: this transaction only. `%>` reads the threshold from it, so its index still works.
+    await db.execute(
+        select(func.set_config("pg_trgm.word_similarity_threshold", str(TYPO_SIMILARITY), True))
+    )
+
+
+async def search(
+    db: AsyncSession,
+    words: str,
+    *,
+    typos: bool,
+    after: tuple[float, UUID] | None,
+    limit: int,
+) -> Sequence[RankedRow]:
+    """Listed videos with the words in the title or description, best first.
+
+    With `typos`, titles close to the words match too. Rank: full-text rank (title over
+    description) plus how close the title is to the words.
+    """
+    query = func.websearch_to_tsquery(literal(SEARCH_CONFIG, REGCONFIG), words)
+    matches = Video.search_vector.bool_op("@@")(query)
+    if typos:
+        await _allow_title_typos(db)
+        matches = or_(matches, Video.title.bool_op("%>")(words))
+    rank = func.ts_rank(Video.search_vector, query) + func.word_similarity(words, Video.title)
+    # querytree 'T': no word is required ("-word" only), so every video would match.
+    statement = _WITH_OWNER.add_columns(rank).where(*LISTED, func.querytree(query) != "T", matches)
+    if after is not None:
+        statement = statement.where(tuple_(rank, Video.id) < tuple_(*after))
+    return (await db.execute(statement.order_by(rank.desc(), Video.id.desc()).limit(limit))).all()
+
+
+async def suggest_titles(db: AsyncSession, words: str, *, limit: int) -> list[str]:
+    """Titles of listed videos close to the words, closest first, in lower case like
+    YouTube's suggestions; titles that differ only in case come once."""
+    await _allow_title_typos(db)
+    title = func.lower(Video.title)
+    closeness = func.word_similarity(words, Video.title)  # pg_trgm ignores case
+    statement = (
+        select(title, closeness)
+        .where(*LISTED, Video.title.bool_op("%>")(words))
+        .distinct()
+        .order_by(closeness.desc(), title)
+        .limit(limit)
+    )
+    return list(await db.scalars(statement))
+
+
+async def listed_categories(db: AsyncSession) -> set[Category]:
+    """One index probe per category (ix_videos_listed_category_id), not a scan of every video."""
+    categories = values(column("name", String), name="categories").data(
+        [(category.value,) for category in Category]
+    )
+    statement = select(categories.c.name).where(
+        exists().where(*LISTED, Video.category == categories.c.name)
+    )
+    return {Category(name) for name in await db.scalars(statement)}
 
 
 async def has_access(db: AsyncSession, video_id: UUID, user_id: UUID) -> bool:
@@ -58,6 +184,7 @@ async def insert_unless_taken(
     title: str,
     description: str,
     visibility: Visibility,
+    category: Category,
 ) -> Video | None:
     """Insert a draft. None if the public id is taken: no exception, no savepoint needed."""
     statement = (
@@ -68,6 +195,7 @@ async def insert_unless_taken(
             title=title,
             description=description,
             visibility=visibility,
+            category=category,
         )
         .on_conflict_do_nothing(index_elements=[Video.public_id])
         .returning(Video)

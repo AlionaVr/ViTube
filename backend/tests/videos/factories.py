@@ -6,7 +6,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.users.models import Role, User
-from app.modules.videos.models import Video, VideoAccess, VideoStatus, Visibility
+from app.modules.videos.models import Category, Video, VideoAccess, VideoStatus, Visibility
 
 
 async def make_user(db: AsyncSession, name: str, role: Role = Role.USER) -> User:
@@ -22,13 +22,18 @@ async def make_video(
     *,
     visibility: Visibility = Visibility.PUBLIC,
     status: VideoStatus = VideoStatus.READY,
+    category: Category = Category.PEOPLE,
+    title: str = "A video",
+    description: str = "",
 ) -> Video:
     video = Video(
         public_id=secrets.token_urlsafe(8),  # 11 URL-safe chars
         owner_id=owner.id,
-        title="A video",
+        title=title,
+        description=description,
         visibility=visibility,
         status=status,
+        category=category,
         # What the state rules (CHECKs) require.
         duration_sec=10 if status is VideoStatus.READY else None,
         error_message="Not a video" if status is VideoStatus.FAILED else None,

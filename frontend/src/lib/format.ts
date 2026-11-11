@@ -25,6 +25,11 @@ export function formatViews(n: number): string {
   return counted(n, 'view', 'views', formatCompact)
 }
 
+/** "No views", "1 view", "1,234 views": the expanded description. */
+export function formatViewsExact(n: number): string {
+  return counted(n, 'view', 'views', formatExact)
+}
+
 /** "1 subscriber", "1.2M subscribers". */
 export function formatSubscribers(n: number): string {
   return counted(n, 'subscriber', 'subscribers', formatCompact)

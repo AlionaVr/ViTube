@@ -1,11 +1,10 @@
 """Comments and replies. Guests read; signed-in users write."""
 
-from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, status
 
-from app.core.pagination import Page
+from app.core.pagination import Cursor, Page
 from app.db.session import DbSession
 from app.modules.auth.deps import CurrentUser, OptionalUser
 from app.modules.comments import service
@@ -13,8 +12,6 @@ from app.modules.comments.schemas import CommentIn, CommentOut, CommentSort
 from app.modules.videos.schemas import PublicId
 
 router = APIRouter(prefix="/api", tags=["comments"])
-
-Cursor = Annotated[str | None, Query(max_length=200, description="next_cursor of the last page")]
 
 
 @router.get(

@@ -1,29 +1,44 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { getVideo, listCategories, listRelated, listVideos, rateVideo } from './api'
-import type { Rating, Video } from './types'
+import type { Category, Rating, Video } from './types'
 
 export const videoKeys = {
-  feed: (category: string | null) => ['videos', 'feed', category] as const,
+  feed: (category: Category | null) => ['videos', 'feed', category] as const,
+  categories: ['videos', 'categories'] as const,
   detail: (id: string) => ['videos', 'detail', id] as const,
   details: ['videos', 'detail'] as const,
   related: (id: string) => ['videos', 'related', id] as const,
-  categories: ['videos', 'categories'] as const,
 }
 
 const firstPage = null as string | null
 
-export function useVideoFeed(category: string | null) {
+export function useVideoFeed(category: Category | null) {
   return useInfiniteQuery({
     queryKey: videoKeys.feed(category),
-    queryFn: ({ pageParam }) => listVideos({ category, cursor: pageParam }),
+    queryFn: ({ pageParam }) => listVideos(category, pageParam),
     initialPageParam: firstPage,
     getNextPageParam: (page) => page.next_cursor,
   })
 }
 
+const POLL_MS = 2000
+
+/** While the worker has the video, ask every 2 s: the page shows it once it's ready. */
+export function pollWhileProcessing(query: {
+  state: { data?: { status: Video['status'] } }
+}): number | false {
+  const status = query.state.data?.status
+  return status === 'uploaded' || status === 'processing' ? POLL_MS : false
+}
+
+/** Owners and moderators may open a video that is still processing. */
 export function useVideo(id: string) {
-  return useQuery({ queryKey: videoKeys.detail(id), queryFn: () => getVideo(id) })
+  return useQuery({
+    queryKey: videoKeys.detail(id),
+    queryFn: () => getVideo(id),
+    refetchInterval: pollWhileProcessing,
+  })
 }
 
 export function useRelatedVideos(id: string) {
@@ -36,7 +51,7 @@ export function useRelatedVideos(id: string) {
 }
 
 export function useCategories() {
-  return useQuery({ queryKey: videoKeys.categories, queryFn: listCategories, staleTime: Infinity })
+  return useQuery({ queryKey: videoKeys.categories, queryFn: listCategories })
 }
 
 /** The like count after the viewer changes their rating; the server's answer replaces it. */

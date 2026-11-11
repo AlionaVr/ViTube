@@ -16,6 +16,7 @@ from redis.exceptions import LockError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import Conflict, DomainError, NotFound, PayloadTooLarge, RequestTimeout
+from app.core.pagination import Page, decode_cursor, split_page
 from app.core.rate_limit import RateLimit
 from app.core.slots import Slots, hold
 from app.core.storage import Storage
@@ -25,12 +26,14 @@ from app.modules.users.models import User
 from app.modules.videos import repository as videos
 from app.modules.videos.access import get_viewable
 from app.modules.videos.config import get_video_settings
-from app.modules.videos.models import Video, VideoStatus
+from app.modules.videos.models import Category, Video, VideoStatus
+from app.modules.videos.repository import VideoRow
 from app.modules.videos.schemas import (
     UploadLimits,
     VideoCreate,
     VideoDetail,
     VideoOut,
+    VideoSummary,
     VideoUpdate,
 )
 from app.worker.celery_app import celery_app
@@ -52,6 +55,8 @@ UPLOADS_TOTAL = Slots("uploads_total", limit=32, ttl=UPLOAD_LOCK_SECONDS)
 # 1 GiB fits even at ~1.2 Mbit/s; a client trickling bytes can't hold a slot longer.
 UPLOAD_DEADLINE_SEC = 2 * 3600
 PROCESS_TASK = "videos.process"  # by name: the api doesn't import worker code
+FEED_PAGE_SIZE = 24  # full rows in a grid of 2, 3, 4 or 6 columns
+UP_NEXT_PAGE_SIZE = 20
 
 
 def upload_limits() -> UploadLimits:
@@ -76,11 +81,54 @@ async def create_draft(db: AsyncSession, redis: Redis, user: User, data: VideoCr
             title=data.title,
             description=data.description,
             visibility=data.visibility,
+            category=data.category,
         )
         if video is not None:
             await db.commit()
             return VideoOut.of(video, user)
     raise RuntimeError("No free public id found")  # 2^64 ids: practically never
+
+
+async def list_feed(
+    db: AsyncSession, category: Category | None, cursor: str | None
+) -> Page[VideoSummary]:
+    """The home feed: the same for every viewer, so no user is read."""
+    before = decode_cursor(cursor, tuple[UUID])[0] if cursor else None
+    rows = await videos.list_newest(db, category=category, before=before, limit=FEED_PAGE_SIZE + 1)
+    page, next_cursor = split_page(rows, FEED_PAGE_SIZE, lambda row: (row[0].id,))
+    return Page(
+        items=[VideoSummary.of(video, owner) for video, owner in page], next_cursor=next_cursor
+    )
+
+
+async def list_up_next(
+    db: AsyncSession, user: User | None, public_id: str, cursor: str | None
+) -> Page[VideoSummary]:
+    """The channel's other videos first, then the newest of other channels."""
+    # Only for a viewable video: the order would tell who owns a private one.
+    video = await get_viewable(db, user, public_id)
+    same_channel, before = decode_cursor(cursor, tuple[bool, UUID]) if cursor else (True, None)
+    limit = UP_NEXT_PAGE_SIZE + 1
+    rows: list[VideoRow] = []
+    if same_channel:
+        rows += await videos.list_up_next(db, video, same_channel=True, before=before, limit=limit)
+        before = None  # the other channels start from their newest
+    if len(rows) < limit:
+        rows += await videos.list_up_next(
+            db, video, same_channel=False, before=before, limit=limit - len(rows)
+        )
+    page, next_cursor = split_page(
+        rows, UP_NEXT_PAGE_SIZE, lambda row: (row[0].owner_id == video.owner_id, row[0].id)
+    )
+    return Page(
+        items=[VideoSummary.of(item, owner) for item, owner in page], next_cursor=next_cursor
+    )
+
+
+async def list_categories(db: AsyncSession) -> list[Category]:
+    """Categories with listed videos, in YouTube's order: a chip never leads to an empty feed."""
+    present = await videos.listed_categories(db)
+    return [category for category in Category if category in present]
 
 
 async def get_video(db: AsyncSession, user: User | None, public_id: str) -> VideoDetail:

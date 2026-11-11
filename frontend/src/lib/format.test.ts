@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatComments, formatCompact, formatDuration, formatTimeAgo, formatViews } from './format'
+import {
+  formatComments,
+  formatCompact,
+  formatDuration,
+  formatTimeAgo,
+  formatViews,
+  formatViewsExact,
+} from './format'
 
 describe('formatCompact', () => {
   it.each([
@@ -23,6 +30,8 @@ describe('counted labels', () => {
     expect(formatViews(0)).toBe('No views')
     expect(formatViews(1)).toBe('1 view')
     expect(formatViews(48_213)).toBe('48K views')
+    expect(formatViewsExact(1)).toBe('1 view')
+    expect(formatViewsExact(48_213)).toBe('48,213 views')
     expect(formatComments(1234)).toBe('1,234 comments')
   })
 })

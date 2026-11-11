@@ -1,0 +1,121 @@
+/* YouTube's results column: up to 1250px of content, 24px sides at every width. */
+.page {
+  container-type: inline-size;
+  max-width: calc(1250px + 2 * 24px);
+  margin: 0 auto;
+  padding: 16px 24px 24px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* As on YouTube: thumbnail and details share the width; the thumbnail stays 240–500 px. */
+.result {
+  display: flex;
+  gap: 16px;
+}
+
+.thumbnail {
+  flex: 1 1 0;
+  min-width: 240px;
+  max-width: 500px;
+}
+
+.details {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* Room for the ⋮ menu button, as on YouTube: only the title wraps short of it. */
+.title {
+  margin: 0;
+  padding-right: 24px;
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 26px;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.line,
+.description {
+  margin: 0;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--color-text-secondary);
+}
+
+.channel {
+  width: fit-content;
+  max-width: 100%;
+  padding: 12px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.channel:hover {
+  color: var(--color-text);
+}
+
+.description {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.result a:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.more {
+  padding: 24px 0;
+  display: flex;
+  justify-content: center;
+}
+
+.ghostThumbnail {
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  background: var(--color-placeholder);
+}
+
+.ghostLine {
+  height: 20px;
+  margin-bottom: 8px;
+  border-radius: 4px;
+  background: var(--color-placeholder);
+}
+
+.ghostShort {
+  width: 60%;
+}
+
+/* YouTube keeps the row even on a phone; stacking only where the details would be unreadable. */
+@container (max-width: 400px) {
+  .result {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .thumbnail {
+    min-width: 0;
+    max-width: none;
+  }
+}

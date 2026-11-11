@@ -1,57 +1,114 @@
-import { screen, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 
 import { ANNA, json, mockApi } from '../../test/api'
-import { listVideos } from '../../videos/api'
-import { resetMockServer } from '../../mocks/server'
 import { renderApp } from '../../test/render'
 import { setScreenWidth } from '../../test/screen'
+import { comment, detail, page, summary } from '../../test/videos'
+import type { Rating, Video } from '../../videos/types'
 
-async function firstVideoId(title: string) {
-  const { items } = await listVideos({ category: null, cursor: null })
-  return items.find((video) => video.title === title)!.id
+const VIDEO = detail(1, { title: 'Sintel – trailer', view_count: 1_920_441 })
+const SIGNED_IN = { 'GET /api/auth/me': () => json(200, ANNA) }
+const GUEST = { 'GET /api/auth/me': () => json(401, { detail: 'Sign in required' }) }
+
+/** The API of one watch page; the rating and new comments behave like the server's. */
+function mockWatch(video: Video = VIDEO, viewer = SIGNED_IN) {
+  const base = `/api/videos/${video.id}`
+  return mockApi({
+    ...viewer,
+    [`GET ${base}`]: () => json(200, video),
+    [`GET ${base}/related`]: () => json(200, page([2, 3, 4].map((n) => summary(n)))),
+    [`GET ${base}/comments`]: () => json(200, page([comment(1)])),
+    [`POST ${base}/comments`]: async (request) => {
+      const { text } = (await request.json()) as { text: string }
+      const author = { handle: ANNA.handle, name: ANNA.handle, avatar_url: null }
+      return json(201, comment(2, { text, author, published_at: new Date().toISOString() }))
+    },
+    [`POST ${base}/views/start`]: () => json(204),
+    [`POST ${base}/views`]: () => json(204),
+    [`PUT ${base}/rating`]: async (request) => {
+      const { rating } = (await request.json()) as { rating: Rating }
+      return json(200, {
+        like_count: video.like_count + (rating === 'like' ? 1 : 0),
+        my_rating: rating,
+      })
+    },
+  })
 }
 
-async function openWatch(title = 'Sintel – trailer') {
-  const id = await firstVideoId(title)
-  const router = renderApp(`/watch?v=${id}`)
-  await screen.findByRole('heading', { level: 1, name: title })
+async function openWatch(video: Video = VIDEO) {
+  const router = renderApp(`/watch?v=${video.id}`)
+  await screen.findByRole('heading', { level: 1, name: video.title })
   return router
 }
 
 describe('WatchPage', () => {
-  beforeEach(() => {
-    mockApi({ 'GET /api/auth/me': () => json(200, ANNA) })
-  })
-  afterEach(() => {
-    resetMockServer()
-    localStorage.clear()
-  })
+  afterEach(() => localStorage.clear())
 
   it('shows the video, its channel, description and Up next', async () => {
+    mockWatch()
     await openWatch()
     expect(screen.getByRole('region', { name: 'Video player' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Open Movie Club' })).toHaveAttribute(
       'href',
       '/@openmovieclub',
     )
-    expect(screen.getByText('182K subscribers')).toBeInTheDocument()
     expect(document.title).toBe('Sintel – trailer - ViTube')
 
     const upNext = await screen.findByRole('region', { name: 'Up next' })
-    expect(within(upNext).getAllByRole('link').length).toBeGreaterThan(5)
+    expect(within(upNext).getByRole('link', { name: /Video 2/ })).toHaveAttribute(
+      'href',
+      '/watch?v=video-00002',
+    )
+  })
+
+  it('reports playback for the view count: start at once, the view after 30 s played', async () => {
+    const fetch = mockWatch()
+    await openWatch()
+    const sent = () =>
+      fetch.mock.calls
+        .map(([request]) => `${request.method} ${new URL(request.url).pathname}`)
+        .filter((call) => call.includes('/views'))
+    // The player autoplays.
+    await waitFor(() => expect(sent()).toEqual(['POST /api/videos/video-00001/views/start']))
+
+    const video = document.querySelector('video')!
+    Object.defineProperty(video, 'played', { value: { length: 1, start: () => 0, end: () => 30 } })
+    fireEvent.timeUpdate(video)
+    await waitFor(() =>
+      expect(sent()).toEqual([
+        'POST /api/videos/video-00001/views/start',
+        'POST /api/videos/video-00001/views',
+      ]),
+    )
+  })
+
+  it('sets off fireworks for a like, not for taking it back', async () => {
+    mockWatch()
+    await openWatch()
+    const like = screen.getByRole('button', { name: /^Like this video along with/ })
+    const fireworks = () => like.querySelectorAll('[data-fireworks]')
+
+    await userEvent.click(like)
+    expect(fireworks()).toHaveLength(1)
+    fireEvent.animationEnd(fireworks()[0])
+    expect(fireworks()).toHaveLength(0)
+
+    await userEvent.click(like)
+    expect(like).toHaveAttribute('aria-pressed', 'false')
+    expect(fireworks()).toHaveLength(0)
   })
 
   it('likes and unlikes at once, with the count', async () => {
+    mockWatch()
     await openWatch()
-    const like = screen.getByRole('button', { name: /^Like this video along with/ })
+    const like = screen.getByRole('button', { name: 'Like this video along with 120 other people' })
     expect(like).toHaveAttribute('aria-pressed', 'false')
-    const before = like.textContent
 
     await userEvent.click(like)
     expect(like).toHaveAttribute('aria-pressed', 'true')
-    expect(like.getAttribute('aria-label')).not.toBe(`Like this video along with ${before}`)
+    expect(like).toHaveTextContent('121')
 
     await userEvent.click(screen.getByRole('button', { name: 'Dislike this video' }))
     expect(screen.getByRole('button', { name: 'Dislike this video' })).toHaveAttribute(
@@ -59,31 +116,23 @@ describe('WatchPage', () => {
       'true',
     )
     expect(like).toHaveAttribute('aria-pressed', 'false')
-  })
-
-  it('subscribes, and unsubscribes after a confirmation', async () => {
-    await openWatch()
-    await userEvent.click(screen.getByRole('button', { name: 'Subscribe' }))
-    expect(await screen.findByText('182K subscribers')).toBeInTheDocument()
-
-    await userEvent.click(screen.getByRole('button', { name: /Subscribed/ }))
-    const dialog = screen.getByRole('dialog', { name: 'Unsubscribe' })
-    expect(dialog).toHaveTextContent('Unsubscribe from Open Movie Club?')
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Unsubscribe' }))
-    expect(await screen.findByRole('button', { name: 'Subscribe' })).toBeInTheDocument()
+    expect(like).toHaveTextContent('120')
   })
 
   it('expands and collapses the description', async () => {
+    mockWatch()
     await openWatch()
-    await userEvent.click(screen.getByRole('button', { name: '...more' }))
+    await userEvent.click(screen.getByRole('button', { name: 'more' }))
     expect(screen.getByText(/^1,920,441 views$/)).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Show less' }))
     expect(screen.getByText('1.9M views')).toBeInTheDocument()
   })
 
-  it('posts a comment at the top of the list', async () => {
+  it('lists comments and posts a new one at the top', async () => {
+    mockWatch()
     await openWatch()
-    const box = await screen.findByRole('textbox', { name: 'Add a comment…' })
+    expect(await screen.findByText('Comment 1')).toBeInTheDocument()
+    const box = screen.getByRole('textbox', { name: 'Add a comment…' })
     await userEvent.click(box)
     const submit = screen.getByRole('button', { name: 'Comment' })
     expect(submit).toBeDisabled()
@@ -98,7 +147,7 @@ describe('WatchPage', () => {
   })
 
   it('asks a guest to sign in instead of liking', async () => {
-    mockApi({ 'GET /api/auth/me': () => json(401, { detail: 'Sign in required' }) })
+    mockWatch(VIDEO, GUEST)
     await openWatch()
 
     await userEvent.click(screen.getByRole('button', { name: /^Like this video along with/ }))
@@ -106,19 +155,43 @@ describe('WatchPage', () => {
     expect(prompt).toHaveTextContent('Sign in to make your opinion count.')
     expect(within(prompt).getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/login')
 
+    expect(document.querySelector('[data-fireworks]')).not.toBeInTheDocument()
+
     await userEvent.keyboard('{Escape}')
     expect(screen.queryByRole('dialog', { name: 'Like this video?' })).not.toBeInTheDocument()
   })
 
   it('puts Up next under the description on narrow screens', async () => {
     setScreenWidth(900)
+    mockWatch()
     await openWatch()
     const upNext = await screen.findByRole('region', { name: 'Up next' })
-    const comments = screen.getByRole('region', { name: /Comments/ })
+    const comments = screen.getByRole('region', { name: '1 Comment' })
     expect(upNext.compareDocumentPosition(comments)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
   })
 
+  it('tells the owner why their video can’t play yet, without ratings or comments', async () => {
+    const failed = detail(1, {
+      status: 'failed',
+      error_message: 'The file is not a video',
+      media_url: null,
+      thumbnail_url: null,
+    })
+    mockWatch(failed)
+    await openWatch(failed)
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Processing failedThe file is not a video')
+    expect(screen.queryByRole('region', { name: 'Video player' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Like this video/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: '1 Comment' })).not.toBeInTheDocument()
+  })
+
   it('says the video is unavailable for an unknown id', async () => {
+    mockApi({
+      ...GUEST,
+      'GET /api/videos/nope': () => json(404, { detail: 'Video not found' }),
+      'GET /api/videos/nope/related': () => json(404, { detail: 'Video not found' }),
+    })
     renderApp('/watch?v=nope')
     expect(await screen.findByText('Video unavailable')).toBeInTheDocument()
   })

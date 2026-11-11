@@ -11,12 +11,7 @@ export default function CompactVideoCard({ video }: { video: VideoSummary }) {
   return (
     <Link to={watchUrl(video.id)} className={styles.card}>
       <div className={styles.thumbnail}>
-        <Thumbnail
-          src={video.thumbnail_url}
-          durationSec={video.duration_sec}
-          lastPositionSec={video.last_position_sec}
-          compact
-        />
+        <Thumbnail src={video.thumbnail_url} durationSec={video.duration_sec} compact />
       </div>
       <div className={styles.meta}>
         <h3 className={styles.title} title={video.title}>
@@ -24,7 +19,7 @@ export default function CompactVideoCard({ video }: { video: VideoSummary }) {
         </h3>
         <p className={styles.line}>{video.channel.name}</p>
         <p className={styles.line}>
-          {formatViews(video.view_count)} • {formatTimeAgo(video.published_at)}
+          {formatViews(video.view_count)} • {formatTimeAgo(video.created_at)}
         </p>
       </div>
     </Link>

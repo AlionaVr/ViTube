@@ -1,6 +1,7 @@
 # Demo data
 
-Three short open-licensed videos for local development and, later, the seed (upload → processing → playback).
+Three short open-licensed videos to upload in local development and, later, for the seed (upload → processing →
+playback).
 The files are not in git: `download.py` fetches them and renders thumbnails.
 
 ```bash

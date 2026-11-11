@@ -7,6 +7,7 @@
 
 /* On focus YouTube shows a search icon inside and grows the box to the left by the same 32px. */
 .box {
+  position: relative;
   flex: 1;
   min-width: 0;
   height: 40px;
@@ -56,6 +57,52 @@
 .input::-webkit-search-cancel-button,
 .input::-webkit-search-decoration {
   appearance: none;
+}
+
+/* YouTube's suggestions: a sheet under the box, the typed start regular, the rest bold. */
+.suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 2;
+  margin: 0;
+  padding: 8px 0;
+  list-style: none;
+  border-radius: 12px;
+  background: var(--color-bg);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Rows are inset, so the highlight is a rounded block inside the sheet. */
+.suggestion {
+  height: 44px;
+  margin: 0 8px;
+  padding: 0 28px 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-radius: 8px;
+  color: var(--color-text);
+  cursor: default;
+}
+
+.suggestion:hover,
+.suggestion[aria-selected='true'] {
+  background: var(--color-hover);
+}
+
+.suggestionText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.typed {
+  font-weight: 400;
 }
 
 .submit {

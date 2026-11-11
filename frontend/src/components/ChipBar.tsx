@@ -3,20 +3,26 @@ import { useEffect, useRef, useState } from 'react'
 import IconButton from './IconButton'
 import styles from './ChipBar.module.css'
 
-export interface Chip {
-  id: string | null
+/** `id: null` is the "All" chip. */
+export interface Chip<T extends string> {
+  id: T | null
   label: string
 }
 
-interface ChipBarProps {
-  chips: Chip[]
-  selected: string | null
-  onSelect: (id: string | null) => void
+interface ChipBarProps<T extends string> {
+  chips: Chip<T>[]
+  selected: T | null
+  onSelect: (id: T | null) => void
   label: string
 }
 
 /** A row of filter chips; arrows appear when it overflows, as on YouTube. */
-export default function ChipBar({ chips, selected, onSelect, label }: ChipBarProps) {
+export default function ChipBar<T extends string>({
+  chips,
+  selected,
+  onSelect,
+  label,
+}: ChipBarProps<T>) {
   const row = useRef<HTMLDivElement>(null)
   const [canScroll, setCanScroll] = useState({ left: false, right: false })
 

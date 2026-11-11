@@ -96,7 +96,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Home feed: public videos, newest first */
+        get: operations["list_feed_api_videos_get"];
         put?: never;
         /** Create a draft */
         post: operations["create_draft_api_videos_post"];
@@ -122,6 +123,23 @@ export interface paths {
         head?: never;
         /** Edit your video's details */
         patch: operations["update_video_api_videos__public_id__patch"];
+        trace?: never;
+    };
+    "/api/videos/{public_id}/related": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Up next: the channel's other videos first, then the newest */
+        get: operations["list_up_next_api_videos__public_id__related_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/videos/{public_id}/file": {
@@ -173,6 +191,57 @@ export interface paths {
         post?: never;
         /** Take back a user's access to your video */
         delete: operations["revoke_access_api_videos__public_id__access__handle__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Categories that have public videos */
+        get: operations["list_categories_api_categories_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search public videos, best match first */
+        get: operations["search_api_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/search/suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Titles of public videos close to what is typed, closest first, in lower case */
+        get: operations["suggest_api_search_suggestions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -323,6 +392,12 @@ export interface components {
             handle: string;
         };
         /**
+         * Category
+         * @description YouTube's upload categories, in its order.
+         * @enum {string}
+         */
+        Category: "film" | "autos" | "music" | "pets" | "sports" | "travel" | "gaming" | "people" | "comedy" | "entertainment" | "news" | "howto" | "education" | "science" | "nonprofits";
+        /**
          * ChannelSummary
          * @description What a video card or a comment shows about a user's channel.
          */
@@ -410,6 +485,20 @@ export interface components {
             /** Next Cursor */
             next_cursor: string | null;
         };
+        /** Page[SearchResult] */
+        Page_SearchResult_: {
+            /** Items */
+            items: components["schemas"]["SearchResult"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
+        /** Page[VideoSummary] */
+        Page_VideoSummary_: {
+            /** Items */
+            items: components["schemas"]["VideoSummary"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
         /**
          * Rating
          * @enum {string}
@@ -433,6 +522,33 @@ export interface components {
          * @enum {string}
          */
         Role: "user" | "moderator" | "admin";
+        /**
+         * SearchResult
+         * @description A result row also shows the start of the description.
+         */
+        SearchResult: {
+            /**
+             * Id
+             * @description Public id, as in /watch?v=<id>
+             */
+            id: string;
+            /** Title */
+            title: string;
+            /** Thumbnail Url */
+            thumbnail_url: string;
+            /** Duration Sec */
+            duration_sec: number;
+            /** View Count */
+            view_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            channel: components["schemas"]["ChannelSummary"];
+            /** Description */
+            description: string;
+        };
         /** UploadLimits */
         UploadLimits: {
             /** Max Size Bytes */
@@ -475,6 +591,8 @@ export interface components {
             description: string;
             /** @default private */
             visibility: components["schemas"]["Visibility"];
+            /** @default people */
+            category: components["schemas"]["Category"];
         };
         /**
          * VideoDetail
@@ -491,6 +609,7 @@ export interface components {
             /** Description */
             description: string;
             visibility: components["schemas"]["Visibility"];
+            category: components["schemas"]["Category"];
             status: components["schemas"]["VideoStatus"];
             /**
              * Error Message
@@ -535,6 +654,7 @@ export interface components {
             /** Description */
             description: string;
             visibility: components["schemas"]["Visibility"];
+            category: components["schemas"]["Category"];
             status: components["schemas"]["VideoStatus"];
             /**
              * Error Message
@@ -573,6 +693,31 @@ export interface components {
          */
         VideoStatus: "uploading" | "uploaded" | "processing" | "ready" | "failed";
         /**
+         * VideoSummary
+         * @description A video in a public list: home feed, Up next, search. Only ready videos are listed.
+         */
+        VideoSummary: {
+            /**
+             * Id
+             * @description Public id, as in /watch?v=<id>
+             */
+            id: string;
+            /** Title */
+            title: string;
+            /** Thumbnail Url */
+            thumbnail_url: string;
+            /** Duration Sec */
+            duration_sec: number;
+            /** View Count */
+            view_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            channel: components["schemas"]["ChannelSummary"];
+        };
+        /**
          * VideoUpdate
          * @description Changes only the given fields; null leaves a field as it is. Works in any status.
          */
@@ -582,6 +727,7 @@ export interface components {
             /** Description */
             description?: string | null;
             visibility?: components["schemas"]["Visibility"] | null;
+            category?: components["schemas"]["Category"] | null;
         };
         /**
          * Visibility
@@ -721,6 +867,39 @@ export interface operations {
             };
         };
     };
+    list_feed_api_videos_get: {
+        parameters: {
+            query?: {
+                category?: components["schemas"]["Category"] | null;
+                /** @description next_cursor of the last page */
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_VideoSummary_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     create_draft_api_videos_post: {
         parameters: {
             query?: never;
@@ -809,6 +988,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VideoOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_up_next_api_videos__public_id__related_get: {
+        parameters: {
+            query?: {
+                /** @description next_cursor of the last page */
+                cursor?: string | null;
+            };
+            header?: never;
+            path: {
+                /** @description Public video id */
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_VideoSummary_"];
                 };
             };
             /** @description Validation Error */
@@ -911,6 +1125,92 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_categories_api_categories_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Category"][];
+                };
+            };
+        };
+    };
+    search_api_search_get: {
+        parameters: {
+            query: {
+                /** @description Words to find in titles and descriptions */
+                q: string;
+                /** @description next_cursor of the last page */
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_SearchResult_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    suggest_api_search_suggestions_get: {
+        parameters: {
+            query: {
+                /** @description Words to find in titles and descriptions */
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
+                };
             };
             /** @description Validation Error */
             422: {

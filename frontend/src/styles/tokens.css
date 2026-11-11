@@ -11,6 +11,8 @@
   --color-surface-hover: #f0f0f0;
   --color-text: #0f0f0f;
   --color-text-secondary: #606060;
+  /* Text on --color-text, e.g. the selected chip. */
+  --color-text-inverse: #f1f1f1;
   --color-border: #d3d3d3;
   --color-divider: rgba(0, 0, 0, 0.1);
   --color-hover: rgba(0, 0, 0, 0.05);
@@ -19,7 +21,7 @@
   --color-scrim: rgba(0, 0, 0, 0.5);
   --color-placeholder: rgba(0, 0, 0, 0.1);
   --color-overlay: rgba(0, 0, 0, 0.6);
-  /* Opaque versions of the tonal greys, for boxes that cover text (description "...more"). */
+  /* Opaque versions of the tonal greys, for boxes that cover text (description "more"). */
   --color-tonal: #f2f2f2;
   --color-tonal-hover: #e5e5e5;
   --color-filled-hover: #272727;

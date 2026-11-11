@@ -73,7 +73,7 @@ FastAPI + PostgreSQL + MinIO + Celery + React. Deployed with `./install.sh` (Doc
   and retry from it.
 - Async state that gates UI (e.g. the viewer) has explicit states (`loading` / `guest` / `authenticated`), not a
   nullable value.
-- Media uses ready tools (native `<video>`, `sirv` for Range); never an own streaming engine.
+- Media uses ready tools (native `<video>`, MinIO behind nginx for Range); never an own streaming engine.
 - Dev and demo data work offline: local files, no external hosts at runtime; big files stay out of git.
 
 ## Secrets and `.env`

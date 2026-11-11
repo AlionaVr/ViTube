@@ -144,6 +144,72 @@
       }
     },
     "/api/videos": {
+      "get": {
+        "tags": [
+          "videos"
+        ],
+        "summary": "Home feed: public videos, newest first",
+        "operationId": "list_feed_api_videos_get",
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Category"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "next_cursor of the last page",
+              "title": "Cursor"
+            },
+            "description": "next_cursor of the last page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_VideoSummary_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
         "tags": [
           "videos"
@@ -151,14 +217,14 @@
         "summary": "Create a draft",
         "operationId": "create_draft_api_videos_post",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/VideoCreate"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "201": {
@@ -265,6 +331,70 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/VideoOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/videos/{public_id}/related": {
+      "get": {
+        "tags": [
+          "videos"
+        ],
+        "summary": "Up next: the channel's other videos first, then the newest",
+        "operationId": "list_up_next_api_videos__public_id__related_get",
+        "parameters": [
+          {
+            "name": "public_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{11}$",
+              "description": "Public video id",
+              "title": "Public Id"
+            },
+            "description": "Public video id"
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "next_cursor of the last page",
+              "title": "Cursor"
+            },
+            "description": "next_cursor of the last page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_VideoSummary_"
                 }
               }
             }
@@ -421,6 +551,148 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/categories": {
+      "get": {
+        "tags": [
+          "videos"
+        ],
+        "summary": "Categories that have public videos",
+        "operationId": "list_categories_api_categories_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Category"
+                  },
+                  "type": "array",
+                  "title": "Response List Categories Api Categories Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/search": {
+      "get": {
+        "tags": [
+          "search"
+        ],
+        "summary": "Search public videos, best match first",
+        "operationId": "search_api_search_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "pattern": "^[^\\x00-\\x1f\\x7f]*$",
+              "description": "Words to find in titles and descriptions",
+              "title": "Q"
+            },
+            "description": "Words to find in titles and descriptions"
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "next_cursor of the last page",
+              "title": "Cursor"
+            },
+            "description": "next_cursor of the last page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_SearchResult_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/search/suggestions": {
+      "get": {
+        "tags": [
+          "search"
+        ],
+        "summary": "Titles of public videos close to what is typed, closest first, in lower case",
+        "operationId": "suggest_api_search_suggestions_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "pattern": "^[^\\x00-\\x1f\\x7f]*$",
+              "description": "Words to find in titles and descriptions",
+              "title": "Q"
+            },
+            "description": "Words to find in titles and descriptions"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Response Suggest Api Search Suggestions Get"
+                }
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -854,6 +1126,28 @@
         ],
         "title": "AccessGrant"
       },
+      "Category": {
+        "type": "string",
+        "enum": [
+          "film",
+          "autos",
+          "music",
+          "pets",
+          "sports",
+          "travel",
+          "gaming",
+          "people",
+          "comedy",
+          "entertainment",
+          "news",
+          "howto",
+          "education",
+          "science",
+          "nonprofits"
+        ],
+        "title": "Category",
+        "description": "YouTube's upload categories, in its order."
+      },
       "ChannelSummary": {
         "properties": {
           "handle": {
@@ -1055,6 +1349,62 @@
         ],
         "title": "Page[CommentOut]"
       },
+      "Page_SearchResult_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SearchResult"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "Page[SearchResult]"
+      },
+      "Page_VideoSummary_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/VideoSummary"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "Page[VideoSummary]"
+      },
       "Rating": {
         "type": "string",
         "enum": [
@@ -1102,6 +1452,56 @@
         ],
         "title": "Role",
         "description": "Nested roles (ADR 0009): each one has all rights of the ones before it.\n\nA plain Enum, not StrEnum: there `>=` compares strings (\"user\" > \"moderator\")."
+      },
+      "SearchResult": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Public id, as in /watch?v=<id>"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "thumbnail_url": {
+            "type": "string",
+            "title": "Thumbnail Url"
+          },
+          "duration_sec": {
+            "type": "integer",
+            "title": "Duration Sec"
+          },
+          "view_count": {
+            "type": "integer",
+            "title": "View Count"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "channel": {
+            "$ref": "#/components/schemas/ChannelSummary"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "thumbnail_url",
+          "duration_sec",
+          "view_count",
+          "created_at",
+          "channel",
+          "description"
+        ],
+        "title": "SearchResult",
+        "description": "A result row also shows the start of the description."
       },
       "UploadLimits": {
         "properties": {
@@ -1200,6 +1600,10 @@
           "visibility": {
             "$ref": "#/components/schemas/Visibility",
             "default": "private"
+          },
+          "category": {
+            "$ref": "#/components/schemas/Category",
+            "default": "people"
           }
         },
         "type": "object",
@@ -1226,6 +1630,9 @@
           },
           "visibility": {
             "$ref": "#/components/schemas/Visibility"
+          },
+          "category": {
+            "$ref": "#/components/schemas/Category"
           },
           "status": {
             "$ref": "#/components/schemas/VideoStatus"
@@ -1307,6 +1714,7 @@
           "title",
           "description",
           "visibility",
+          "category",
           "status",
           "error_message",
           "duration_sec",
@@ -1339,6 +1747,9 @@
           },
           "visibility": {
             "$ref": "#/components/schemas/Visibility"
+          },
+          "category": {
+            "$ref": "#/components/schemas/Category"
           },
           "status": {
             "$ref": "#/components/schemas/VideoStatus"
@@ -1417,6 +1828,7 @@
           "title",
           "description",
           "visibility",
+          "category",
           "status",
           "error_message",
           "duration_sec",
@@ -1441,6 +1853,51 @@
         ],
         "title": "VideoStatus",
         "description": "uploading \u2192 uploaded \u2192 processing \u2192 ready | failed (ADR 0003)."
+      },
+      "VideoSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Public id, as in /watch?v=<id>"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "thumbnail_url": {
+            "type": "string",
+            "title": "Thumbnail Url"
+          },
+          "duration_sec": {
+            "type": "integer",
+            "title": "Duration Sec"
+          },
+          "view_count": {
+            "type": "integer",
+            "title": "View Count"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "channel": {
+            "$ref": "#/components/schemas/ChannelSummary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "thumbnail_url",
+          "duration_sec",
+          "view_count",
+          "created_at",
+          "channel"
+        ],
+        "title": "VideoSummary",
+        "description": "A video in a public list: home feed, Up next, search. Only ready videos are listed."
       },
       "VideoUpdate": {
         "properties": {
@@ -1473,6 +1930,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/Visibility"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "category": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Category"
               },
               {
                 "type": "null"

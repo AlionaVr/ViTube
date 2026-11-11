@@ -14,6 +14,7 @@ function video(changes: Partial<OwnVideo> = {}): OwnVideo {
     title: 'holiday',
     description: '',
     visibility: 'private',
+    category: 'people',
     status: 'uploading',
     error_message: null,
     duration_sec: null,
@@ -146,7 +147,12 @@ describe('UploadDialog', () => {
 
     // A draft named after the file, then the file itself with the CSRF token.
     const draft = api.mock.calls.find(([request]) => request.method === 'POST')![0]
-    expect(await draft.json()).toEqual({ title: 'holiday', description: '', visibility: 'private' })
+    expect(await draft.json()).toEqual({
+      title: 'holiday',
+      description: '',
+      visibility: 'private',
+      category: 'people',
+    })
     await waitFor(() => expect(FakeXhr.last).toBeDefined())
     const xhr = FakeXhr.last!
     expect([xhr.method, xhr.url, xhr.body]).toEqual(['PUT', '/api/videos/abcdefghijk/file', chosen])
@@ -259,6 +265,12 @@ describe('UploadDialog', () => {
     await userEvent.clear(title)
     await userEvent.type(title, 'Summer in Riga')
     await userEvent.type(within(dialog).getByLabelText('Description'), 'Sea and sun')
+    const category = within(dialog).getByRole('combobox', { name: 'Category' })
+    expect(category).toHaveDisplayValue('People & Blogs')
+    await userEvent.selectOptions(
+      category,
+      within(category).getByRole('option', { name: 'Travel & Events' }),
+    )
     await userEvent.click(within(dialog).getByRole('radio', { name: /Public/ }))
     await userEvent.click(within(dialog).getByRole('button', { name: 'Save' }))
 
@@ -268,6 +280,7 @@ describe('UploadDialog', () => {
       title: 'Summer in Riga',
       description: 'Sea and sun',
       visibility: 'public',
+      category: 'travel',
     })
   })
 

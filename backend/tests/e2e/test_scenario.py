@@ -6,6 +6,7 @@ Accounts are reused between runs (login, else sign up), so reruns don't hit the 
 
 import json
 import os
+import secrets
 import subprocess
 import time
 from collections.abc import Iterator
@@ -96,6 +97,13 @@ def upload(browser: Browser, content: bytes, title: str) -> str:
     return public_id
 
 
+def listed(browser: Browser, path: str, **params: str) -> list[str]:
+    """Ids on the first page of a public list: the feed or search."""
+    response = browser.get(path, params=params)
+    assert response.status_code == 200, response.text
+    return [item["id"] for item in response.json()["items"]]
+
+
 def wait_until_processed(browser: Browser, public_id: str) -> dict[str, Any]:
     deadline = time.monotonic() + PROCESSING_TIMEOUT_SEC
     while time.monotonic() < deadline:
@@ -117,8 +125,9 @@ def test_upload_processing_playback_and_access(
         "-c:v", "libx264", "-c:a", "aac", "-shortest", str(sample),
     )  # fmt: skip
 
-    # Upload → processing → ready.
-    public_id = upload(owner, sample.read_bytes(), "E2E private video")
+    # Upload → processing → ready. The marker finds this run's video among earlier runs'.
+    marker = secrets.token_hex(4)
+    public_id = upload(owner, sample.read_bytes(), f"E2E private video {marker}")
     video = wait_until_processed(owner, public_id)
     assert video["status"] == "ready", video["error_message"]
     assert video["duration_sec"] == 3
@@ -145,6 +154,8 @@ def test_upload_processing_playback_and_access(
     assert b"<Error>" not in beyond.content
 
     # Private: a guest must sign in, a stranger learns nothing; originals are never served.
+    assert public_id not in listed(guest, "/api/videos")
+    assert public_id not in listed(guest, "/api/search", q=marker)
     assert guest.get(page).status_code == 404
     assert guest.get(media).status_code == 401
     assert other.get(page).status_code == 404
@@ -161,10 +172,17 @@ def test_upload_processing_playback_and_access(
     assert other.get(page).status_code == 404
     assert other.get(media, headers={"Range": "bytes=0-99"}).status_code == 404
 
-    # Public: anyone, no cookie needed.
+    # Public: anyone, no cookie needed; on the home feed and found by its title.
     assert owner.send("PATCH", page, json={"visibility": "public"}).status_code == 200
     assert guest.get(page).status_code == 200
     assert guest.get(media, headers={"Range": "bytes=0-99"}).status_code == 206
+    assert public_id in listed(guest, "/api/videos")
+    assert public_id in listed(guest, "/api/search", q=marker)
+
+    # Private again: out of the lists at once. Runs leave no public test videos behind.
+    assert owner.send("PATCH", page, json={"visibility": "private"}).status_code == 200
+    assert public_id not in listed(guest, "/api/videos")
+    assert public_id not in listed(guest, "/api/search", q=marker)
 
 
 def test_a_file_that_is_not_a_video_fails_with_a_reason(owner: Browser) -> None:

@@ -16,7 +16,9 @@ export function getUploadLimits(): Promise<UploadLimits> {
 export function createDraft(title: string): Promise<OwnVideo> {
   // Generated types make fields with defaults required, so the defaults are spelled out.
   return unwrap(
-    api.POST('/api/videos', { body: { title, description: '', visibility: 'private' } }),
+    api.POST('/api/videos', {
+      body: { title, description: '', visibility: 'private', category: 'people' },
+    }),
   )
 }
 

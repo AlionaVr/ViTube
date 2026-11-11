@@ -1,4 +1,4 @@
-"""/api/videos: drafts, metadata, the file upload, the watch page data and sharing."""
+"""/api/videos: the feed, drafts, metadata, the file upload, the watch page data and sharing."""
 
 from typing import Annotated
 
@@ -6,11 +6,13 @@ from fastapi import APIRouter, Path, Request, status
 from starlette.requests import ClientDisconnect
 
 from app.core.errors import DomainError
+from app.core.pagination import Cursor, Page
 from app.core.redis import RedisClient
 from app.core.storage import StorageClient
 from app.db.session import DbSession
 from app.modules.auth.deps import CurrentUser, OptionalUser
 from app.modules.videos import service
+from app.modules.videos.models import Category
 from app.modules.videos.schemas import (
     HANDLE_PATTERN,
     AccessGrant,
@@ -19,10 +21,12 @@ from app.modules.videos.schemas import (
     VideoCreate,
     VideoDetail,
     VideoOut,
+    VideoSummary,
     VideoUpdate,
 )
 
 router = APIRouter(prefix="/api/videos", tags=["videos"])
+categories_router = APIRouter(prefix="/api/categories", tags=["videos"])
 
 # The body is the file itself, any Content-Type (ADR 0006).
 FILE_BODY = {
@@ -39,6 +43,20 @@ async def upload_limits() -> UploadLimits:
     return service.upload_limits()
 
 
+@router.get("", response_model=Page[VideoSummary], summary="Home feed: public videos, newest first")
+async def list_feed(
+    db: DbSession, category: Category | None = None, cursor: Cursor = None
+) -> Page[VideoSummary]:
+    return await service.list_feed(db, category, cursor)
+
+
+@categories_router.get(
+    "", response_model=list[Category], summary="Categories that have public videos"
+)
+async def list_categories(db: DbSession) -> list[Category]:
+    return await service.list_categories(db)
+
+
 @router.post(
     "", status_code=status.HTTP_201_CREATED, response_model=VideoOut, summary="Create a draft"
 )
@@ -51,6 +69,17 @@ async def create_draft(
 @router.get("/{public_id}", response_model=VideoDetail, summary="A video the viewer may watch")
 async def get_video(public_id: PublicId, user: OptionalUser, db: DbSession) -> VideoDetail:
     return await service.get_video(db, user, public_id)
+
+
+@router.get(
+    "/{public_id}/related",
+    response_model=Page[VideoSummary],
+    summary="Up next: the channel's other videos first, then the newest",
+)
+async def list_up_next(
+    public_id: PublicId, user: OptionalUser, db: DbSession, cursor: Cursor = None
+) -> Page[VideoSummary]:
+    return await service.list_up_next(db, user, public_id, cursor)
 
 
 @router.patch("/{public_id}", response_model=VideoOut, summary="Edit your video's details")

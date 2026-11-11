@@ -7,9 +7,11 @@ from uuid import UUID
 from sqlalchemy import (
     BigInteger,
     CheckConstraint,
+    Computed,
     DateTime,
     Enum,
     ForeignKey,
+    Index,
     Integer,
     SmallInteger,
     String,
@@ -17,6 +19,7 @@ from sqlalchemy import (
     func,
     text,
 )
+from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -40,6 +43,33 @@ class VideoStatus(enum.StrEnum):
     PROCESSING = "processing"
     READY = "ready"
     FAILED = "failed"
+
+
+class Category(enum.StrEnum):
+    """YouTube's upload categories, in its order."""
+
+    FILM = "film"
+    AUTOS = "autos"
+    MUSIC = "music"
+    PETS = "pets"
+    SPORTS = "sports"
+    TRAVEL = "travel"
+    GAMING = "gaming"
+    PEOPLE = "people"  # People & Blogs: YouTube's default
+    COMEDY = "comedy"
+    ENTERTAINMENT = "entertainment"
+    NEWS = "news"
+    HOWTO = "howto"
+    EDUCATION = "education"
+    SCIENCE = "science"
+    NONPROFITS = "nonprofits"
+
+
+# repository.LISTED in SQL, for partial indexes; keep the two in sync.
+LISTED_SQL = "visibility = 'public' AND status = 'ready'"
+
+# Word stems for search (ADR 0007): "trailers" finds "trailer". Queries must use the same config.
+SEARCH_CONFIG = "english"
 
 
 def _str_enum(enum_class: type[enum.StrEnum], name: str) -> Enum:
@@ -79,6 +109,23 @@ class Video(Base):
             "view_count >= 0 AND like_count >= 0 AND comment_count >= 0",
             name="counters_not_negative",
         ),
+        # The home feed, newest first: all listed videos, and by category.
+        Index("ix_videos_listed_id", "id", postgresql_where=text(LISTED_SQL)),
+        Index("ix_videos_listed_category_id", "category", "id", postgresql_where=text(LISTED_SQL)),
+        # Search (ADR 0007): full text, and title trigrams for typos and suggestions.
+        Index(
+            "ix_videos_listed_search_vector",
+            "search_vector",
+            postgresql_using="gin",
+            postgresql_where=text(LISTED_SQL),
+        ),
+        Index(
+            "ix_videos_listed_title_trgm",
+            "title",
+            postgresql_using="gin",
+            postgresql_ops={"title": "gin_trgm_ops"},
+            postgresql_where=text(LISTED_SQL),
+        ),
     )
 
     # Internal id: object keys and foreign keys. Never in API paths.
@@ -94,6 +141,9 @@ class Video(Base):
     status: Mapped[VideoStatus] = mapped_column(
         _str_enum(VideoStatus, "status"), server_default=VideoStatus.UPLOADING.value
     )
+    category: Mapped[Category] = mapped_column(
+        _str_enum(Category, "category"), server_default=Category.PEOPLE.value
+    )
     # Set by a DB trigger on every status change; the sweeper finds stuck jobs by it (ADR 0003).
     status_changed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
@@ -107,6 +157,16 @@ class Video(Base):
     like_count: Mapped[int] = mapped_column(Integer, server_default="0")
     comment_count: Mapped[int] = mapped_column(Integer, server_default="0")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # Postgres builds it from the title (weight A) and description (B). Only search reads it.
+    search_vector: Mapped[str] = mapped_column(
+        TSVECTOR,
+        Computed(
+            f"setweight(to_tsvector('{SEARCH_CONFIG}', title), 'A')"
+            f" || setweight(to_tsvector('{SEARCH_CONFIG}', description), 'B')",
+            persisted=True,
+        ),
+        deferred=True,
+    )
 
     @property
     def original_key(self) -> str:
