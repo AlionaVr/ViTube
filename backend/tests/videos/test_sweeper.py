@@ -17,7 +17,7 @@ from app.core.storage import Storage
 from app.modules.videos import pipeline, tasks
 from app.modules.videos import repository as videos
 from app.modules.videos.config import get_video_settings
-from app.modules.videos.models import Video, VideoStatus
+from app.modules.videos.models import GAVE_UP_REASON, Video, VideoStatus
 from app.modules.videos.service import PROCESS_TASK
 from app.worker.celery_app import celery_app
 from tests.videos.factories import make_user, make_video
@@ -74,6 +74,8 @@ async def test_sweeper_takes_back_jobs_of_a_lost_worker(db: AsyncSession) -> Non
         hopeless.id: VideoStatus.FAILED,
         running.id: VideoStatus.PROCESSING,
     }
+    reason = await db.scalar(select(Video.error_message).where(Video.id == hopeless.id))
+    assert reason == GAVE_UP_REASON
 
 
 def test_the_worker_knows_the_task_the_api_sends() -> None:

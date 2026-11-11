@@ -17,8 +17,7 @@ import styles from './StudioVideosPage.module.css'
 
 const SKELETON_ROWS = 6
 
-const STATUS_LABELS: Record<Exclude<VideoStatus, 'failed'>, string> = {
-  uploading: 'Draft', // no file yet, or its upload was cut off
+const STATUS_LABELS: Record<Exclude<VideoStatus, 'uploading' | 'failed'>, string> = {
   uploaded: 'Processing',
   processing: 'Processing',
   ready: 'Ready',
@@ -146,13 +145,17 @@ function VideoRow({ video }: { video: OwnVideo }) {
           </div>
         </div>
       </td>
-      <td>{VISIBILITY_LABELS[video.visibility]}</td>
+      {/* As in Studio: a draft (no file yet, or its upload was cut off) shows as such here. */}
+      <td>{video.status === 'uploading' ? 'Draft' : VISIBILITY_LABELS[video.visibility]}</td>
       <td>
         <Status video={video} />
       </td>
       <td>
         {formatDate(video.created_at)}
-        <p className={styles.secondary}>Uploaded</p>
+        {/* Studio's wording; the API has one date, the upload's, for both. */}
+        <p className={styles.secondary}>
+          {video.visibility === 'public' && video.status === 'ready' ? 'Published' : 'Uploaded'}
+        </p>
       </td>
       <td className={styles.number}>{formatExact(video.view_count)}</td>
       <td className={styles.number}>{formatExact(video.comment_count)}</td>
@@ -162,6 +165,7 @@ function VideoRow({ video }: { video: OwnVideo }) {
 }
 
 function Status({ video }: { video: OwnVideo }) {
+  if (video.status === 'uploading') return null // Visibility already says Draft
   if (video.status !== 'failed') return STATUS_LABELS[video.status]
   return (
     <>

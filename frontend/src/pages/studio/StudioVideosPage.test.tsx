@@ -91,14 +91,19 @@ describe('StudioVideosPage', () => {
     expect(first.getByText('Public')).toBeInTheDocument()
     expect(first.getByText('Ready')).toBeInTheDocument()
     expect(first.getByText(formatDate(ready.created_at))).toBeInTheDocument()
+    expect(first.getByText('Published')).toBeInTheDocument()
     expect(first.getByText('2,384,112')).toBeInTheDocument()
     expect(first.getByText('12')).toBeInTheDocument()
     expect(first.getByText('1,204')).toBeInTheDocument()
 
-    expect(rowOf('Still processing').getByText('Unlisted')).toBeInTheDocument()
-    expect(rowOf('Still processing').getByText('Processing')).toBeInTheDocument()
-    expect(rowOf('Never uploaded').getByText('Private')).toBeInTheDocument()
-    expect(rowOf('Never uploaded').getByText('Draft')).toBeInTheDocument()
+    const processing = rowOf('Still processing')
+    expect(processing.getByText('Unlisted')).toBeInTheDocument()
+    expect(processing.getByText('Processing')).toBeInTheDocument()
+    expect(processing.getByText('Uploaded')).toBeInTheDocument()
+    // A draft says so in Visibility, as in Studio, and only there.
+    const draft = rowOf('Never uploaded')
+    expect(draft.getByText('Draft')).toBeInTheDocument()
+    expect(draft.queryByText('Private')).not.toBeInTheDocument()
     expect(document.title).toBe('Channel content - ViTube')
   })
 

@@ -1,16 +1,19 @@
-/* YouTube Studio's Content page: a heading over a full-width table. */
+/* YouTube Studio's Content page: the table spans the page, its side gap sits in the end cells. */
 .page {
-  padding: 24px 32px;
+  --side: 24px;
+  padding: 24px 0;
 }
 
 @media (max-width: 600px) {
   .page {
-    padding: 16px;
+    --side: 16px;
+    padding: 16px 0;
   }
 }
 
 .heading {
   margin: 0 0 16px;
+  padding: 0 var(--side);
   font-size: 24px;
   font-weight: 500;
   line-height: 32px;
@@ -25,7 +28,9 @@
   width: 100%;
   min-width: 960px;
   table-layout: fixed;
-  border-collapse: collapse;
+  /* Separate borders: collapsed ones don't move with the sticky column. */
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 13px;
   line-height: 18px;
 }
@@ -76,6 +81,20 @@
   text-align: right;
 }
 
+/* As in Studio: the Video column stays while the others scroll sideways. */
+.table :is(th, td):first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  padding-left: var(--side);
+  background: var(--color-bg);
+}
+
+.table :is(th, td):last-child {
+  padding-right: var(--side);
+}
+
+/* After the sticky rule, same specificity: the hover covers the sticky cell too. */
 .row:hover td {
   background: var(--color-surface);
 }
@@ -146,6 +165,25 @@
 
 .short {
   width: 40%;
+}
+
+/* A phone: a narrower sticky column leaves room to scroll the rest past it. */
+@media (max-width: 600px) {
+  .table {
+    min-width: 720px;
+  }
+
+  .videoColumn {
+    width: 240px;
+  }
+
+  .video {
+    gap: 12px;
+  }
+
+  .thumbnail {
+    width: 80px;
+  }
 }
 
 .more {

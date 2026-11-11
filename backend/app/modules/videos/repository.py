@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.users.models import User
 from app.modules.videos.models import (
+    GAVE_UP_REASON,
     SEARCH_CONFIG,
     Category,
     Video,
@@ -277,7 +278,7 @@ async def take_back_stale(
     await db.execute(
         update(Video)
         .where(*stale, Video.processing_attempts >= max_attempts)
-        .values(status=VideoStatus.FAILED, error_message="Processing failed")
+        .values(status=VideoStatus.FAILED, error_message=GAVE_UP_REASON)
     )
     rows = await db.scalars(
         update(Video).where(*stale).values(status=VideoStatus.UPLOADED).returning(Video.id)

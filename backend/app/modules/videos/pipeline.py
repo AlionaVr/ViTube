@@ -26,7 +26,7 @@ from app.core.config import get_settings
 from app.core.storage import Storage, get_storage_settings, open_storage
 from app.modules.videos import repository as videos
 from app.modules.videos.config import get_video_settings
-from app.modules.videos.models import Video, VideoStatus
+from app.modules.videos.models import GAVE_UP_REASON, Video, VideoStatus
 
 log = logging.getLogger(__name__)
 
@@ -129,7 +129,7 @@ async def _run(db: AsyncSession, storage: Storage, video: Video, attempt: int) -
         await db.rollback()
         if attempt >= MAX_ATTEMPTS:
             await videos.finish(
-                db, video_id, attempt, status=VideoStatus.FAILED, error_message="Processing failed"
+                db, video_id, attempt, status=VideoStatus.FAILED, error_message=GAVE_UP_REASON
             )
         else:
             await videos.finish(db, video_id, attempt, status=VideoStatus.UPLOADED)
