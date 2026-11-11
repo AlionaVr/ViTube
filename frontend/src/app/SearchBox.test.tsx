@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { act, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 
@@ -16,6 +16,17 @@ describe('SearchBox', () => {
 
     expect(router.state.location.pathname).toBe('/results')
     expect(router.state.location.search).toBe('?search_query=cats+%26+dogs')
+  })
+
+  it('shows the query of the results page, also after going back', async () => {
+    const router = renderApp('/results?search_query=sintel')
+    const box = screen.getByRole('searchbox', { name: 'Search' })
+    expect(box).toHaveValue('sintel')
+
+    await act(() => router.navigate('/results?search_query=big+buck+bunny'))
+    expect(box).toHaveValue('big buck bunny')
+    await act(() => router.navigate(-1))
+    expect(box).toHaveValue('sintel')
   })
 
   it('ignores an empty query', async () => {

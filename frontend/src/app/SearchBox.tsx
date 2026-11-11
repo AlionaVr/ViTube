@@ -1,5 +1,5 @@
 import { type FormEvent, useRef, useState } from 'react'
-import { useNavigate } from 'react-router'
+import { useLocation, useNavigate } from 'react-router'
 
 import Icon from '../components/Icon'
 import IconButton from '../components/IconButton'
@@ -11,7 +11,18 @@ export default function SearchBox() {
   const narrow = useMediaQuery(NARROW_HEADER)
   // Narrow screens: the search bar opens over the whole header.
   const [open, setOpen] = useState(false)
-  const [query, setQuery] = useState('')
+  // On the results page the box shows its query, also after Back and Forward.
+  const location = useLocation()
+  const shown =
+    location.pathname === '/results'
+      ? (new URLSearchParams(location.search).get('search_query') ?? '')
+      : null
+  const [query, setQuery] = useState(shown ?? '')
+  const [lastShown, setLastShown] = useState(shown)
+  if (shown !== lastShown) {
+    setLastShown(shown)
+    if (shown !== null) setQuery(shown)
+  }
   const input = useRef<HTMLInputElement>(null)
 
   function handleSubmit(event: FormEvent) {
