@@ -1,7 +1,4 @@
 import react from '@vitejs/plugin-react'
-import { fileURLToPath } from 'node:url'
-import sirv from 'sirv'
-import type { Plugin } from 'vite'
 import { defineConfig } from 'vitest/config'
 
 // Dev server proxies the API to the Docker stack (nginx on :80),
@@ -9,25 +6,13 @@ import { defineConfig } from 'vitest/config'
 // Keeps the browser's Host: the API refuses writes whose Origin doesn't match it (ADR 0005).
 const api = { target: process.env.API_PROXY ?? 'http://localhost', changeOrigin: false }
 
-// Dev only: serves the demo videos and thumbnails offline (demo-data/README.md). sirv handles Range for seeking.
-function demoData(): Plugin {
-  const root = fileURLToPath(new URL('../demo-data', import.meta.url))
-  return {
-    name: 'demo-data',
-    apply: 'serve',
-    configureServer(server) {
-      for (const dir of ['videos', 'thumbnails']) {
-        server.middlewares.use(`/demo-data/${dir}`, sirv(`${root}/${dir}`, { dev: true }))
-      }
-    },
-  }
-}
-
 export default defineConfig({
-  plugins: [react(), demoData()],
+  plugins: [react()],
   server: {
     proxy: {
       '/api': api,
+      // Videos and thumbnails: nginx checks access, MinIO answers Range requests.
+      '/media': api,
       '/docs': api,
     },
   },

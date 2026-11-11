@@ -16,8 +16,8 @@ function renderPlayer(props: Callbacks = {}) {
     <>
       <input aria-label="Comment" />
       <Player
-        src="/demo-data/videos/sintel-trailer.mp4"
-        poster="/demo-data/thumbnails/sintel-trailer-7.jpg"
+        src="/media/videos/0193/720p.mp4"
+        poster="/media/thumbs/0193.jpg"
         theater={false}
         onTheaterToggle={props.onTheaterToggle ?? (() => {})}
         onNext={props.onNext}

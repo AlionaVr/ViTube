@@ -274,11 +274,7 @@ export default function Player({
         <div className={styles.error} role="alert">
           <Icon name="error" size={48} />
           <p className={styles.errorTitle}>Can’t play this video</p>
-          <p className={styles.errorHint}>
-            {import.meta.env.DEV
-              ? 'Demo files missing? Run python3 demo-data/download.py.'
-              : 'The video file didn’t load. Try again later.'}
-          </p>
+          <p className={styles.errorHint}>The video file didn’t load. Try again later.</p>
         </div>
       )}
 
