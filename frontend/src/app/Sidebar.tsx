@@ -60,11 +60,17 @@ function NavItems({ items, onNavigate }: NavProps & { items: NavItem[] }) {
 }
 
 function SubscriptionList({ onNavigate }: NavProps) {
-  const { data: channels } = useSubscriptions()
-  if (!channels?.length) return null
+  const { data } = useSubscriptions()
+  const channels = data?.pages.flatMap((page) => page.items) ?? []
+  if (!channels.length) return null
   return (
     <section className={styles.section}>
-      <h2 className={styles.title}>Subscriptions</h2>
+      <h2 className={styles.heading}>
+        <Link to="/feed/channels" onClick={onNavigate} className={`${styles.item} ${styles.you}`}>
+          Subscriptions
+          <Icon name="chevronRight" size={20} />
+        </Link>
+      </h2>
       {channels.map((channel) => (
         <Link
           key={channel.handle}

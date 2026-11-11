@@ -379,6 +379,101 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/channels/{handle}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A channel's page header */
+        get: operations["get_channel_api_channels__handle__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/channels/{handle}/videos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A channel's public videos
+         * @description Only public, ready videos: the same for every viewer, the owner too.
+         */
+        get: operations["list_videos_api_channels__handle__videos_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/channels/{handle}/subscription": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Subscribe to a channel
+         * @description Subscribing again changes nothing.
+         */
+        put: operations["subscribe_api_channels__handle__subscription_put"];
+        post?: never;
+        /**
+         * Unsubscribe from a channel
+         * @description Unsubscribing again changes nothing.
+         */
+        delete: operations["unsubscribe_api_channels__handle__subscription_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/me/subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Channels you subscribed to, A to Z */
+        get: operations["list_subscriptions_api_me_subscriptions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/feed/subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** New public videos of the channels you subscribed to */
+        get: operations["list_feed_api_feed_subscriptions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -414,6 +509,35 @@ export interface components {
          * @enum {string}
          */
         Category: "film" | "autos" | "music" | "pets" | "sports" | "travel" | "gaming" | "people" | "comedy" | "entertainment" | "news" | "howto" | "education" | "science" | "nonprofits";
+        /**
+         * ChannelOut
+         * @description The channel page header. The watch page reads it for the subscriber count too.
+         */
+        ChannelOut: {
+            /** Handle */
+            handle: string;
+            /** Name */
+            name: string;
+            /** Avatar Url */
+            avatar_url: string | null;
+            /**
+             * Joined At
+             * Format: date-time
+             */
+            joined_at: string;
+            /** Subscriber Count */
+            subscriber_count: number;
+            /**
+             * Video Count
+             * @description Public, ready videos: what the Videos tab lists
+             */
+            video_count: number;
+            /**
+             * Is Subscribed
+             * @description False for guests and on your own channel
+             */
+            is_subscribed: boolean;
+        };
         /**
          * ChannelSummary
          * @description What a video card or a comment shows about a user's channel.
@@ -509,6 +633,13 @@ export interface components {
             /** Next Cursor */
             next_cursor: string | null;
         };
+        /** Page[SubscribedChannel] */
+        Page_SubscribedChannel_: {
+            /** Items */
+            items: components["schemas"]["SubscribedChannel"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
         /** Page[VideoOut] */
         Page_VideoOut_: {
             /** Items */
@@ -572,6 +703,27 @@ export interface components {
             channel: components["schemas"]["ChannelSummary"];
             /** Description */
             description: string;
+        };
+        /**
+         * SubscribedChannel
+         * @description A row of the viewer's subscriptions.
+         */
+        SubscribedChannel: {
+            /** Handle */
+            handle: string;
+            /** Name */
+            name: string;
+            /** Avatar Url */
+            avatar_url: string | null;
+            /** Subscriber Count */
+            subscriber_count: number;
+        };
+        /** SubscriptionOut */
+        SubscriptionOut: {
+            /** Subscriber Count */
+            subscriber_count: number;
+            /** Is Subscribed */
+            is_subscribed: boolean;
         };
         /** UploadLimits */
         UploadLimits: {
@@ -710,6 +862,11 @@ export interface components {
             created_at: string;
             channel: components["schemas"]["ChannelSummary"];
         };
+        /**
+         * VideoSort
+         * @enum {string}
+         */
+        VideoSort: "latest" | "popular" | "oldest";
         /**
          * VideoStatus
          * @description uploading → uploaded → processing → ready | failed (ADR 0003).
@@ -1504,6 +1661,202 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_channel_api_channels__handle__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Channel handle, without the @ */
+                handle: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChannelOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_videos_api_channels__handle__videos_get: {
+        parameters: {
+            query?: {
+                sort?: components["schemas"]["VideoSort"];
+                /** @description next_cursor of the last page */
+                cursor?: string | null;
+            };
+            header?: never;
+            path: {
+                /** @description Channel handle, without the @ */
+                handle: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_VideoSummary_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    subscribe_api_channels__handle__subscription_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Channel handle, without the @ */
+                handle: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unsubscribe_api_channels__handle__subscription_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Channel handle, without the @ */
+                handle: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_subscriptions_api_me_subscriptions_get: {
+        parameters: {
+            query?: {
+                /** @description next_cursor of the last page */
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_SubscribedChannel_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_feed_api_feed_subscriptions_get: {
+        parameters: {
+            query?: {
+                /** @description next_cursor of the last page */
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_VideoSummary_"];
+                };
             };
             /** @description Validation Error */
             422: {

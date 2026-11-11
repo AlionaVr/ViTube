@@ -32,11 +32,9 @@
   border-bottom: 1px solid var(--color-divider);
 }
 
-.title {
-  padding: 6px 12px 4px;
-  font-size: 16px;
-  font-weight: 500;
-  line-height: 22px;
+/* A section title that links to its page, like "You". */
+.heading {
+  font: inherit;
 }
 
 /* Full-guide size by default; the mini guide overrides it below. */

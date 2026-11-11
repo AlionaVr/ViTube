@@ -5,6 +5,7 @@ import {
   formatCompact,
   formatDuration,
   formatTimeAgo,
+  formatVideoCount,
   formatViews,
   formatViewsExact,
 } from './format'
@@ -33,6 +34,9 @@ describe('counted labels', () => {
     expect(formatViewsExact(1)).toBe('1 view')
     expect(formatViewsExact(48_213)).toBe('48,213 views')
     expect(formatComments(1234)).toBe('1,234 comments')
+    expect(formatVideoCount(0)).toBe('No videos')
+    expect(formatVideoCount(1)).toBe('1 video')
+    expect(formatVideoCount(1234)).toBe('1.2K videos')
   })
 })
 

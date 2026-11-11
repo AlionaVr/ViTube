@@ -114,6 +114,8 @@ class Video(Base):
         # The home feed, newest first: all listed videos, and by category.
         Index("ix_videos_listed_id", "id", postgresql_where=text(LISTED_SQL)),
         Index("ix_videos_listed_category_id", "category", "id", postgresql_where=text(LISTED_SQL)),
+        # A channel's listed videos: its Videos tab, video count, subscriptions feed, Up next.
+        Index("ix_videos_listed_owner_id_id", "owner_id", "id", postgresql_where=text(LISTED_SQL)),
         # Search (ADR 0007): full text, and title trigrams for typos and suggestions.
         Index(
             "ix_videos_listed_search_vector",

@@ -1,8 +1,16 @@
-// Hand-written until the API exists; then replaced by types from schema.d.ts. snake_case as FastAPI sends it.
+// Types from the API (schema.d.ts).
+import type { components } from '../api/schema'
 
 /** What a card or a comment shows about a channel. */
-export interface ChannelSummary {
-  handle: string
-  name: string
-  avatar_url: string | null
-}
+export type ChannelSummary = components['schemas']['ChannelSummary']
+
+/** The channel page header; the watch page reads the subscriber count from it. */
+export type Channel = components['schemas']['ChannelOut']
+
+export type Subscription = components['schemas']['SubscriptionOut']
+
+/** A row of the viewer's subscriptions. */
+export type SubscribedChannel = components['schemas']['SubscribedChannel']
+
+/** The Videos tab's chips. */
+export type VideoSort = components['schemas']['VideoSort']

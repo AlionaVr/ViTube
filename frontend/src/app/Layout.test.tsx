@@ -68,11 +68,17 @@ describe('Layout', () => {
   })
 
   it('shows the library, subscriptions and account menu to a signed-in viewer', async () => {
-    mockApi({ 'GET /api/auth/me': () => json(200, ANNA) })
+    const anna = { handle: 'anna', name: 'Anna', avatar_url: null, subscriber_count: 3 }
+    mockApi({
+      'GET /api/auth/me': () => json(200, ANNA),
+      'GET /api/me/subscriptions': () => json(200, { items: [anna], next_cursor: null }),
+    })
     renderApp('/')
     expect(await screen.findByRole('button', { name: 'Account menu' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Liked videos' })).toBeInTheDocument()
-    expect(await screen.findByRole('heading', { name: 'Subscriptions' })).toBeInTheDocument()
+    const heading = await screen.findByRole('heading', { name: 'Subscriptions' })
+    expect(within(heading).getByRole('link')).toHaveAttribute('href', '/feed/channels')
+    expect(screen.getByRole('link', { name: 'Anna' })).toHaveAttribute('href', '/@anna')
     expect(screen.queryByText(/Sign in to like videos/)).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Sign in' })).not.toBeInTheDocument()
   })

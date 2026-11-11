@@ -1,0 +1,124 @@
+/* YouTube's channel page without a banner: the header starts under the masthead. */
+.page {
+  max-width: 1284px;
+  margin: 0 auto;
+  padding: 0 24px 24px;
+}
+
+.header {
+  padding: 24px 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.info {
+  min-width: 0;
+}
+
+.name {
+  font-size: 36px;
+  line-height: 50px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  margin-top: 4px;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-text-secondary);
+}
+
+.handle {
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+/* Holds its height while the viewer loads, so the page doesn't jump. */
+.actions {
+  min-height: 36px;
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+}
+
+.tabs {
+  margin-top: 8px;
+  display: flex;
+  gap: 24px;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+/* The bar sits on the row's divider. */
+.tab {
+  height: 48px;
+  margin-bottom: -1px;
+  display: flex;
+  align-items: center;
+  border-bottom: 2px solid transparent;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 22px;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+.tab:hover {
+  border-bottom-color: var(--color-text-disabled);
+}
+
+.tab[aria-current='page'] {
+  border-bottom-color: var(--color-text);
+  color: var(--color-text);
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+}
+
+.ghost {
+  border-radius: 4px;
+  background: var(--color-placeholder);
+}
+
+.ghostAvatar {
+  width: 160px;
+  height: 160px;
+  flex: none;
+  border-radius: 50%;
+}
+
+.ghostName {
+  width: 280px;
+  max-width: 100%;
+  height: 40px;
+}
+
+.ghostLine {
+  width: 240px;
+  max-width: 100%;
+  height: 20px;
+  margin-top: 12px;
+}
+
+@media (max-width: 656px) {
+  .page {
+    padding: 0 16px 16px;
+  }
+
+  .header {
+    padding-top: 16px;
+  }
+
+  .name {
+    font-size: 24px;
+    line-height: 32px;
+  }
+
+  .ghostAvatar {
+    width: 72px;
+    height: 72px;
+  }
+}

@@ -1,6 +1,10 @@
 import type { RouteObject } from 'react-router'
 
 import AuthPage from '../pages/auth/AuthPage'
+import ChannelPage from '../pages/channel/ChannelPage'
+import ChannelVideos from '../pages/channel/ChannelVideos'
+import ChannelsPage from '../pages/feed/ChannelsPage'
+import SubscriptionsPage from '../pages/feed/SubscriptionsPage'
 import HomePage from '../pages/HomePage'
 import NotFoundPage from '../pages/NotFoundPage'
 import ResultsPage from '../pages/results/ResultsPage'
@@ -19,6 +23,17 @@ export const routes: RouteObject[] = [
       { path: 'results', element: <ResultsPage /> },
       { path: 'watch', element: <WatchPage /> },
       { path: 'studio/videos', element: <StudioVideosPage /> },
+      { path: 'feed/subscriptions', element: <SubscriptionsPage /> },
+      { path: 'feed/channels', element: <ChannelsPage /> },
+      // /@handle. Static paths rank higher, so this only gets the rest.
+      {
+        path: ':channel',
+        element: <ChannelPage />,
+        children: [
+          { index: true, element: <ChannelVideos /> },
+          { path: 'videos', element: <ChannelVideos /> },
+        ],
+      },
       { path: '*', element: <NotFoundPage /> },
     ],
   },

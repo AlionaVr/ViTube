@@ -35,6 +35,11 @@ export function formatSubscribers(n: number): string {
   return counted(n, 'subscriber', 'subscribers', formatCompact)
 }
 
+/** "No videos", "1 video", "1.2K videos": a channel's count. */
+export function formatVideoCount(n: number): string {
+  return counted(n, 'video', 'videos', formatCompact)
+}
+
 /** "1 comment", "1,234 comments". */
 export function formatComments(n: number): string {
   return counted(n, 'comment', 'comments', formatExact)

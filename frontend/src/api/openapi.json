@@ -1135,6 +1135,319 @@
         }
       }
     },
+    "/api/channels/{handle}": {
+      "get": {
+        "tags": [
+          "channels"
+        ],
+        "summary": "A channel's page header",
+        "operationId": "get_channel_api_channels__handle__get",
+        "parameters": [
+          {
+            "name": "handle",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._-]{3,30}$",
+              "description": "Channel handle, without the @",
+              "title": "Handle"
+            },
+            "description": "Channel handle, without the @"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChannelOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/channels/{handle}/videos": {
+      "get": {
+        "tags": [
+          "channels"
+        ],
+        "summary": "A channel's public videos",
+        "description": "Only public, ready videos: the same for every viewer, the owner too.",
+        "operationId": "list_videos_api_channels__handle__videos_get",
+        "parameters": [
+          {
+            "name": "handle",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._-]{3,30}$",
+              "description": "Channel handle, without the @",
+              "title": "Handle"
+            },
+            "description": "Channel handle, without the @"
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/VideoSort",
+              "default": "latest"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "next_cursor of the last page",
+              "title": "Cursor"
+            },
+            "description": "next_cursor of the last page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_VideoSummary_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/channels/{handle}/subscription": {
+      "put": {
+        "tags": [
+          "channels"
+        ],
+        "summary": "Subscribe to a channel",
+        "description": "Subscribing again changes nothing.",
+        "operationId": "subscribe_api_channels__handle__subscription_put",
+        "parameters": [
+          {
+            "name": "handle",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._-]{3,30}$",
+              "description": "Channel handle, without the @",
+              "title": "Handle"
+            },
+            "description": "Channel handle, without the @"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubscriptionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "channels"
+        ],
+        "summary": "Unsubscribe from a channel",
+        "description": "Unsubscribing again changes nothing.",
+        "operationId": "unsubscribe_api_channels__handle__subscription_delete",
+        "parameters": [
+          {
+            "name": "handle",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._-]{3,30}$",
+              "description": "Channel handle, without the @",
+              "title": "Handle"
+            },
+            "description": "Channel handle, without the @"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubscriptionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me/subscriptions": {
+      "get": {
+        "tags": [
+          "channels"
+        ],
+        "summary": "Channels you subscribed to, A to Z",
+        "operationId": "list_subscriptions_api_me_subscriptions_get",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "next_cursor of the last page",
+              "title": "Cursor"
+            },
+            "description": "next_cursor of the last page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_SubscribedChannel_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/feed/subscriptions": {
+      "get": {
+        "tags": [
+          "channels"
+        ],
+        "summary": "New public videos of the channels you subscribed to",
+        "operationId": "list_feed_api_feed_subscriptions_get",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "next_cursor of the last page",
+              "title": "Cursor"
+            },
+            "description": "next_cursor of the last page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_VideoSummary_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/health": {
       "get": {
         "tags": [
@@ -1199,6 +1512,60 @@
         ],
         "title": "Category",
         "description": "YouTube's upload categories, in its order."
+      },
+      "ChannelOut": {
+        "properties": {
+          "handle": {
+            "type": "string",
+            "title": "Handle"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "joined_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Joined At"
+          },
+          "subscriber_count": {
+            "type": "integer",
+            "title": "Subscriber Count"
+          },
+          "video_count": {
+            "type": "integer",
+            "title": "Video Count",
+            "description": "Public, ready videos: what the Videos tab lists"
+          },
+          "is_subscribed": {
+            "type": "boolean",
+            "title": "Is Subscribed",
+            "description": "False for guests and on your own channel"
+          }
+        },
+        "type": "object",
+        "required": [
+          "handle",
+          "name",
+          "avatar_url",
+          "joined_at",
+          "subscriber_count",
+          "video_count",
+          "is_subscribed"
+        ],
+        "title": "ChannelOut",
+        "description": "The channel page header. The watch page reads it for the subscriber count too."
       },
       "ChannelSummary": {
         "properties": {
@@ -1429,6 +1796,34 @@
         ],
         "title": "Page[SearchResult]"
       },
+      "Page_SubscribedChannel_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SubscribedChannel"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "Page[SubscribedChannel]"
+      },
       "Page_VideoOut_": {
         "properties": {
           "items": {
@@ -1582,6 +1977,60 @@
         ],
         "title": "SearchResult",
         "description": "A result row also shows the start of the description."
+      },
+      "SubscribedChannel": {
+        "properties": {
+          "handle": {
+            "type": "string",
+            "title": "Handle"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "subscriber_count": {
+            "type": "integer",
+            "title": "Subscriber Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "handle",
+          "name",
+          "avatar_url",
+          "subscriber_count"
+        ],
+        "title": "SubscribedChannel",
+        "description": "A row of the viewer's subscriptions."
+      },
+      "SubscriptionOut": {
+        "properties": {
+          "subscriber_count": {
+            "type": "integer",
+            "title": "Subscriber Count"
+          },
+          "is_subscribed": {
+            "type": "boolean",
+            "title": "Is Subscribed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "subscriber_count",
+          "is_subscribed"
+        ],
+        "title": "SubscriptionOut"
       },
       "UploadLimits": {
         "properties": {
@@ -1921,6 +2370,15 @@
           "channel"
         ],
         "title": "VideoOut"
+      },
+      "VideoSort": {
+        "type": "string",
+        "enum": [
+          "latest",
+          "popular",
+          "oldest"
+        ],
+        "title": "VideoSort"
       },
       "VideoStatus": {
         "type": "string",
