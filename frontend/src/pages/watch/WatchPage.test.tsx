@@ -84,6 +84,22 @@ describe('WatchPage', () => {
     )
   })
 
+  it('sets off fireworks for a like, not for taking it back', async () => {
+    mockWatch()
+    await openWatch()
+    const like = screen.getByRole('button', { name: /^Like this video along with/ })
+    const fireworks = () => like.querySelectorAll('[data-fireworks]')
+
+    await userEvent.click(like)
+    expect(fireworks()).toHaveLength(1)
+    fireEvent.animationEnd(fireworks()[0])
+    expect(fireworks()).toHaveLength(0)
+
+    await userEvent.click(like)
+    expect(like).toHaveAttribute('aria-pressed', 'false')
+    expect(fireworks()).toHaveLength(0)
+  })
+
   it('likes and unlikes at once, with the count', async () => {
     mockWatch()
     await openWatch()
@@ -138,6 +154,8 @@ describe('WatchPage', () => {
     const prompt = screen.getByRole('dialog', { name: 'Like this video?' })
     expect(prompt).toHaveTextContent('Sign in to make your opinion count.')
     expect(within(prompt).getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/login')
+
+    expect(document.querySelector('[data-fireworks]')).not.toBeInTheDocument()
 
     await userEvent.keyboard('{Escape}')
     expect(screen.queryByRole('dialog', { name: 'Like this video?' })).not.toBeInTheDocument()
