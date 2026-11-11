@@ -237,7 +237,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Titles of public videos close to what is typed, closest first */
+        /** Titles of public videos close to what is typed, closest first, in lower case */
         get: operations["suggest_api_search_suggestions_get"];
         put?: never;
         post?: never;

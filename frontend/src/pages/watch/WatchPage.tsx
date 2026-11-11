@@ -109,7 +109,7 @@ export default function WatchPage() {
             <Description video={video.data} />
             {!twoColumns && (
               <div className={styles.upNextInline}>
-                <UpNext videoId={id} />
+                <UpNext videoId={id} grid />
               </div>
             )}
             {ready && <Comments video={video.data} />}

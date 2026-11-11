@@ -34,7 +34,7 @@ describe('SearchBox', () => {
   it('suggests titles while typing and searches the one clicked', async () => {
     const fetch = mockApi({
       ...GUEST,
-      'GET /api/search/suggestions': () => json(200, ['Sintel – trailer', 'The Sintel story']),
+      'GET /api/search/suggestions': () => json(200, ['sintel – trailer', 'the sintel story']),
     })
     const router = renderApp('/')
     const box = screen.getByRole('combobox', { name: 'Search' })
@@ -44,8 +44,8 @@ describe('SearchBox', () => {
     expect(box).toHaveAttribute('aria-expanded', 'true')
     const options = within(list).getAllByRole('option')
     expect(options.map((option) => option.textContent)).toEqual([
-      'Sintel – trailer',
-      'The Sintel story',
+      'sintel – trailer',
+      'the sintel story',
     ])
     // Asked once, after the pause in typing.
     const asked = fetch.mock.calls
@@ -54,30 +54,30 @@ describe('SearchBox', () => {
     expect(asked.map((url) => url.search)).toEqual(['?q=sin'])
 
     await userEvent.click(options[1])
-    expect(router.state.location.search).toBe('?search_query=The+Sintel+story')
+    expect(router.state.location.search).toBe('?search_query=the+sintel+story')
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
   })
 
   it('walks the suggestions with the arrows and closes them with Escape', async () => {
-    mockApi({ ...GUEST, 'GET /api/search/suggestions': () => json(200, ['Sintel', 'Sinbad']) })
+    mockApi({ ...GUEST, 'GET /api/search/suggestions': () => json(200, ['sintel', 'sinbad']) })
     const router = renderApp('/')
     const box = screen.getByRole('combobox', { name: 'Search' })
     await userEvent.type(box, 'sin')
     await screen.findByRole('listbox')
 
     await userEvent.keyboard('{ArrowDown}{ArrowDown}')
-    expect(box).toHaveValue('Sinbad')
-    expect(screen.getByRole('option', { name: 'Sinbad' })).toHaveAttribute('aria-selected', 'true')
+    expect(box).toHaveValue('sinbad')
+    expect(screen.getByRole('option', { name: 'sinbad' })).toHaveAttribute('aria-selected', 'true')
     await userEvent.keyboard('{ArrowDown}')
     expect(box).toHaveValue('sin')
     await userEvent.keyboard('{ArrowUp}')
-    expect(box).toHaveValue('Sinbad')
+    expect(box).toHaveValue('sinbad')
 
     await userEvent.keyboard('{Escape}')
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
-    expect(box).toHaveValue('Sinbad')
+    expect(box).toHaveValue('sinbad')
     await userEvent.keyboard('{Enter}')
-    expect(router.state.location.search).toBe('?search_query=Sinbad')
+    expect(router.state.location.search).toBe('?search_query=sinbad')
   })
 
   it('ignores an empty query', async () => {

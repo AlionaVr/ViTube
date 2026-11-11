@@ -19,3 +19,5 @@
 
 - ➕ No extra service.
 - ➖ Simpler ranking than a dedicated search engine.
+- ➖ `search_vector` is a stored generated column (Postgres can't index a virtual one): adding it or changing its
+  expression rewrites `videos` under an exclusive lock.

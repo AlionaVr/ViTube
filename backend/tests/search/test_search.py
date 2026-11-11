@@ -1,9 +1,14 @@
 """GET /api/search: full text over titles and descriptions, title typos, listed videos only."""
 
+import base64
+from uuid import uuid4
+
 import pytest
 from httpx2 import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.rate_limit import RateLimit
+from app.modules.search import service
 from app.modules.search.service import PAGE_SIZE
 from app.modules.users.models import User
 from app.modules.videos.models import Video, VideoStatus, Visibility
@@ -112,13 +117,22 @@ async def test_pages_go_by_rank_without_gaps_or_repeats(
 
 @pytest.mark.parametrize(
     "params",
-    [{}, {"q": ""}, {"q": "   "}, {"q": "x" * 201}],
-    ids=["none", "empty", "blank", "long"],
+    [{}, {"q": ""}, {"q": "   "}, {"q": "x" * 201}, {"q": "a\x00b"}],
+    ids=["none", "empty", "blank", "long", "NUL"],
 )
 async def test_the_query_is_checked(client: AsyncClient, params: dict[str, str]) -> None:
     response = await client.get("/api/search", params=params)
 
     assert response.status_code == 422
+
+
+@pytest.mark.parametrize("rank", ["NaN", "Infinity", "1e999"])
+async def test_a_cursor_with_an_endless_rank_is_refused(client: AsyncClient, rank: str) -> None:
+    cursor = base64.urlsafe_b64encode(f'[{rank}, "{uuid4()}"]'.encode()).decode()
+
+    response = await client.get("/api/search", params={"q": "dragon", "cursor": cursor})
+
+    assert response.status_code == 400
 
 
 async def test_a_bad_cursor_is_refused(client: AsyncClient) -> None:
@@ -135,3 +149,44 @@ async def test_words_that_match_nothing_give_an_empty_page(
     response = await client.get("/api/search", params={"q": "the"})  # a stop word, no lexemes
 
     assert response.json() == {"items": [], "next_cursor": None}
+
+
+@pytest.mark.parametrize("words", ["-sintel", '-"big buck"', "dragon or -sintel"])
+async def test_words_that_only_exclude_find_nothing(
+    client: AsyncClient, db: AsyncSession, owner: User, words: str
+) -> None:
+    await make_video(db, owner, title=SINTEL)
+    await make_video(db, owner, title="Big Buck Bunny")
+
+    assert await found(client, words) == []
+
+
+async def test_an_excluded_word_stays_out_even_as_a_title_match(
+    client: AsyncClient, db: AsyncSession, owner: User
+) -> None:
+    await make_video(db, owner, title=SINTEL)
+    await make_video(db, owner, title="Sintel – making of")
+
+    assert await found(client, "sintel -trailer") == ["Sintel – making of"]
+
+
+async def test_short_words_match_whole_words_only(
+    client: AsyncClient, db: AsyncSession, owner: User
+) -> None:
+    await make_video(db, owner, title="Go fishing")
+    await make_video(db, owner, title="Gold rush")  # close to "go" by trigrams
+
+    assert await found(client, "go") == ["Go fishing"]
+
+
+async def test_searches_are_limited_per_ip(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(service, "SEARCHES_PER_IP", RateLimit("search_ip", limit=2, window=60))
+    for _ in range(2):
+        assert (await client.get("/api/search", params={"q": "dragon"})).status_code == 200
+
+    response = await client.get("/api/search", params={"q": "dragon"})
+
+    assert response.status_code == 429
+    assert int(response.headers["retry-after"]) > 0

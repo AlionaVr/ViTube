@@ -63,27 +63,18 @@
   padding-top: 24px;
 }
 
-/* One column: Up next sits between the description and the comments (rendered there). */
+/*
+ * One column, as on YouTube: the player edge to edge under the header, 16px text margins,
+ * Up next as a card grid between the description and the comments (rendered there).
+ */
 @media (max-width: 1015px) {
   .watch {
-    --gutter: 24px;
+    --gutter: 16px;
     grid-template-columns:
       [full-start] var(--gutter)
       [primary-start] minmax(0, 1fr)
       [primary-end] var(--gutter)
       [full-end];
-  }
-
-  .theater .playerBox {
-    height: auto;
-    aspect-ratio: 16 / 9;
-  }
-}
-
-/* Phone width: the player goes edge to edge. */
-@media (max-width: 656px) {
-  .watch {
-    --gutter: 12px;
     padding-top: 0;
   }
 
@@ -91,7 +82,10 @@
     grid-column: full;
   }
 
-  .playerBox {
+  .playerBox,
+  .theater .playerBox {
+    height: auto;
+    aspect-ratio: 16 / 9;
     border-radius: 0;
   }
 }

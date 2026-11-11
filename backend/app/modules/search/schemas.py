@@ -10,7 +10,13 @@ from app.modules.videos.schemas import VideoSummary
 SearchQuery = Annotated[
     str,
     Query(description="Words to find in titles and descriptions"),
-    StringConstraints(strip_whitespace=True, min_length=1, max_length=200),
+    # No control characters: Postgres refuses NUL (a 500, not a 422).
+    StringConstraints(
+        strip_whitespace=True,
+        min_length=1,
+        max_length=200,
+        pattern=r"^[^\x00-\x1f\x7f]*$",
+    ),
 ]
 
 

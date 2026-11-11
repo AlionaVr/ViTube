@@ -4,7 +4,21 @@ from collections.abc import Sequence
 from datetime import timedelta
 from uuid import UUID
 
-from sqlalchemy import Row, Select, delete, exists, func, literal, or_, select, tuple_, update
+from sqlalchemy import (
+    Row,
+    Select,
+    String,
+    column,
+    delete,
+    exists,
+    func,
+    literal,
+    or_,
+    select,
+    tuple_,
+    update,
+    values,
+)
 from sqlalchemy.dialects.postgresql import REGCONFIG, insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,8 +39,12 @@ RankedRow = Row[Video, User, float]
 TYPO_SIMILARITY = 0.5
 
 # Public lists (feed, search, Up next) show only these. One place: a new rule reaches every list.
-# models.LISTED_SQL repeats it for partial indexes; keep the two in sync.
-LISTED = (Video.visibility == Visibility.PUBLIC, Video.status == VideoStatus.READY)
+# Partial indexes use models.LISTED_SQL: LISTED must imply it (may add rules, never drop one).
+# Literals, not bind parameters: a generic plan can't use a partial index for `visibility = $1`.
+LISTED = (
+    Video.visibility == literal(Visibility.PUBLIC, Video.visibility.type, literal_execute=True),
+    Video.status == literal(VideoStatus.READY, Video.status.type, literal_execute=True),
+)
 
 _WITH_OWNER = select(Video, User).join(User, User.id == Video.owner_id)
 
@@ -80,39 +98,56 @@ async def _allow_title_typos(db: AsyncSession) -> None:
 
 
 async def search(
-    db: AsyncSession, words: str, *, after: tuple[float, UUID] | None, limit: int
+    db: AsyncSession,
+    words: str,
+    *,
+    typos: bool,
+    after: tuple[float, UUID] | None,
+    limit: int,
 ) -> Sequence[RankedRow]:
-    """Listed videos with the words in the title or description, or close to the title; best first.
+    """Listed videos with the words in the title or description, best first.
 
-    Rank: full-text rank (title over description) plus how close the title is to the words.
+    With `typos`, titles close to the words match too. Rank: full-text rank (title over
+    description) plus how close the title is to the words.
     """
-    await _allow_title_typos(db)
     query = func.websearch_to_tsquery(literal(SEARCH_CONFIG, REGCONFIG), words)
+    matches = Video.search_vector.bool_op("@@")(query)
+    if typos:
+        await _allow_title_typos(db)
+        matches = or_(matches, Video.title.bool_op("%>")(words))
     rank = func.ts_rank(Video.search_vector, query) + func.word_similarity(words, Video.title)
-    statement = _WITH_OWNER.add_columns(rank).where(
-        *LISTED, or_(Video.search_vector.bool_op("@@")(query), Video.title.bool_op("%>")(words))
-    )
+    # querytree 'T': no word is required ("-word" only), so every video would match.
+    statement = _WITH_OWNER.add_columns(rank).where(*LISTED, func.querytree(query) != "T", matches)
     if after is not None:
         statement = statement.where(tuple_(rank, Video.id) < tuple_(*after))
     return (await db.execute(statement.order_by(rank.desc(), Video.id.desc()).limit(limit))).all()
 
 
 async def suggest_titles(db: AsyncSession, words: str, *, limit: int) -> list[str]:
-    """Titles of listed videos close to the words, closest first; each title once."""
+    """Titles of listed videos close to the words, closest first, in lower case like
+    YouTube's suggestions; titles that differ only in case come once."""
     await _allow_title_typos(db)
-    closeness = func.word_similarity(words, Video.title)
+    title = func.lower(Video.title)
+    closeness = func.word_similarity(words, Video.title)  # pg_trgm ignores case
     statement = (
-        select(Video.title, closeness)
+        select(title, closeness)
         .where(*LISTED, Video.title.bool_op("%>")(words))
         .distinct()
-        .order_by(closeness.desc(), Video.title)
+        .order_by(closeness.desc(), title)
         .limit(limit)
     )
     return list(await db.scalars(statement))
 
 
 async def listed_categories(db: AsyncSession) -> set[Category]:
-    return set(await db.scalars(select(Video.category).where(*LISTED).distinct()))
+    """One index probe per category (ix_videos_listed_category_id), not a scan of every video."""
+    categories = values(column("name", String), name="categories").data(
+        [(category.value,) for category in Category]
+    )
+    statement = select(categories.c.name).where(
+        exists().where(*LISTED, Video.category == categories.c.name)
+    )
+    return {Category(name) for name in await db.scalars(statement)}
 
 
 async def has_access(db: AsyncSession, video_id: UUID, user_id: UUID) -> bool:

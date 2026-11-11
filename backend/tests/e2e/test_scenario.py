@@ -179,6 +179,11 @@ def test_upload_processing_playback_and_access(
     assert public_id in listed(guest, "/api/videos")
     assert public_id in listed(guest, "/api/search", q=marker)
 
+    # Private again: out of the lists at once. Runs leave no public test videos behind.
+    assert owner.send("PATCH", page, json={"visibility": "private"}).status_code == 200
+    assert public_id not in listed(guest, "/api/videos")
+    assert public_id not in listed(guest, "/api/search", q=marker)
+
 
 def test_a_file_that_is_not_a_video_fails_with_a_reason(owner: Browser) -> None:
     public_id = upload(owner, b"just some text, not a video", "E2E not a video")

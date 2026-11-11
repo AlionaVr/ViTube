@@ -1,6 +1,6 @@
 .card {
   display: flex;
-  gap: 8px;
+  gap: 12px;
   color: var(--color-text);
 }
 
@@ -10,9 +10,10 @@
   border-radius: 8px;
 }
 
+/* YouTube sizes the thumbnail by the column: 220px of 352px, 330px of 528px. */
 .thumbnail {
   flex: none;
-  width: 168px;
+  width: 62.5%;
 }
 
 .ghost {
@@ -34,8 +35,8 @@
   line-height: 20px;
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
   overflow: hidden;
   overflow-wrap: anywhere;
 }

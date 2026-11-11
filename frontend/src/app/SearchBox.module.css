@@ -67,26 +67,29 @@
   right: 0;
   z-index: 2;
   margin: 0;
-  padding: 16px 0;
+  padding: 8px 0;
   list-style: none;
   border-radius: 12px;
   background: var(--color-bg);
-  box-shadow: var(--shadow-popup);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
+/* Rows are inset, so the highlight is a rounded block inside the sheet. */
 .suggestion {
-  height: 32px;
-  padding: 0 24px 0 16px;
+  height: 44px;
+  margin: 0 8px;
+  padding: 0 28px 0 16px;
   display: flex;
   align-items: center;
   gap: 16px;
+  border-radius: 8px;
   color: var(--color-text);
   cursor: default;
 }
 
 .suggestion:hover,
 .suggestion[aria-selected='true'] {
-  background: var(--color-surface-hover);
+  background: var(--color-hover);
 }
 
 .suggestionText {

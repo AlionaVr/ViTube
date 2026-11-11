@@ -4,6 +4,13 @@
   gap: 8px;
 }
 
+/* Under the description (one column): home-sized cards, as on YouTube. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 40px 16px;
+}
+
 .more {
   padding: 16px 0;
   display: flex;

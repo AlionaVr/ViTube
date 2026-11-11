@@ -1,7 +1,7 @@
-/* YouTube's results column; rows stack when the column gets narrow. */
+/* YouTube's results column: up to 1250px of content, 24px sides at every width. */
 .page {
   container-type: inline-size;
-  max-width: 1096px;
+  max-width: calc(1250px + 2 * 24px);
   margin: 0 auto;
   padding: 16px 24px 24px;
 }
@@ -24,15 +24,15 @@
   max-width: 500px;
 }
 
-/* Room for the ⋮ menu button, as on YouTube. */
 .details {
   flex: 1 1 0;
   min-width: 0;
-  padding-right: 24px;
 }
 
+/* Room for the ⋮ menu button, as on YouTube: only the title wraps short of it. */
 .title {
   margin: 0;
+  padding-right: 24px;
   font-size: 18px;
   font-weight: 400;
   line-height: 26px;
@@ -107,7 +107,8 @@
   width: 60%;
 }
 
-@container (max-width: 600px) {
+/* YouTube keeps the row even on a phone; stacking only where the details would be unreadable. */
+@container (max-width: 400px) {
   .result {
     flex-direction: column;
     gap: 12px;
@@ -116,11 +117,5 @@
   .thumbnail {
     min-width: 0;
     max-width: none;
-  }
-}
-
-@media (max-width: 656px) {
-  .page {
-    padding: 0 16px 16px;
   }
 }

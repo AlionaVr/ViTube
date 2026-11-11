@@ -106,7 +106,7 @@ describe('WatchPage', () => {
   it('expands and collapses the description', async () => {
     mockWatch()
     await openWatch()
-    await userEvent.click(screen.getByRole('button', { name: '...more' }))
+    await userEvent.click(screen.getByRole('button', { name: 'more' }))
     expect(screen.getByText(/^1,920,441 views$/)).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Show less' }))
     expect(screen.getByText('1.9M views')).toBeInTheDocument()
