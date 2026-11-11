@@ -52,6 +52,7 @@ describe('ChannelsPage', () => {
     const row = within(list).getByRole('link', { name: 'ANNA' }).closest('li')!
 
     await userEvent.click(within(row).getByRole('button', { name: /Subscribed/ }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Unsubscribe' }))
     await userEvent.click(
       within(screen.getByRole('dialog', { name: 'Unsubscribe' })).getByRole('button', {
         name: 'Unsubscribe',

@@ -344,6 +344,21 @@ async def test_the_cover_is_the_first_video_this_viewer_may_watch(
     assert cover((await guest.get(url)).json()) is None
 
 
+async def test_a_grant_on_another_video_shows_neither_item_nor_cover(
+    owner: AsyncClient, viewer: AsyncClient, db: AsyncSession, anna: User
+) -> None:
+    playlist_id = await create(owner, visibility="public")
+    bob = await make_user(db, "bob")
+    inside, elsewhere = await make_video(db, bob), await make_video(db, bob)
+    await add(owner, playlist_id, inside)
+    for video in (inside, elsewhere):
+        await set_visibility(db, video, Visibility.PRIVATE)
+    await grant(db, elsewhere.public_id, VIEWER_EMAIL)
+
+    assert await item_ids(viewer, playlist_id) == []
+    assert (await viewer.get(f"/api/playlists/{playlist_id}")).json()["thumbnail_url"] is None
+
+
 async def test_items_come_in_pages(owner: AsyncClient, db: AsyncSession, anna: User) -> None:
     playlist_id = await create(owner)
     videos = [await make_video(db, anna) for _ in range(service.ITEMS_PAGE_SIZE + 2)]

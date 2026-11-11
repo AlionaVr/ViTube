@@ -102,3 +102,18 @@ async def test_viewable_is_can_view_as_sql(
     assert await ids_where(db, viewable(user)) == allowed
     # And both follow the policy's oracle, so a rule can't drift in both at once.
     assert allowed == {video.id for state, video in videos.items() if expected(viewer, *state)}
+
+
+async def test_a_grant_on_another_video_opens_nothing_here(
+    db: AsyncSession, videos: dict[State, Video], viewers: dict[Viewer, User | None]
+) -> None:
+    """viewable ties a grant to its own row: a grant elsewhere is a stranger's view here."""
+    elsewhere = await make_video(db, await make_user(db, "dave"), visibility=Visibility.PRIVATE)
+    granted_elsewhere = await make_user(db, "erin")
+    db.add(VideoAccess(video_id=elsewhere.id, user_id=granted_elsewhere.id))
+    await db.commit()
+    here = Video.id.in_([video.id for video in videos.values()])
+
+    assert await ids_where(db, viewable(granted_elsewhere), here) == await ids_where(
+        db, viewable(viewers[Viewer.STRANGER]), here
+    )

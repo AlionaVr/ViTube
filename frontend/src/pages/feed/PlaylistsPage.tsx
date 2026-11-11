@@ -1,7 +1,7 @@
 import ErrorState from '../../components/ErrorState'
 import Spinner from '../../components/Spinner'
 import { useInfiniteScroll } from '../../hooks/useInfiniteScroll'
-import { formatTimeAgo } from '../../lib/format'
+import { formatUpdated } from '../../lib/format'
 import { useMyPlaylists } from '../../playlists/hooks'
 import PlaylistCard, { PlaylistCardSkeleton } from '../../playlists/PlaylistCard'
 import { VISIBILITY } from '../../playlists/visibility'
@@ -21,7 +21,7 @@ function Playlists() {
 
   if (mine.isPending) {
     return (
-      <div className={grid.grid} aria-busy="true" aria-label="Loading playlists">
+      <div className={grid.feed} aria-busy="true" aria-label="Loading playlists">
         {Array.from({ length: SKELETON_CARDS }, (_, i) => (
           <PlaylistCardSkeleton key={i} />
         ))}
@@ -35,14 +35,14 @@ function Playlists() {
   const playlists = mine.data.pages.flatMap((page) => page.items)
   return (
     <>
-      <div className={grid.grid}>
+      <div className={grid.feed}>
         {playlists.map((playlist) => (
           <PlaylistCard
             key={playlist.id}
             playlist={playlist}
             lines={[
               `${VISIBILITY[playlist.visibility].label} • Playlist`,
-              `Updated ${formatTimeAgo(playlist.updated_at)}`,
+              formatUpdated(playlist.updated_at),
             ]}
           />
         ))}
@@ -64,7 +64,7 @@ function Playlists() {
 export default function PlaylistsPage() {
   const viewer = useViewer()
   return (
-    <div className={`${grid.container} ${styles.page}`}>
+    <div className={grid.page}>
       <title>Playlists - ViTube</title>
       {viewer.status === 'guest' ? (
         <SignInToSee

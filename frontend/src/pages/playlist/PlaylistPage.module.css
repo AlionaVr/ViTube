@@ -10,21 +10,31 @@
   position: sticky;
   top: calc(var(--header-height) + 24px);
   isolation: isolate;
-  overflow: hidden;
   width: 360px;
-  min-height: calc(100vh - var(--header-height) - 48px);
+  /* The viewport's height: an opened description scrolls inside. */
+  height: calc(100vh - var(--header-height) - 48px);
+  overflow: hidden auto;
   flex: none;
   padding: 24px;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 255 255 / 0.3) transparent;
   border-radius: 16px;
   /* Without a cover: a neutral dark panel, still with white text. */
   background: linear-gradient(to bottom, #606060, #272727);
   color: #fff;
 }
 
+/* Clips the blur's spill, so the panel scrolls only when its own content is taller. */
 .backdrop {
   position: absolute;
-  inset: -60px;
+  inset: 0;
   z-index: -2;
+  overflow: hidden;
+}
+
+.backdrop img {
+  position: absolute;
+  inset: -60px;
   width: calc(100% + 120px);
   height: calc(100% + 120px);
   object-fit: cover;
@@ -95,13 +105,14 @@
   gap: 4px;
 }
 
+/* White on the panel, its "...more" too; only here, not in the dialogs the panel opens. */
 .description {
-  margin: 12px 0 0;
+  --color-text: #fff;
+  --color-text-secondary: rgb(255 255 255 / 0.7);
+  margin-top: 12px;
   font-size: 14px;
   line-height: 20px;
-  color: rgb(255 255 255 / 0.7);
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
+  color: var(--color-text-secondary);
 }
 
 .playAll {
@@ -216,7 +227,7 @@
     position: relative;
     top: auto;
     width: auto;
-    min-height: 0;
+    height: auto;
   }
 
   .cover {

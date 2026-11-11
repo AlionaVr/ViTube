@@ -2,8 +2,16 @@ import { useEffect, useRef, useState } from 'react'
 
 import styles from './ClampedText.module.css'
 
-/** Text cut to `lines` with "Read more"; the button shows only when something is cut. */
-export default function ClampedText({ text, lines }: { text: string; lines: number }) {
+/** Text cut to `lines` with a "Read more" button (or `more`); it shows only when something is cut. */
+export default function ClampedText({
+  text,
+  lines,
+  more = 'Read more',
+}: {
+  text: string
+  lines: number
+  more?: string
+}) {
   const ref = useRef<HTMLParagraphElement>(null)
   const [expanded, setExpanded] = useState(false)
   const [overflows, setOverflows] = useState(false)
@@ -34,7 +42,7 @@ export default function ClampedText({ text, lines }: { text: string; lines: numb
           aria-expanded={expanded}
           onClick={() => setExpanded((value) => !value)}
         >
-          {expanded ? 'Show less' : 'Read more'}
+          {expanded ? 'Show less' : more}
         </button>
       )}
     </>

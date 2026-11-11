@@ -22,7 +22,7 @@ export default function ChannelPlaylists() {
   const items = playlists.data?.pages.flatMap((page) => page.items) ?? []
 
   if (playlists.isSuccess && items.length === 0) {
-    return <EmptyState title="This channel doesn’t have any playlists" />
+    return <EmptyState title="This channel has no playlists." />
   }
   return (
     <div className={`${grid.container} ${styles.tab}`}>

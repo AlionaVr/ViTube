@@ -5,6 +5,7 @@ import {
   formatCompact,
   formatDuration,
   formatTimeAgo,
+  formatUpdated,
   formatVideoCount,
   formatViews,
   formatViewsExact,
@@ -68,5 +69,22 @@ describe('formatDuration', () => {
     [3723, '1:02:03'],
   ])('%ds → %s', (seconds, text) => {
     expect(formatDuration(seconds)).toBe(text)
+  })
+})
+
+describe('formatUpdated', () => {
+  // Local time, as the viewer's calendar.
+  const now = new Date(2026, 10, 12, 9, 0).getTime()
+  const at = (day: number, hour: number) => new Date(2026, 10, day, hour).toISOString()
+
+  it.each([
+    [at(12, 0), 'Updated today'],
+    [at(11, 23), 'Updated yesterday'], // ten hours ago, but another day
+    [at(11, 0), 'Updated yesterday'],
+    [at(9, 12), 'Updated 3 days ago'],
+    [at(6, 12), 'Updated 6 days ago'],
+    [at(1, 12), 'Updated 1 week ago'],
+  ])('%s → %s', (iso, text) => {
+    expect(formatUpdated(iso, now)).toBe(text)
   })
 })

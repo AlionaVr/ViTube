@@ -3,9 +3,10 @@
 from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy import delete, exists, func, literal_column, select, tuple_, update
+from sqlalchemy import delete, exists, func, literal_column, select, true, tuple_, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from app.modules.channels.models import Subscription
 from app.modules.channels.schemas import VideoSort
@@ -48,16 +49,25 @@ async def list_videos(
 async def list_feed(
     db: AsyncSession, subscriber_id: UUID, *, before: UUID | None, limit: int
 ) -> Sequence[VideoRow]:
-    """Listed videos of the channels the user subscribed to, newest first, after the cursor."""
-    channels = select(Subscription.channel_id).where(Subscription.subscriber_id == subscriber_id)
-    query = (
-        select(Video, User)
-        .join(User, User.id == Video.owner_id)
-        .where(*LISTED, Video.owner_id.in_(channels))
-    )
+    """Listed videos of the channels the user subscribed to, newest first, after the cursor.
+
+    Per channel its newest `limit` (an index-only walk of ix_videos_listed_owner_id_id), then the
+    newest of those: the cost is subscriptions x page size, whatever the site or a channel holds.
+    """
+    newest = select(Video.id).where(Video.owner_id == Subscription.channel_id, *LISTED)
     if before is not None:
-        query = query.where(Video.id < before)
-    return (await db.execute(query.order_by(Video.id.desc()).limit(limit))).all()
+        newest = newest.where(Video.id < before)
+    per_channel = newest.order_by(Video.id.desc()).limit(limit).lateral("newest")
+    shown = aliased(Video)  # not Video: the subquery would correlate to it
+    query = (
+        select(shown, User)
+        .select_from(Subscription)
+        .join(per_channel, true())
+        .join(shown, shown.id == per_channel.c.id)
+        .join(User, User.id == shown.owner_id)
+        .where(Subscription.subscriber_id == subscriber_id)
+    )
+    return (await db.execute(query.order_by(shown.id.desc()).limit(limit))).all()
 
 
 async def list_subscribed(

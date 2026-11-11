@@ -7,9 +7,9 @@ import Spinner from '../../components/Spinner'
 import VideoCard, { VideoCardSkeleton } from '../../components/VideoCard'
 import { useInfiniteScroll } from '../../hooks/useInfiniteScroll'
 import buttons from '../../styles/buttons.module.css'
+import grid from '../../styles/grid.module.css'
 import { useViewer } from '../../viewer/useViewer'
 // The same grid as Home.
-import grid from '../HomePage.module.css'
 import SignInToSee from './SignInToSee'
 import styles from './SubscriptionsPage.module.css'
 
@@ -25,7 +25,7 @@ function Feed() {
 
   if (feed.isPending) {
     return (
-      <div className={grid.grid} aria-busy="true" aria-label="Loading videos">
+      <div className={grid.feed} aria-busy="true" aria-label="Loading videos">
         {Array.from({ length: SKELETON_CARDS }, (_, i) => (
           <VideoCardSkeleton key={i} />
         ))}
@@ -44,7 +44,7 @@ function Feed() {
   }
   return (
     <>
-      <div className={grid.grid}>
+      <div className={grid.feed}>
         {videos.map((video) => (
           <VideoCard key={video.id} video={video} />
         ))}

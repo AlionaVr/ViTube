@@ -1,5 +1,5 @@
+import { SelectField, TextAreaField } from '../components/TextField'
 import { DESCRIPTION_MAX } from './limits'
-import styles from './PlaylistFields.module.css'
 import type { Visibility } from './types'
 import { VISIBILITY } from './visibility'
 
@@ -13,20 +13,17 @@ export function PrivacySelect({
   onChange: (value: Visibility) => void
 }) {
   return (
-    <label className={styles.field}>
-      <span>Privacy</span>
-      <select
-        className={styles.control}
-        value={value}
-        onChange={(event) => onChange(event.target.value as Visibility)}
-      >
-        {CHOICES.map((choice) => (
-          <option key={choice} value={choice}>
-            {VISIBILITY[choice].label}
-          </option>
-        ))}
-      </select>
-    </label>
+    <SelectField
+      label="Privacy"
+      value={value}
+      onChange={(event) => onChange(event.target.value as Visibility)}
+    >
+      {CHOICES.map((choice) => (
+        <option key={choice} value={choice}>
+          {VISIBILITY[choice].label}
+        </option>
+      ))}
+    </SelectField>
   )
 }
 
@@ -38,15 +35,12 @@ export function DescriptionField({
   onChange: (value: string) => void
 }) {
   return (
-    <label className={styles.field}>
-      <span>Description</span>
-      <textarea
-        className={`${styles.control} ${styles.text}`}
-        value={value}
-        maxLength={DESCRIPTION_MAX}
-        rows={4}
-        onChange={(event) => onChange(event.target.value)}
-      />
-    </label>
+    <TextAreaField
+      label="Description"
+      value={value}
+      maxLength={DESCRIPTION_MAX}
+      hint={`${value.length}/${DESCRIPTION_MAX}`}
+      onChange={(event) => onChange(event.target.value)}
+    />
   )
 }

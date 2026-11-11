@@ -5,6 +5,7 @@ import { Link, useSearchParams } from 'react-router'
 
 import { ApiError } from '../../api/client'
 import Avatar from '../../components/Avatar'
+import ClampedText from '../../components/ClampedText'
 import EmptyState from '../../components/EmptyState'
 import ErrorState from '../../components/ErrorState'
 import Icon from '../../components/Icon'
@@ -12,7 +13,7 @@ import Spinner from '../../components/Spinner'
 import Thumbnail from '../../components/Thumbnail'
 import { useInfiniteScroll } from '../../hooks/useInfiniteScroll'
 import { useToast } from '../../hooks/useToast'
-import { formatTimeAgo, formatVideoCount, formatViews } from '../../lib/format'
+import { formatTimeAgo, formatUpdated, formatVideoCount, formatViews } from '../../lib/format'
 import {
   useMoveInPlaylist,
   usePlaylist,
@@ -52,7 +53,9 @@ function Header({
     <header className={styles.header}>
       {/* The cover, blurred, colors the panel as YouTube's sampled gradient does. */}
       {playlist.thumbnail_url && (
-        <img className={styles.backdrop} src={playlist.thumbnail_url} alt="" />
+        <div className={styles.backdrop}>
+          <img src={playlist.thumbnail_url} alt="" />
+        </div>
       )}
       <div className={styles.cover}>
         {playlist.thumbnail_url ? (
@@ -73,9 +76,13 @@ function Header({
           {label}
         </span>
         <span>{formatVideoCount(playlist.video_count)}</span>
-        <span>Updated {formatTimeAgo(playlist.updated_at)}</span>
+        <span>{formatUpdated(playlist.updated_at)}</span>
       </p>
-      {playlist.description && <p className={styles.description}>{playlist.description}</p>}
+      {playlist.description && (
+        <div className={styles.description}>
+          <ClampedText text={playlist.description} lines={2} more="...more" />
+        </div>
+      )}
       {/* Watch later can't be edited or deleted. */}
       {own && playlist.kind === 'user' && <PlaylistTools playlist={playlist} />}
       {first && (

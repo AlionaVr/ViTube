@@ -71,11 +71,13 @@ describe('ChannelPage', () => {
     expect(fetch.mock.calls.some(([request]) => request.method === 'PUT')).toBe(true)
   })
 
-  it('unsubscribes after the confirm dialog', async () => {
+  it('unsubscribes from the Subscribed menu after the confirm dialog', async () => {
     mockChannel(channel({ is_subscribed: true, subscriber_count: 3 }))
     await openChannel()
 
     await userEvent.click(await screen.findByRole('button', { name: /Subscribed/ }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Unsubscribe' }))
     const dialog = screen.getByRole('dialog', { name: 'Unsubscribe' })
     expect(within(dialog).getByText('Unsubscribe from Open Movie Club?')).toBeInTheDocument()
     await userEvent.click(within(dialog).getByRole('button', { name: 'Unsubscribe' }))
@@ -274,7 +276,7 @@ describe('ChannelPage', () => {
       await openChannel('/@openmovieclub/playlists')
 
       expect(
-        await screen.findByRole('heading', { name: 'This channel doesn’t have any playlists' }),
+        await screen.findByRole('heading', { name: 'This channel has no playlists.' }),
       ).toBeInTheDocument()
     })
   })

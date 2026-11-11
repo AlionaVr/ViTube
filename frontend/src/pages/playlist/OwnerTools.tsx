@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router'
 
 import Dialog from '../../components/Dialog'
-import Icon, { type IconName } from '../../components/Icon'
 import IconButton from '../../components/IconButton'
+import MenuChoices, { type MenuChoice } from '../../components/Menu'
 import Popover from '../../components/Popover'
 import { useToast } from '../../hooks/useToast'
 import EditPlaylistDialog from '../../playlists/EditPlaylistDialog'
@@ -12,13 +12,7 @@ import type { Playlist } from '../../playlists/types'
 import buttons from '../../styles/buttons.module.css'
 import styles from './OwnerTools.module.css'
 
-interface MenuChoice {
-  icon: IconName
-  label: string
-  onSelect: () => void
-}
-
-/** YouTube's ⋮ menu: icon and label per line. */
+/** YouTube's ⋮ menu. */
 function Menu({
   label,
   choices,
@@ -42,25 +36,7 @@ function Menu({
         />
       )}
     >
-      {(close) => (
-        <div className={styles.menu}>
-          {choices.map((choice) => (
-            <button
-              key={choice.label}
-              type="button"
-              role="menuitem"
-              className={styles.choice}
-              onClick={() => {
-                close()
-                choice.onSelect()
-              }}
-            >
-              <Icon name={choice.icon} />
-              {choice.label}
-            </button>
-          ))}
-        </div>
-      )}
+      {(close) => <MenuChoices choices={choices} close={close} />}
     </Popover>
   )
 }

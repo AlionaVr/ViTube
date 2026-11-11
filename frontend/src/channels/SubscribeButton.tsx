@@ -2,6 +2,8 @@ import { useState } from 'react'
 
 import Dialog from '../components/Dialog'
 import Icon from '../components/Icon'
+import MenuChoices from '../components/Menu'
+import Popover from '../components/Popover'
 import SignInGate from '../components/SignInGate'
 import buttons from '../styles/buttons.module.css'
 import { useSetSubscribed } from './hooks'
@@ -10,7 +12,7 @@ import type { Channel } from './types'
 
 type Props = { channel: Pick<Channel, 'handle' | 'name' | 'is_subscribed'> }
 
-/** Subscribe, or Subscribed with a confirm dialog to unsubscribe. Not for the viewer's own channel. */
+/** Subscribe, or Subscribed ▾ with a menu whose Unsubscribe asks first. Not on your own channel. */
 export default function SubscribeButton({ channel }: Props) {
   const setSubscribed = useSetSubscribed(channel.handle)
   const [confirming, setConfirming] = useState(false)
@@ -18,16 +20,30 @@ export default function SubscribeButton({ channel }: Props) {
   if (channel.is_subscribed) {
     return (
       <>
-        <button
-          type="button"
-          className={`${buttons.pill} ${buttons.tonal} ${buttons.iconLeading} ${buttons.iconTrailing}`}
-          aria-haspopup="dialog"
-          onClick={() => setConfirming(true)}
+        <Popover
+          label="Subscription"
+          role="menu"
+          trigger={(props) => (
+            <button
+              type="button"
+              className={`${buttons.pill} ${buttons.tonal} ${buttons.iconLeading} ${buttons.iconTrailing}`}
+              {...props}
+            >
+              <Icon name="notifications" />
+              Subscribed
+              <Icon name="chevronDown" />
+            </button>
+          )}
         >
-          <Icon name="notifications" />
-          Subscribed
-          <Icon name="chevronDown" />
-        </button>
+          {(close) => (
+            <MenuChoices
+              close={close}
+              choices={[
+                { icon: 'personRemove', label: 'Unsubscribe', onSelect: () => setConfirming(true) },
+              ]}
+            />
+          )}
+        </Popover>
         <Dialog open={confirming} onClose={() => setConfirming(false)} label="Unsubscribe">
           <p className={styles.confirm}>Unsubscribe from {channel.name}?</p>
           <div className={styles.confirmActions}>

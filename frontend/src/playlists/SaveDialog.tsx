@@ -44,7 +44,7 @@ function NewPlaylistForm({ videoId, onDone }: { videoId: string; onDone: () => v
   return (
     <form className={styles.form} onSubmit={(event) => void submit(event)}>
       <TextField
-        label="Name"
+        label="Title"
         value={title}
         onChange={(event) => setTitle(event.target.value)}
         maxLength={TITLE_MAX}

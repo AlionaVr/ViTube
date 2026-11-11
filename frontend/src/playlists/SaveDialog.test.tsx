@@ -112,7 +112,7 @@ describe('SaveDialog', () => {
     const dialog = await openSave()
 
     await userEvent.click(within(dialog).getByRole('button', { name: 'Create new playlist' }))
-    await userEvent.type(within(dialog).getByLabelText('Name'), 'Trailers')
+    await userEvent.type(within(dialog).getByLabelText('Title'), 'Trailers')
     expect(within(dialog).getByText('8/150')).toBeInTheDocument()
     await userEvent.selectOptions(within(dialog).getByLabelText('Privacy'), 'public')
     await userEvent.click(within(dialog).getByRole('button', { name: 'Create' }))
@@ -136,13 +136,13 @@ describe('SaveDialog', () => {
     const dialog = await openSave()
 
     await userEvent.click(within(dialog).getByRole('button', { name: 'Create new playlist' }))
-    await userEvent.type(within(dialog).getByLabelText('Name'), 'Trailers')
+    await userEvent.type(within(dialog).getByLabelText('Title'), 'Trailers')
     await userEvent.click(within(dialog).getByRole('button', { name: 'Create' }))
 
     expect(
       await within(dialog).findByText('Too many attempts. Try again later.'),
     ).toBeInTheDocument()
-    expect(within(dialog).getByLabelText('Name')).toHaveValue('Trailers')
+    expect(within(dialog).getByLabelText('Title')).toHaveValue('Trailers')
   })
 
   it('says where the video went', async () => {

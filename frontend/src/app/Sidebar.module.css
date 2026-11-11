@@ -72,6 +72,17 @@
   background: var(--color-hover-strong);
 }
 
+/* "Show more": a button that looks like the rows. */
+.toggle {
+  width: 100%;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
 .you {
   gap: 8px;
   font-size: 16px;

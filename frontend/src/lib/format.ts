@@ -66,6 +66,20 @@ export function formatTimeAgo(iso: string, now = Date.now()): string {
   return 'just now'
 }
 
+const DAY_MS = 86_400_000
+
+/** A playlist's change, in calendar days as YouTube counts them: "Updated today", "Updated
+ * yesterday", "Updated 3 days ago"; from a week on, "Updated 2 weeks ago" and so on. */
+export function formatUpdated(iso: string, now = Date.now()): string {
+  const midnight = (time: number) => new Date(time).setHours(0, 0, 0, 0)
+  // Rounded: a day with a clock change is 23 or 25 hours long.
+  const days = Math.round((midnight(now) - midnight(Date.parse(iso))) / DAY_MS)
+  if (days <= 0) return 'Updated today'
+  if (days === 1) return 'Updated yesterday'
+  if (days < 7) return `Updated ${days} days ago`
+  return `Updated ${formatTimeAgo(iso, now)}`
+}
+
 /** "Nov 7, 2026". */
 export function formatDate(iso: string): string {
   return date.format(new Date(iso))

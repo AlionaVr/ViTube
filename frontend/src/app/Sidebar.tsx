@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link, useLocation } from 'react-router'
 
 import { useSubscriptions } from '../channels/hooks'
@@ -59,10 +60,17 @@ function NavItems({ items, onNavigate }: NavProps & { items: NavItem[] }) {
   })
 }
 
+const SHOWN_SUBSCRIPTIONS = 7 // as YouTube's guide, then "Show N more"
+
 function SubscriptionList({ onNavigate }: NavProps) {
-  const { data } = useSubscriptions()
+  const { data, hasNextPage } = useSubscriptions()
+  const { pathname } = useLocation()
+  const [open, setOpen] = useState(false)
   const channels = data?.pages.flatMap((page) => page.items) ?? []
   if (!channels.length) return null
+  const shown = open ? channels : channels.slice(0, SHOWN_SUBSCRIPTIONS)
+  const hidden = channels.length - SHOWN_SUBSCRIPTIONS
+  const here = pathname.toLowerCase() // handles are case-insensitive
   return (
     <section className={styles.section}>
       <h2 className={styles.heading}>
@@ -71,17 +79,35 @@ function SubscriptionList({ onNavigate }: NavProps) {
           <Icon name="chevronRight" size={20} />
         </Link>
       </h2>
-      {channels.map((channel) => (
-        <Link
-          key={channel.handle}
-          to={channelUrl(channel.handle)}
-          onClick={onNavigate}
-          className={styles.item}
+      {shown.map((channel) => {
+        const url = channelUrl(channel.handle)
+        const active = here === url.toLowerCase() || here.startsWith(`${url.toLowerCase()}/`)
+        return (
+          <Link
+            key={channel.handle}
+            to={url}
+            onClick={onNavigate}
+            className={active ? `${styles.item} ${styles.active}` : styles.item}
+            aria-current={active ? 'page' : undefined}
+          >
+            <Avatar name={channel.name} src={channel.avatar_url} size={24} />
+            <span className={styles.label}>{channel.name}</span>
+          </Link>
+        )
+      })}
+      {hidden > 0 && (
+        <button
+          type="button"
+          className={`${styles.item} ${styles.toggle}`}
+          aria-expanded={open}
+          onClick={() => setOpen((value) => !value)}
         >
-          <Avatar name={channel.name} src={channel.avatar_url} size={24} />
-          <span className={styles.label}>{channel.name}</span>
-        </Link>
-      ))}
+          <Icon name={open ? 'chevronUp' : 'chevronDown'} />
+          <span className={styles.label}>
+            {open ? 'Show fewer' : hasNextPage ? 'Show more' : `Show ${hidden} more`}
+          </span>
+        </button>
+      )}
     </section>
   )
 }

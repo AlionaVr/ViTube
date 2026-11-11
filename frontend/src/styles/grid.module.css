@@ -1,15 +1,23 @@
-/* A card grid that counts columns from its own width, so the guide opening re-flows it. */
+/* Card grids count columns from their own width, so the guide opening re-flows them. */
 .container {
   container-type: inline-size;
 }
 
-.grid {
+/* A full-width feed page: Home, Subscriptions, Playlists. */
+.page {
+  container-type: inline-size;
+  padding: 0 24px 24px;
+}
+
+.grid,
+.feed {
   --columns: 1;
   display: grid;
   grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
   gap: 40px 16px;
 }
 
+/* Channel tabs: the page is at most 1284px wide. */
 @container (min-width: 500px) {
   .grid {
     --columns: 2;
@@ -28,8 +36,49 @@
   }
 }
 
+/* Feeds: YouTube's columns by content width. */
+.feed {
+  padding-top: 24px;
+}
+
+@container (min-width: 520px) {
+  .feed {
+    --columns: 2;
+  }
+}
+
+@container (min-width: 880px) {
+  .feed {
+    --columns: 3;
+  }
+}
+
+@container (min-width: 1500px) {
+  .feed {
+    --columns: 4;
+  }
+}
+
+@container (min-width: 2100px) {
+  .feed {
+    --columns: 5;
+  }
+}
+
+@container (min-width: 2600px) {
+  .feed {
+    --columns: 6;
+  }
+}
+
 .more {
   padding: 24px 0;
   display: flex;
   justify-content: center;
+}
+
+@media (max-width: 656px) {
+  .page {
+    padding: 0 16px 16px;
+  }
 }
