@@ -4,7 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.users.models import User
-from app.modules.videos.models import Video, VideoAccess, VideoStatus, Visibility
+from app.modules.videos.models import Category, Video, VideoAccess, VideoStatus, Visibility
 from tests.videos.factories import make_user, make_video
 
 
@@ -17,6 +17,7 @@ async def test_db_fills_defaults(db: AsyncSession) -> None:
     assert video.id.version == 7
     assert video.visibility is Visibility.PRIVATE  # safe default for API clients
     assert video.status is VideoStatus.UPLOADING
+    assert video.category is Category.PEOPLE  # YouTube's default
     assert video.description == ""
     assert (video.view_count, video.like_count, video.comment_count) == (0, 0, 0)
     assert video.processing_attempts == 0
@@ -60,6 +61,7 @@ async def test_public_id_format_is_checked(db: AsyncSession, public_id: str) -> 
         ("title", "   ", "ck_videos_title_length"),
         ("title", "x" * 101, "ck_videos_title_length"),
         ("description", "x" * 5001, "ck_videos_description_length"),
+        ("category", "cats", "ck_videos_category"),
         ("duration_sec", -1, "ck_videos_duration_sec_not_negative"),
         ("processing_attempts", -1, "ck_videos_processing_attempts_not_negative"),
         ("view_count", -1, "ck_videos_counters_not_negative"),

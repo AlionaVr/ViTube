@@ -2,11 +2,19 @@
 // (`unwrap(api.GET(...))`, src/api/client.ts) once the backend has the endpoint.
 import { api, unwrap } from '../api/client'
 import * as server from '../mocks/server'
-import type { Page, Rating, Video, VideoSummary } from './types'
+import type { Category, Page, Rating, Video, VideoSummary } from './types'
 
-/** The home feed: public videos, newest first. */
-export function listVideos(cursor: string | null): Promise<Page<VideoSummary>> {
-  return unwrap(api.GET('/api/videos', { params: { query: { cursor } } }))
+/** The home feed: public videos, newest first; `null` category means all. */
+export function listVideos(
+  category: Category | null,
+  cursor: string | null,
+): Promise<Page<VideoSummary>> {
+  return unwrap(api.GET('/api/videos', { params: { query: { category, cursor } } }))
+}
+
+/** Categories that have public videos, in YouTube's order. */
+export function listCategories(): Promise<Category[]> {
+  return unwrap(api.GET('/api/categories'))
 }
 
 /** Throws ApiError 404 for an unknown or private video. */

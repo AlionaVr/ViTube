@@ -197,6 +197,36 @@
   line-height: 16px;
 }
 
+/* Studio's dropdown in the same box; a native select keeps the keyboard and screen readers. */
+.selectBox {
+  padding-bottom: 8px;
+}
+
+.select {
+  width: 100%;
+  margin-top: 4px;
+  padding: 0 32px 0 0;
+  border: none;
+  outline: none;
+  appearance: none;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 15px;
+  line-height: 22px;
+  cursor: pointer;
+}
+
+.selectArrow {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  display: flex;
+  color: var(--color-text-secondary);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
 .visibility {
   margin: 0;
   padding: 0;

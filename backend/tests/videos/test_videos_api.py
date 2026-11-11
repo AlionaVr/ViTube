@@ -261,6 +261,7 @@ async def test_draft_is_created_private_and_waiting_for_its_file(client: AsyncCl
         "title": "My video",
         "description": "",
         "visibility": "private",
+        "category": "people",
         "status": "uploading",
         "error_message": None,
         "duration_sec": None,
@@ -275,12 +276,15 @@ async def test_draft_is_created_private_and_waiting_for_its_file(client: AsyncCl
     assert (await client.get(f"/api/videos/{body['id']}")).json() == body | {"my_rating": "none"}
 
 
-async def test_draft_keeps_the_given_description_and_visibility(owner: AsyncClient) -> None:
-    response = await post_draft(owner, description="About it", visibility="unlisted")
+async def test_draft_keeps_the_given_details(owner: AsyncClient) -> None:
+    response = await post_draft(
+        owner, description="About it", visibility="unlisted", category="music"
+    )
 
     assert response.status_code == 201
     assert response.json()["description"] == "About it"
     assert response.json()["visibility"] == "unlisted"
+    assert response.json()["category"] == "music"
 
 
 async def test_draft_title_is_stripped(owner: AsyncClient) -> None:
@@ -305,6 +309,7 @@ async def test_draft_accepts_the_longest_title_and_description(owner: AsyncClien
         {"title": "t" * 101},
         {"description": "d" * 5001},
         {"visibility": "secret"},
+        {"category": "cats"},
     ],
     ids=[
         "null title",
@@ -313,6 +318,7 @@ async def test_draft_accepts_the_longest_title_and_description(owner: AsyncClien
         "long title",
         "long description",
         "visibility",
+        "category",
     ],
 )
 async def test_draft_checks_input(
@@ -401,7 +407,12 @@ async def test_owner_edits_details_in_any_status(
     owner: AsyncClient, db: AsyncSession, status: VideoStatus
 ) -> None:
     video = await video_in(owner, db, status)
-    changes = {"title": " New title ", "description": "New description", "visibility": "public"}
+    changes = {
+        "title": " New title ",
+        "description": "New description",
+        "visibility": "public",
+        "category": "music",
+    }
 
     response = await edit(owner, video.public_id, changes)
 
@@ -410,13 +421,16 @@ async def test_owner_edits_details_in_any_status(
     assert body["title"] == "New title"
     assert body["description"] == "New description"
     assert body["visibility"] == "public"
+    assert body["category"] == "music"
     assert body["status"] == status.value
     page = await owner.get(f"/api/videos/{video.public_id}")
     assert page.json() == body | {"my_rating": "none"}
 
 
 async def test_null_and_missing_fields_are_left_as_they_are(owner: AsyncClient) -> None:
-    public_id = await create_draft(owner, description="Old description", visibility="unlisted")
+    public_id = await create_draft(
+        owner, description="Old description", visibility="unlisted", category="music"
+    )
 
     response = await edit(owner, public_id, {"title": "New title", "description": None})
 
@@ -425,6 +439,7 @@ async def test_null_and_missing_fields_are_left_as_they_are(owner: AsyncClient) 
     assert body["title"] == "New title"
     assert body["description"] == "Old description"
     assert body["visibility"] == "unlisted"
+    assert body["category"] == "music"
 
 
 async def test_empty_description_clears_it(owner: AsyncClient) -> None:
@@ -437,8 +452,14 @@ async def test_empty_description_clears_it(owner: AsyncClient) -> None:
 
 @pytest.mark.parametrize(
     "changes",
-    [{"title": "  "}, {"title": "t" * 101}, {"description": "d" * 5001}, {"visibility": "secret"}],
-    ids=["blank title", "long title", "long description", "visibility"],
+    [
+        {"title": "  "},
+        {"title": "t" * 101},
+        {"description": "d" * 5001},
+        {"visibility": "secret"},
+        {"category": "cats"},
+    ],
+    ids=["blank title", "long title", "long description", "visibility", "category"],
 )
 async def test_edit_checks_input(
     owner: AsyncClient, db: AsyncSession, changes: dict[str, object]

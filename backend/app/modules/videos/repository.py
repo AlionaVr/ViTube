@@ -9,12 +9,12 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.users.models import User
-from app.modules.videos.models import Video, VideoAccess, VideoStatus, Visibility
+from app.modules.videos.models import Category, Video, VideoAccess, VideoStatus, Visibility
 
 VideoRow = Row[Video, User]
 
 # Public lists (feed, search, Up next) show only these. One place: a new rule reaches every list.
-# The partial index ix_videos_listed_id repeats this condition; keep the two in sync.
+# models.LISTED_SQL repeats it for partial indexes; keep the two in sync.
 LISTED = (Video.visibility == Visibility.PUBLIC, Video.status == VideoStatus.READY)
 
 _WITH_OWNER = select(Video, User).join(User, User.id == Video.owner_id)
@@ -33,12 +33,20 @@ async def get_owner(db: AsyncSession, video: Video) -> User:
     return await db.get_one(User, video.owner_id)
 
 
-async def list_newest(db: AsyncSession, *, before: UUID | None, limit: int) -> Sequence[VideoRow]:
+async def list_newest(
+    db: AsyncSession, *, category: Category | None, before: UUID | None, limit: int
+) -> Sequence[VideoRow]:
     """Listed videos, newest first (ids are uuidv7: ordered by time), after the cursor."""
     query = _WITH_OWNER.where(*LISTED)
+    if category is not None:
+        query = query.where(Video.category == category)
     if before is not None:
         query = query.where(Video.id < before)
     return (await db.execute(query.order_by(Video.id.desc()).limit(limit))).all()
+
+
+async def listed_categories(db: AsyncSession) -> set[Category]:
+    return set(await db.scalars(select(Video.category).where(*LISTED).distinct()))
 
 
 async def has_access(db: AsyncSession, video_id: UUID, user_id: UUID) -> bool:
@@ -75,6 +83,7 @@ async def insert_unless_taken(
     title: str,
     description: str,
     visibility: Visibility,
+    category: Category,
 ) -> Video | None:
     """Insert a draft. None if the public id is taken: no exception, no savepoint needed."""
     statement = (
@@ -85,6 +94,7 @@ async def insert_unless_taken(
             title=title,
             description=description,
             visibility=visibility,
+            category=category,
         )
         .on_conflict_do_nothing(index_elements=[Video.public_id])
         .returning(Video)

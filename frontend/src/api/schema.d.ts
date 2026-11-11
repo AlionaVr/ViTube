@@ -179,6 +179,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Categories that have public videos */
+        get: operations["list_categories_api_categories_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/videos/{public_id}/rating": {
         parameters: {
             query?: never;
@@ -323,6 +340,12 @@ export interface components {
              */
             handle: string;
         };
+        /**
+         * Category
+         * @description YouTube's upload categories, in its order.
+         * @enum {string}
+         */
+        Category: "film" | "autos" | "music" | "pets" | "sports" | "travel" | "gaming" | "people" | "comedy" | "entertainment" | "news" | "howto" | "education" | "science" | "nonprofits";
         /**
          * ChannelSummary
          * @description What a video card or a comment shows about a user's channel.
@@ -483,6 +506,8 @@ export interface components {
             description: string;
             /** @default private */
             visibility: components["schemas"]["Visibility"];
+            /** @default people */
+            category: components["schemas"]["Category"];
         };
         /**
          * VideoDetail
@@ -499,6 +524,7 @@ export interface components {
             /** Description */
             description: string;
             visibility: components["schemas"]["Visibility"];
+            category: components["schemas"]["Category"];
             status: components["schemas"]["VideoStatus"];
             /**
              * Error Message
@@ -543,6 +569,7 @@ export interface components {
             /** Description */
             description: string;
             visibility: components["schemas"]["Visibility"];
+            category: components["schemas"]["Category"];
             status: components["schemas"]["VideoStatus"];
             /**
              * Error Message
@@ -615,6 +642,7 @@ export interface components {
             /** Description */
             description?: string | null;
             visibility?: components["schemas"]["Visibility"] | null;
+            category?: components["schemas"]["Category"] | null;
         };
         /**
          * Visibility
@@ -757,6 +785,7 @@ export interface operations {
     list_feed_api_videos_get: {
         parameters: {
             query?: {
+                category?: components["schemas"]["Category"] | null;
                 /** @description next_cursor of the last page */
                 cursor?: string | null;
             };
@@ -984,6 +1013,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_categories_api_categories_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Category"][];
                 };
             };
         };

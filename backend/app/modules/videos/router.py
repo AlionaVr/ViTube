@@ -1,4 +1,4 @@
-"""/api/videos: drafts, metadata, the file upload, the watch page data and sharing."""
+"""/api/videos: the feed, drafts, metadata, the file upload, the watch page data and sharing."""
 
 from typing import Annotated
 
@@ -12,6 +12,7 @@ from app.core.storage import StorageClient
 from app.db.session import DbSession
 from app.modules.auth.deps import CurrentUser, OptionalUser
 from app.modules.videos import service
+from app.modules.videos.models import Category
 from app.modules.videos.schemas import (
     HANDLE_PATTERN,
     AccessGrant,
@@ -25,6 +26,7 @@ from app.modules.videos.schemas import (
 )
 
 router = APIRouter(prefix="/api/videos", tags=["videos"])
+categories_router = APIRouter(prefix="/api/categories", tags=["videos"])
 
 # The body is the file itself, any Content-Type (ADR 0006).
 FILE_BODY = {
@@ -42,8 +44,17 @@ async def upload_limits() -> UploadLimits:
 
 
 @router.get("", response_model=Page[VideoSummary], summary="Home feed: public videos, newest first")
-async def list_feed(db: DbSession, cursor: Cursor = None) -> Page[VideoSummary]:
-    return await service.list_feed(db, cursor)
+async def list_feed(
+    db: DbSession, category: Category | None = None, cursor: Cursor = None
+) -> Page[VideoSummary]:
+    return await service.list_feed(db, category, cursor)
+
+
+@categories_router.get(
+    "", response_model=list[Category], summary="Categories that have public videos"
+)
+async def list_categories(db: DbSession) -> list[Category]:
+    return await service.list_categories(db)
 
 
 @router.post(

@@ -43,6 +43,30 @@ class VideoStatus(enum.StrEnum):
     FAILED = "failed"
 
 
+class Category(enum.StrEnum):
+    """YouTube's upload categories, in its order."""
+
+    FILM = "film"
+    AUTOS = "autos"
+    MUSIC = "music"
+    PETS = "pets"
+    SPORTS = "sports"
+    TRAVEL = "travel"
+    GAMING = "gaming"
+    PEOPLE = "people"  # People & Blogs: YouTube's default
+    COMEDY = "comedy"
+    ENTERTAINMENT = "entertainment"
+    NEWS = "news"
+    HOWTO = "howto"
+    EDUCATION = "education"
+    SCIENCE = "science"
+    NONPROFITS = "nonprofits"
+
+
+# repository.LISTED in SQL, for partial indexes; keep the two in sync.
+LISTED_SQL = "visibility = 'public' AND status = 'ready'"
+
+
 def _str_enum(enum_class: type[enum.StrEnum], name: str) -> Enum:
     # varchar + CHECK, not a Postgres enum: adding a value is a plain migration.
     return Enum(
@@ -80,12 +104,9 @@ class Video(Base):
             "view_count >= 0 AND like_count >= 0 AND comment_count >= 0",
             name="counters_not_negative",
         ),
-        # The home feed: listed videos (repository.LISTED), newest first.
-        Index(
-            "ix_videos_listed_id",
-            "id",
-            postgresql_where=text("visibility = 'public' AND status = 'ready'"),
-        ),
+        # The home feed, newest first: all listed videos, and by category.
+        Index("ix_videos_listed_id", "id", postgresql_where=text(LISTED_SQL)),
+        Index("ix_videos_listed_category_id", "category", "id", postgresql_where=text(LISTED_SQL)),
     )
 
     # Internal id: object keys and foreign keys. Never in API paths.
@@ -100,6 +121,9 @@ class Video(Base):
     )
     status: Mapped[VideoStatus] = mapped_column(
         _str_enum(VideoStatus, "status"), server_default=VideoStatus.UPLOADING.value
+    )
+    category: Mapped[Category] = mapped_column(
+        _str_enum(Category, "category"), server_default=Category.PEOPLE.value
     )
     # Set by a DB trigger on every status change; the sweeper finds stuck jobs by it (ADR 0003).
     status_changed_at: Mapped[datetime] = mapped_column(

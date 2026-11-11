@@ -26,7 +26,7 @@ from app.modules.users.models import User
 from app.modules.videos import repository as videos
 from app.modules.videos.access import get_viewable
 from app.modules.videos.config import get_video_settings
-from app.modules.videos.models import Video, VideoStatus
+from app.modules.videos.models import Category, Video, VideoStatus
 from app.modules.videos.schemas import (
     UploadLimits,
     VideoCreate,
@@ -79,6 +79,7 @@ async def create_draft(db: AsyncSession, redis: Redis, user: User, data: VideoCr
             title=data.title,
             description=data.description,
             visibility=data.visibility,
+            category=data.category,
         )
         if video is not None:
             await db.commit()
@@ -86,14 +87,22 @@ async def create_draft(db: AsyncSession, redis: Redis, user: User, data: VideoCr
     raise RuntimeError("No free public id found")  # 2^64 ids: practically never
 
 
-async def list_feed(db: AsyncSession, cursor: str | None) -> Page[VideoSummary]:
+async def list_feed(
+    db: AsyncSession, category: Category | None, cursor: str | None
+) -> Page[VideoSummary]:
     """The home feed: the same for every viewer, so no user is read."""
     before = decode_cursor(cursor, tuple[UUID])[0] if cursor else None
-    rows = await videos.list_newest(db, before=before, limit=FEED_PAGE_SIZE + 1)
+    rows = await videos.list_newest(db, category=category, before=before, limit=FEED_PAGE_SIZE + 1)
     page, next_cursor = split_page(rows, FEED_PAGE_SIZE, lambda row: (row[0].id,))
     return Page(
         items=[VideoSummary.of(video, owner) for video, owner in page], next_cursor=next_cursor
     )
+
+
+async def list_categories(db: AsyncSession) -> list[Category]:
+    """Categories with listed videos, in YouTube's order: a chip never leads to an empty feed."""
+    present = await videos.listed_categories(db)
+    return [category for category in Category if category in present]
 
 
 async def get_video(db: AsyncSession, user: User | None, public_id: str) -> VideoDetail:

@@ -1,4 +1,4 @@
-"""GET /api/videos: the home feed lists public ready videos, newest first."""
+"""GET /api/videos: the home feed lists public ready videos, newest first; GET /api/categories."""
 
 from datetime import datetime
 
@@ -6,19 +6,22 @@ import pytest
 from httpx2 import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.videos.models import VideoStatus, Visibility
+from app.modules.videos.models import Category, VideoStatus, Visibility
 from app.modules.videos.service import FEED_PAGE_SIZE
 from tests.videos.factories import make_user, make_video
 
 NOT_READY = [status for status in VideoStatus if status is not VideoStatus.READY]
 
 
-async def feed_ids(client: AsyncClient) -> list[str]:
+async def feed_ids(client: AsyncClient, category: Category | None = None) -> list[str]:
     """Follow next_cursor to the end; the ids in the order the pages gave them."""
     ids: list[str] = []
     cursor = None
     while True:
-        response = await client.get("/api/videos", params={"cursor": cursor} if cursor else {})
+        params = {"category": category, "cursor": cursor}
+        response = await client.get(
+            "/api/videos", params={key: value for key, value in params.items() if value}
+        )
         assert response.status_code == 200
         ids += [item["id"] for item in response.json()["items"]]
         cursor = response.json()["next_cursor"]
@@ -88,3 +91,37 @@ async def test_a_bad_cursor_is_refused(client: AsyncClient) -> None:
     response = await client.get("/api/videos", params={"cursor": "not-a-cursor"})
 
     assert response.status_code == 400
+
+
+async def test_a_category_lists_only_its_videos_across_pages(
+    client: AsyncClient, db: AsyncSession
+) -> None:
+    owner = await make_user(db, "owner")
+    music = []
+    for _ in range(FEED_PAGE_SIZE + 1):
+        await make_video(db, owner, category=Category.GAMING)
+        music.append((await make_video(db, owner, category=Category.MUSIC)).public_id)
+
+    assert await feed_ids(client, Category.MUSIC) == music[::-1]
+
+
+async def test_an_unknown_category_is_refused(client: AsyncClient) -> None:
+    response = await client.get("/api/videos", params={"category": "cats"})
+
+    assert response.status_code == 422
+
+
+async def test_categories_are_those_with_listed_videos_in_youtube_order(
+    client: AsyncClient, db: AsyncSession
+) -> None:
+    owner = await make_user(db, "owner")
+    await make_video(db, owner, category=Category.GAMING)
+    await make_video(db, owner, category=Category.GAMING)
+    await make_video(db, owner, category=Category.MUSIC)
+    await make_video(db, owner, category=Category.SCIENCE, visibility=Visibility.PRIVATE)
+    await make_video(db, owner, category=Category.NEWS, status=VideoStatus.PROCESSING)
+
+    response = await client.get("/api/categories")
+
+    assert response.status_code == 200
+    assert response.json() == ["music", "gaming"]

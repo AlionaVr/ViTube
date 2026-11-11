@@ -7,6 +7,8 @@ export type Rating = 'like' | 'dislike' | 'none'
 /** A video in a list: home grid, Up next, search. */
 export type VideoSummary = components['schemas']['VideoSummary']
 
+export type Category = components['schemas']['Category']
+
 /** The watch page. */
 export interface Video extends Omit<VideoSummary, 'channel'> {
   description: string
