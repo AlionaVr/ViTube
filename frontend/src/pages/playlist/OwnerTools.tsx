@@ -84,7 +84,7 @@ function DeleteDialog({
     } catch {
       return // the dialog stays open with the reason
     }
-    void navigate('/')
+    void navigate('/feed/playlists')
     toast('Playlist deleted')
   }
 

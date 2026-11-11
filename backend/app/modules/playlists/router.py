@@ -6,6 +6,7 @@ from app.core.pagination import Cursor, Page
 from app.core.redis import RedisClient
 from app.db.session import DbSession
 from app.modules.auth.deps import CurrentUser, OptionalUser
+from app.modules.channels.schemas import Handle
 from app.modules.playlists import service
 from app.modules.playlists.schemas import (
     ItemMove,
@@ -127,6 +128,18 @@ async def move_video(
     redis: RedisClient,
 ) -> None:
     await service.move_video(db, redis, user, playlist_id, public_id, body.before)
+
+
+@router.get(
+    "/channels/{handle}/playlists",
+    response_model=Page[PlaylistOut],
+    summary="A channel's public playlists, newest first",
+    description="The same list for every viewer, the owner too; covers are per viewer.",
+)
+async def list_channel_playlists(
+    handle: Handle, user: OptionalUser, db: DbSession, cursor: Cursor = None
+) -> Page[PlaylistOut]:
+    return await service.list_channel_playlists(db, user, handle, cursor)
 
 
 @router.get(

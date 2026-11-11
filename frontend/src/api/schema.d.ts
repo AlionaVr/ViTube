@@ -564,6 +564,26 @@ export interface paths {
         patch: operations["move_video_api_playlists__playlist_id__items__public_id__patch"];
         trace?: never;
     };
+    "/api/channels/{handle}/playlists": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A channel's public playlists, newest first
+         * @description The same list for every viewer, the owner too; covers are per viewer.
+         */
+        get: operations["list_channel_playlists_api_channels__handle__playlists_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/me/playlists": {
         parameters: {
             query?: never;
@@ -830,6 +850,13 @@ export interface components {
         Page_PlaylistItemOut_: {
             /** Items */
             items: components["schemas"]["PlaylistItemOut"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
+        /** Page[PlaylistOut] */
+        Page_PlaylistOut_: {
+            /** Items */
+            items: components["schemas"]["PlaylistOut"][];
             /** Next Cursor */
             next_cursor: string | null;
         };
@@ -2411,6 +2438,41 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_channel_playlists_api_channels__handle__playlists_get: {
+        parameters: {
+            query?: {
+                /** @description next_cursor of the last page */
+                cursor?: string | null;
+            };
+            header?: never;
+            path: {
+                /** @description Channel handle, without the @ */
+                handle: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_PlaylistOut_"];
+                };
             };
             /** @description Validation Error */
             422: {

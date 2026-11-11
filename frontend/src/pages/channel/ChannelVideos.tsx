@@ -9,6 +9,7 @@ import ErrorState from '../../components/ErrorState'
 import Spinner from '../../components/Spinner'
 import VideoCard, { VideoCardSkeleton } from '../../components/VideoCard'
 import { useInfiniteScroll } from '../../hooks/useInfiniteScroll'
+import grid from '../../styles/grid.module.css'
 import styles from './ChannelVideos.module.css'
 
 const SORTS: Chip<VideoSort>[] = [
@@ -33,7 +34,7 @@ export default function ChannelVideos() {
     return <EmptyState title="This channel doesn’t have any content" />
   }
   return (
-    <div className={styles.tab}>
+    <div className={grid.container}>
       <div className={styles.chips}>
         <ChipBar
           label="Sort videos"
@@ -43,7 +44,7 @@ export default function ChannelVideos() {
         />
       </div>
       {videos.isPending ? (
-        <div className={styles.grid} aria-busy="true" aria-label="Loading videos">
+        <div className={grid.grid} aria-busy="true" aria-label="Loading videos">
           {Array.from({ length: SKELETON_CARDS }, (_, i) => (
             <VideoCardSkeleton key={i} showChannel={false} />
           ))}
@@ -52,14 +53,14 @@ export default function ChannelVideos() {
         <ErrorState title="Can’t load videos" onRetry={() => void videos.refetch()} />
       ) : (
         <>
-          <div className={styles.grid}>
+          <div className={grid.grid}>
             {items.map((video) => (
               <VideoCard key={video.id} video={video} showChannel={false} />
             ))}
           </div>
           <div ref={sentinel} />
           {videos.isFetchingNextPage && (
-            <div className={styles.more}>
+            <div className={grid.more}>
               <Spinner label="Loading more videos" />
             </div>
           )}

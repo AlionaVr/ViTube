@@ -79,8 +79,7 @@ function mockOwn(fail: Partial<Record<'PATCH' | 'DELETE', boolean>> = {}) {
         ]
       }),
     ),
-    'GET /api/videos': () => json(200, page([])),
-    'GET /api/categories': () => json(200, []),
+    'GET /api/me/playlists': () => json(200, page([playlist(9, { kind: 'watch_later' })])),
   })
   return { fetch, sent }
 }
@@ -223,7 +222,7 @@ describe('PlaylistPage', () => {
       expect(screen.getByRole('dialog', { name: 'Edit playlist' })).toBeInTheDocument()
     })
 
-    it('deletes the playlist after asking, then leaves its page', async () => {
+    it('deletes the playlist after asking, then opens your playlists', async () => {
       const user = userEvent.setup()
       const { sent } = mockOwn()
       const router = renderApp(`/playlist?list=${ANNAS.id}`)
@@ -235,7 +234,7 @@ describe('PlaylistPage', () => {
       expect(sent).toEqual([])
       await user.click(within(dialog).getByRole('button', { name: 'Delete' }))
 
-      await waitFor(() => expect(router.state.location.pathname).toBe('/'))
+      await waitFor(() => expect(router.state.location.pathname).toBe('/feed/playlists'))
       expect(sent).toEqual([{ method: 'DELETE', path: OWN }])
       expect(screen.getByRole('status')).toHaveTextContent('Playlist deleted')
     })

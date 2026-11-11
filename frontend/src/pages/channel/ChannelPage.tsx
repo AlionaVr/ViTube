@@ -56,7 +56,10 @@ function HeaderSkeleton() {
 }
 
 // /@handle itself shows the first tab, as YouTube's /@handle shows its first one (Home).
-const TABS = [{ path: 'videos', label: 'Videos' }]
+const TABS = [
+  { path: 'videos', label: 'Videos' },
+  { path: 'playlists', label: 'Playlists' },
+]
 
 function Tabs({ handle }: { handle: string }) {
   const { pathname } = useLocation()

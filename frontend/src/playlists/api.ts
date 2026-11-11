@@ -59,6 +59,18 @@ export function setInPlaylist(id: string, videoId: string, saved: boolean): Prom
   )
 }
 
+/** A channel's Playlists tab: public ones only. Throws ApiError 404 for an unknown handle. */
+export function listChannelPlaylists(
+  handle: string,
+  cursor: string | null,
+): Promise<Page<Playlist>> {
+  return unwrap(
+    api.GET('/api/channels/{handle}/playlists', {
+      params: { path: { handle }, query: { cursor } },
+    }),
+  )
+}
+
 /** The viewer's playlists, newest first; with a video, each says whether it holds it. */
 export function listMyPlaylists(
   videoId: string | null,

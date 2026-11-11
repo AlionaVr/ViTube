@@ -1849,6 +1849,71 @@
         }
       }
     },
+    "/api/channels/{handle}/playlists": {
+      "get": {
+        "tags": [
+          "playlists"
+        ],
+        "summary": "A channel's public playlists, newest first",
+        "description": "The same list for every viewer, the owner too; covers are per viewer.",
+        "operationId": "list_channel_playlists_api_channels__handle__playlists_get",
+        "parameters": [
+          {
+            "name": "handle",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._-]{3,30}$",
+              "description": "Channel handle, without the @",
+              "title": "Handle"
+            },
+            "description": "Channel handle, without the @"
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "next_cursor of the last page",
+              "title": "Cursor"
+            },
+            "description": "next_cursor of the last page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_PlaylistOut_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/me/playlists": {
       "get": {
         "tags": [
@@ -2465,6 +2530,34 @@
           "next_cursor"
         ],
         "title": "Page[PlaylistItemOut]"
+      },
+      "Page_PlaylistOut_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PlaylistOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "Page[PlaylistOut]"
       },
       "Page_SearchResult_": {
         "properties": {

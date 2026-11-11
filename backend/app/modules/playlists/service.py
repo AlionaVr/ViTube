@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import Conflict, DomainError, NotFound
 from app.core.pagination import Page, decode_cursor, split_page
 from app.core.rate_limit import RateLimit
+from app.modules.channels.service import get_by_handle
 from app.modules.playlists import repository as playlists
 from app.modules.playlists.models import MAX_VIDEOS, Playlist, PlaylistKind
 from app.modules.playlists.schemas import (
@@ -29,6 +30,7 @@ from app.modules.videos import repository as videos
 from app.modules.videos.interactions import get_ready
 from app.modules.videos.models import Video, Visibility
 from app.modules.videos.schemas import MEDIA_PREFIX, VideoSummary
+from app.modules.videos.service import FEED_PAGE_SIZE
 
 # Per account. Creating is rare; other writes come one per click.
 PLAYLISTS_CREATED = RateLimit("playlist_create", limit=20, window=3600)
@@ -176,6 +178,19 @@ async def list_mine(
         )
         for playlist in page
     ]
+    return Page(items=items, next_cursor=next_cursor)
+
+
+async def list_channel_playlists(
+    db: AsyncSession, viewer: User | None, handle: str, cursor: str | None
+) -> Page[PlaylistOut]:
+    """The channel's Playlists tab: public ones only, the same list for every viewer."""
+    channel = await get_by_handle(db, handle)
+    after = decode_cursor(cursor, tuple[UUID])[0] if cursor else None
+    rows = await playlists.list_public(db, channel.id, after=after, limit=FEED_PAGE_SIZE + 1)
+    page, next_cursor = split_page(rows, FEED_PAGE_SIZE, lambda playlist: (playlist.id,))
+    covers = await playlists.first_videos(db, [p.id for p in page], viewer) if page else {}
+    items = [PlaylistOut.build(p, channel, _thumbnail(covers.get(p.id))) for p in page]
     return Page(items=items, next_cursor=next_cursor)
 
 

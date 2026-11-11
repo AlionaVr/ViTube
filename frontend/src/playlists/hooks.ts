@@ -13,6 +13,7 @@ import {
   getPlaylist,
   getSaved,
   getWatchLater,
+  listChannelPlaylists,
   listItems,
   listMyPlaylists,
   moveInPlaylist,
@@ -29,6 +30,7 @@ export const playlistKeys = {
   mine: (videoId: string | null) => ['playlists', 'mine', videoId] as const,
   watchLater: ['playlists', 'watch-later'] as const,
   saved: (videoId: string) => ['playlists', 'saved', videoId] as const,
+  channel: (handle: string) => ['playlists', 'channel', handle] as const,
 }
 
 const firstPage = null as string | null
@@ -55,6 +57,15 @@ export function usePlaylistItems(id: string) {
   return useInfiniteQuery({
     queryKey: playlistKeys.items(id),
     queryFn: ({ pageParam }) => listItems(id, pageParam),
+    initialPageParam: firstPage,
+    getNextPageParam: (page) => page.next_cursor,
+  })
+}
+
+export function useChannelPlaylists(handle: string) {
+  return useInfiniteQuery({
+    queryKey: playlistKeys.channel(handle),
+    queryFn: ({ pageParam }) => listChannelPlaylists(handle, pageParam),
     initialPageParam: firstPage,
     getNextPageParam: (page) => page.next_cursor,
   })

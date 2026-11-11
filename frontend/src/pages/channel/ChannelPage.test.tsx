@@ -6,6 +6,7 @@ import type { Channel } from '../../channels/types'
 import { ANNA, json, mockApi } from '../../test/api'
 import { channel } from '../../test/channels'
 import { intersectAll } from '../../test/observers'
+import { playlist } from '../../test/playlists'
 import { renderApp } from '../../test/render'
 import { page, summary } from '../../test/videos'
 
@@ -215,6 +216,66 @@ describe('ChannelPage', () => {
         await screen.findByRole('heading', { name: 'This channel doesn’t have any content' }),
       ).toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'Latest' })).not.toBeInTheDocument()
+    })
+  })
+
+  describe('Playlists tab', () => {
+    it('shows the channel’s playlists as cards that open them', async () => {
+      const films = playlist(1, {
+        title: 'Blender films',
+        visibility: 'public',
+        video_count: 3,
+        thumbnail_url: '/media/thumbs/1.jpg',
+      })
+      mockApi({
+        ...GUEST,
+        [`GET ${API}`]: () => json(200, channel()),
+        [`GET ${API}/playlists`]: () => json(200, page([films])),
+      })
+      await openChannel('/@openmovieclub/playlists')
+
+      const title = await screen.findByRole('link', { name: 'Blender films' })
+      expect(title).toHaveAttribute('href', `/playlist?list=${films.id}`)
+      const card = title.closest('article')!
+      expect(within(card).getByText('3 videos')).toBeInTheDocument()
+      expect(within(card).getByRole('link', { name: 'View full playlist' })).toHaveAttribute(
+        'href',
+        `/playlist?list=${films.id}`,
+      )
+      expect(screen.getByRole('link', { name: 'Playlists' })).toHaveAttribute(
+        'aria-current',
+        'page',
+      )
+    })
+
+    it('loads the next page on scroll', async () => {
+      mockApi({
+        ...GUEST,
+        [`GET ${API}`]: () => json(200, channel()),
+        [`GET ${API}/playlists`]: (request) =>
+          queryOf(request).cursor === 'next'
+            ? json(200, page([playlist(2, { visibility: 'public' })]))
+            : json(200, page([playlist(1, { visibility: 'public' })], 'next')),
+      })
+      await openChannel('/@openmovieclub/playlists')
+      await screen.findByRole('link', { name: 'Playlist 1' })
+
+      act(() => intersectAll())
+
+      expect(await screen.findByRole('link', { name: 'Playlist 2' })).toBeInTheDocument()
+    })
+
+    it('says so when the channel has no playlists', async () => {
+      mockApi({
+        ...GUEST,
+        [`GET ${API}`]: () => json(200, channel()),
+        [`GET ${API}/playlists`]: () => json(200, page([])),
+      })
+      await openChannel('/@openmovieclub/playlists')
+
+      expect(
+        await screen.findByRole('heading', { name: 'This channel doesn’t have any playlists' }),
+      ).toBeInTheDocument()
     })
   })
 })
