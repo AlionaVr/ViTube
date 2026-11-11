@@ -9,22 +9,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import NotFound
 from app.modules.users.models import User
-from app.modules.videos.access import can_view, get_viewable, is_restricted
-from app.modules.videos.models import Video, VideoStatus
-
-
-async def _open(db: AsyncSession, video: Video) -> bool:
-    return video.status is VideoStatus.READY and not await is_restricted(db, video)
-
-
-async def is_ready(db: AsyncSession, user: User | None, video: Video) -> bool:
-    """Ready, not restricted, and the viewer may watch it. False for the owner too, until then."""
-    return await _open(db, video) and await can_view(db, user, video)
+from app.modules.videos import repository as videos
+from app.modules.videos.access import can_interact
+from app.modules.videos.models import Video
 
 
 async def get_ready(db: AsyncSession, user: User | None, public_id: str) -> Video:
     """A ready, not restricted video the viewer may watch, else NotFound."""
-    video = await get_viewable(db, user, public_id)
-    if not await _open(db, video):
+    video = await videos.get_by_public_id(db, public_id)
+    if video is None or not await can_interact(db, user, video):
         raise NotFound("Video not found")
     return video

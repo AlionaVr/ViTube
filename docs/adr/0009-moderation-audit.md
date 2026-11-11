@@ -27,7 +27,9 @@
 - An action is one transaction: lock the target, change it, close its open reports, write the audit entry. Either
   all of it happens or none of it. A repeated action that changes nothing writes no entry.
 - `audit_log` records every moderator and admin action: who, what, target, when, details (jsonb). It is
-  append-only: the app's DB role may not update or delete it (ADR 0010).
+  append-only: the app's DB role may not update or delete it (ADR 0010). It has no foreign keys, so an entry
+  outlives the account, video or comment it names. Admins filter it by action, by who acted (an account or the
+  CLI) and by the account acted on (the account, its videos and its comments); each filter has an index.
 - Account status, set by admins (API and moderation page) and the CLI: `banned` (no sign-in, sessions end, content
   stays), `terminated` (the same, and the channel's videos are restricted like hidden ones, by status, with no
   change to each video), `active` (reinstated). Admins can't restrict themselves or another admin. How a ban holds:

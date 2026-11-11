@@ -3,15 +3,17 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Path, status
+from fastapi import APIRouter, Depends, Path, Query, status
 
 from app.core.errors import NotFound
 from app.core.pagination import Cursor, Page
 from app.db.session import DbSession
+from app.modules.audit.models import AuditAction, AuditSource
 from app.modules.audit.repository import Actor
 from app.modules.auth.deps import Sessions, require_role
 from app.modules.moderation import service
 from app.modules.moderation.schemas import (
+    AuditEntryOut,
     HideIn,
     ModeratedVideo,
     ReportCase,
@@ -123,3 +125,30 @@ async def set_status(
     if user is None:
         raise NotFound("No such user")
     await service.set_status(db, sessions, Actor.of(admin), user.id, body.status, body.reason)
+
+
+@router.get(
+    "/audit-log",
+    response_model=Page[AuditEntryOut],
+    summary="Who did what, newest first (admins)",
+)
+async def list_audit(
+    _: Admin,
+    db: DbSession,
+    action: Annotated[list[AuditAction] | None, Query(description="Any of these actions")] = None,
+    source: Annotated[AuditSource | None, Query(description="cli: the command line")] = None,
+    actor: Annotated[
+        str | None, Query(pattern=HANDLE_PATTERN, description="Who acted, without the @")
+    ] = None,
+    account: Annotated[
+        str | None,
+        Query(
+            pattern=HANDLE_PATTERN,
+            description="The account acted on, its videos and its comments; without the @",
+        ),
+    ] = None,
+    cursor: Cursor = None,
+) -> Page[AuditEntryOut]:
+    return await service.list_audit(
+        db, cursor, actions=action or (), source=source, actor=actor, account=account
+    )

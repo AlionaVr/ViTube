@@ -85,3 +85,27 @@ export async function setStatus(handle: string, status: UserStatus, reason = '')
 
 /** The channel behind a reported video or comment: the account an admin may restrict. */
 export type Account = components['schemas']['ChannelSummary']
+
+export type AuditEntry = components['schemas']['AuditEntryOut']
+export type AuditPage = components['schemas']['Page_AuditEntryOut_']
+
+export type AuditAction = components['schemas']['AuditAction']
+export type AuditSource = components['schemas']['AuditSource']
+
+/** Each set field narrows the log; handles go without the @. */
+export interface AuditFilters {
+  actions: AuditAction[]
+  source: AuditSource | null
+  actor: string | null
+  account: string | null // the account itself, its videos and its comments
+}
+
+/** Who did what, newest first. Admins only. */
+export function listAudit(filters: AuditFilters, cursor: string | null): Promise<AuditPage> {
+  const { actions, ...rest } = filters
+  return unwrap(
+    api.GET('/api/moderation/audit-log', {
+      params: { query: { action: actions.length > 0 ? actions : null, ...rest, cursor } },
+    }),
+  )
+}

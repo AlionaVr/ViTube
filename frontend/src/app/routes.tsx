@@ -9,6 +9,7 @@ import PlaylistsPage from '../pages/feed/PlaylistsPage'
 import SubscriptionsPage from '../pages/feed/SubscriptionsPage'
 import HomePage from '../pages/HomePage'
 import Accounts from '../pages/moderation/Accounts'
+import AuditLog from '../pages/moderation/AuditLog'
 import HiddenVideos from '../pages/moderation/HiddenVideos'
 import ModerationPage from '../pages/moderation/ModerationPage'
 import ReportQueue from '../pages/moderation/ReportQueue'
@@ -41,6 +42,7 @@ export const routes: RouteObject[] = [
           { index: true, element: <ReportQueue /> },
           { path: 'hidden', element: <HiddenVideos /> },
           { path: 'accounts', element: <Accounts /> },
+          { path: 'audit', element: <AuditLog /> },
         ],
       },
       // /@handle. Static paths rank higher, so this only gets the rest.

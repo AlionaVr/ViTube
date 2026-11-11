@@ -405,3 +405,148 @@ a.meta:hover {
     grid-template-columns: 40px minmax(0, 1fr) auto;
   }
 }
+
+/* Audit log */
+
+.auditRow {
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  grid-template-areas: 'thumb video time';
+  align-items: start;
+}
+
+@container (min-width: 760px) {
+  .auditRow {
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+    grid-template-areas: 'thumb video time';
+  }
+}
+
+/* Studio's filter row: who acted and whom it was about, under the action chips. */
+.auditFilters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.handleFilter {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  column-gap: 8px;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.handleFilter label {
+  color: var(--color-text-secondary);
+}
+
+.handleBox {
+  height: 32px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  color: var(--color-text-secondary);
+}
+
+.handleBox:focus-within {
+  border-color: var(--color-link);
+}
+
+.handleBox[data-invalid] {
+  border-color: var(--color-error);
+}
+
+.handleBox input {
+  width: 128px;
+  border: none;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  outline: none;
+}
+
+.handleBox:has(input:disabled) {
+  border-color: var(--color-divider);
+  color: var(--color-text-disabled);
+}
+
+.filterError {
+  grid-column: 2;
+  margin: 4px 0 0;
+  color: var(--color-error);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+/* A one-chip switch, styled like the chips above it. */
+.toggle {
+  height: 32px;
+  padding: 0 12px 0 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  border-radius: 8px;
+  background: var(--color-hover);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.toggle:hover {
+  background: var(--color-hover-strong);
+}
+
+.toggle:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.toggle[aria-pressed='true'] {
+  background: var(--color-text);
+  color: var(--color-text-inverse);
+}
+
+.clear {
+  margin-left: auto;
+}
+
+.cliMark {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-hover);
+  color: var(--color-text-secondary);
+}
+
+.auditText {
+  margin: 0 0 2px;
+  font-size: 14px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+
+.auditText .inlineLink {
+  color: var(--color-text);
+}
+
+.gone {
+  color: var(--color-text-secondary);
+}
+
+.auditTime {
+  grid-area: time;
+  white-space: nowrap;
+}

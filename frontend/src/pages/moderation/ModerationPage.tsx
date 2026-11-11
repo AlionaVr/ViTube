@@ -12,6 +12,7 @@ const TABS = [
   { to: '/moderation', label: 'Reports', end: true, adminOnly: false },
   { to: '/moderation/hidden', label: 'Hidden videos', end: false, adminOnly: false },
   { to: '/moderation/accounts', label: 'Accounts', end: false, adminOnly: true },
+  { to: '/moderation/audit', label: 'Audit log', end: false, adminOnly: true },
 ]
 
 /** /moderation: reports from viewers and what moderators do about them (ADR 0009). */

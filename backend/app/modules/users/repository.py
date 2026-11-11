@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.users.models import User
+from app.modules.users.models import User, UserStatus
 
 
 async def get_by_id(db: AsyncSession, user_id: UUID) -> User | None:
@@ -70,3 +70,8 @@ async def lock_for_status(db: AsyncSession, user_id: UUID) -> User | None:
         .execution_options(populate_existing=True)
     )
     return await db.scalar(query)
+
+
+async def get_status(db: AsyncSession, user_id: UUID) -> UserStatus | None:
+    """Only the status: a cheap read that leaves no object for the session to track."""
+    return await db.scalar(select(User.status).where(User.id == user_id))

@@ -1,11 +1,14 @@
 """Queries of moderator actions. No commits: the service decides when a transaction ends."""
 
 from collections.abc import Collection, Sequence
+from dataclasses import dataclass
 from uuid import UUID
 
-from sqlalchemy import select, update
+from sqlalchemy import Select, select, union_all, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
+from app.modules.audit.models import AuditAction, AuditEntry, AuditSource, TargetType
 from app.modules.comments.models import Comment
 from app.modules.users.models import User, UserStatus
 from app.modules.videos.models import Video
@@ -107,3 +110,72 @@ async def list_restricted(
     if before is not None:
         query = query.where(User.id < before)
     return (await db.scalars(query.order_by(User.id.desc()).limit(limit))).all()
+
+
+@dataclass(frozen=True)
+class AuditFilter:
+    """What the admin narrowed the log to. Each part has its own index."""
+
+    actions: Collection[AuditAction] = ()
+    source: AuditSource | None = None
+    actor_id: UUID | None = None
+    account_id: UUID | None = None  # the account itself, its videos and its comments
+
+
+async def list_audit(
+    db: AsyncSession, filters: AuditFilter, *, before: UUID | None, limit: int
+) -> Sequence[AuditEntry]:
+    """Newest first (ids are uuidv7), after the cursor."""
+    query = select(AuditEntry)
+    if filters.actions:
+        query = query.where(AuditEntry.action.in_(filters.actions))
+    if filters.source is not None:
+        query = query.where(AuditEntry.source == filters.source)
+    if filters.actor_id is not None:
+        query = query.where(AuditEntry.actor_id == filters.actor_id)
+    if (account := filters.account_id) is None:
+        return (await db.scalars(_newest(query, before, limit))).all()
+    # One branch per kind of target, each on ix_audit_log_target_type_target_id_id with its own
+    # LIMIT: the cost follows the account's entries, not the log's size (an OR would make the
+    # planner walk the whole log backwards).
+    targets = (
+        (TargetType.USER, AuditEntry.target_id == account),
+        (
+            TargetType.VIDEO,
+            AuditEntry.target_id.in_(select(Video.id).where(Video.owner_id == account)),
+        ),
+        (
+            TargetType.COMMENT,
+            AuditEntry.target_id.in_(select(Comment.id).where(Comment.author_id == account)),
+        ),
+    )
+    branches = union_all(
+        *(
+            _newest(query.where(AuditEntry.target_type == kind, target), before, limit)
+            for kind, target in targets
+        )
+    ).subquery()
+    entry = aliased(AuditEntry, branches)
+    merged = select(entry).order_by(entry.id.desc()).limit(limit)
+    return (await db.scalars(merged)).all()
+
+
+def _newest(query: Select[AuditEntry], before: UUID | None, limit: int) -> Select[AuditEntry]:
+    if before is not None:
+        query = query.where(AuditEntry.id < before)
+    return query.order_by(AuditEntry.id.desc()).limit(limit)
+
+
+async def users_by_ids(db: AsyncSession, user_ids: Collection[UUID]) -> dict[UUID, User]:
+    users = await db.scalars(select(User).where(User.id.in_(user_ids)))
+    return {user.id: user for user in users}
+
+
+async def videos_by_ids(db: AsyncSession, video_ids: Collection[UUID]) -> dict[UUID, Video]:
+    videos = await db.scalars(select(Video).where(Video.id.in_(video_ids)))
+    return {video.id: video for video in videos}
+
+
+async def comments_by_ids(db: AsyncSession, comment_ids: Collection[UUID]) -> dict[UUID, Comment]:
+    comments = await db.scalars(select(Comment).where(Comment.id.in_(comment_ids)))
+    return {comment.id: comment for comment in comments}

@@ -21,20 +21,35 @@ MEDIA_PATH = re.compile(
 
 async def is_restricted(db: AsyncSession, video: Video) -> bool:
     """Hidden by a moderator, or its channel terminated (ADR 0009). The SQL twin for lists is
-    repository.NOT_RESTRICTED."""
+    repository.NOT_RESTRICTED. One query at most: callers check it once per decision."""
     if video.is_hidden:
         return True
-    owner = await users.get_by_id(db, video.owner_id)  # the identity map has it after one read
-    return owner is not None and owner.status is UserStatus.TERMINATED
+    return await users.get_status(db, video.owner_id) is UserStatus.TERMINATED
 
 
 async def can_view(db: AsyncSession, user: User | None, video: Video) -> bool:
     """Owner and moderators: always, restricted videos too (to review them). Others: ready
     videos that are not restricted (ADR 0009); private ones need a grant."""
-    if user is not None and (user.id == video.owner_id or user.role.at_least(Role.MODERATOR)):
+    if _owner_or_staff(user, video):
         return True
     if video.status is not VideoStatus.READY or await is_restricted(db, video):
         return False
+    return await _visibility_allows(db, user, video)
+
+
+async def can_interact(db: AsyncSession, user: User | None, video: Video) -> bool:
+    """Likes, comments, views and reports: a ready video that is not restricted, for everyone,
+    its owner and moderators too; and the viewer may watch it."""
+    if video.status is not VideoStatus.READY or await is_restricted(db, video):
+        return False
+    return _owner_or_staff(user, video) or await _visibility_allows(db, user, video)
+
+
+def _owner_or_staff(user: User | None, video: Video) -> bool:
+    return user is not None and (user.id == video.owner_id or user.role.at_least(Role.MODERATOR))
+
+
+async def _visibility_allows(db: AsyncSession, user: User | None, video: Video) -> bool:
     if video.visibility is not Visibility.PRIVATE:
         return True
     return user is not None and await videos.has_access(db, video.id, user.id)

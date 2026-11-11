@@ -1,10 +1,11 @@
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field, StringConstraints
 
 from app.core.text import MULTILINE
+from app.modules.audit.models import AuditAction, AuditEntry, AuditSource, TargetType
 from app.modules.comments.models import Comment
 from app.modules.reports.models import DETAILS_MAX, ReportReason
 from app.modules.reports.repository import OpenCase
@@ -115,3 +116,40 @@ class RestrictedAccount(BaseModel):
     @classmethod
     def of(cls, user: User) -> "RestrictedAccount":
         return cls(channel=ChannelSummary.of(user), status=user.status)
+
+
+class AuditTarget(BaseModel):
+    """What an entry is about, as a person reads it."""
+
+    type: TargetType
+    label: str = Field(description="Video title, comment text or @handle; empty if it is gone")
+    video_id: str | None = Field(description="Public id of the video, or of the comment's video")
+    handle: str | None = Field(description="The user, for a user target")
+
+
+class AuditEntryOut(BaseModel):
+    id: UUID
+    created_at: datetime
+    source: AuditSource
+    actor: ChannelSummary | None = Field(description="Who acted through the API; null for the CLI")
+    by: str | None = Field(description="CLI: the admin named with --by (claimed, not proven)")
+    os_user: str | None = Field(description="CLI: the shell user")
+    action: AuditAction
+    target: AuditTarget
+    details: dict[str, Any] = Field(description="reason, reports, replies, from, to")
+
+    @classmethod
+    def of(cls, entry: AuditEntry, actor: User | None, target: AuditTarget) -> "AuditEntryOut":
+        details = dict(entry.details)
+        by, os_user = details.pop("by", None), details.pop("os_user", None)
+        return cls(
+            id=entry.id,
+            created_at=entry.created_at,
+            source=entry.source,
+            actor=ChannelSummary.of(actor) if actor else None,
+            by=by,
+            os_user=os_user,
+            action=entry.action,
+            target=target,
+            details=details,
+        )

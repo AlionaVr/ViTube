@@ -393,4 +393,210 @@ describe('moderation page', () => {
 
     expect(await screen.findByText("This page isn't available")).toBeInTheDocument()
   })
+
+  it('shows admins who did what in the audit log', async () => {
+    const at = '2026-11-11T12:00:00Z'
+    const entry = {
+      created_at: at,
+      source: 'api' as const,
+      actor: { handle: 'user-mod00001', name: 'user-mod00001', avatar_url: null },
+      by: null,
+      os_user: null,
+    }
+    mockApi({
+      'GET /api/auth/me': () => json(200, ADMIN),
+      'GET /api/moderation/audit-log': () =>
+        json(200, {
+          items: [
+            {
+              ...entry,
+              id: '0193a5c2-0000-7000-8000-000000000003',
+              source: 'cli',
+              actor: null,
+              by: 'admin@example.com',
+              os_user: 'app',
+              action: 'set_user_status',
+              target: {
+                type: 'user',
+                label: '@user-spammer1',
+                video_id: null,
+                handle: 'user-spammer1',
+              },
+              details: { from: 'active', to: 'terminated', reason: 'Scam channel' },
+            },
+            {
+              ...entry,
+              id: '0193a5c2-0000-7000-8000-000000000002',
+              action: 'hide_video',
+              target: {
+                type: 'video',
+                label: 'Fake giveaway',
+                video_id: 'aaaaaaaaaaa',
+                handle: null,
+              },
+              details: { reason: 'spam', reports: 2 },
+            },
+            {
+              ...entry,
+              id: '0193a5c2-0000-7000-8000-000000000001',
+              action: 'restore_video',
+              target: { type: 'video', label: '', video_id: null, handle: null },
+              details: {},
+            },
+          ],
+          next_cursor: null,
+        }),
+    })
+    renderApp('/moderation/audit')
+
+    const list = await screen.findByRole('list', { name: 'Audit log' })
+    const [cli, hid, gone] = Array.from(list.children) as HTMLElement[]
+    expect(cli).toHaveTextContent('Command line terminated the channel @user-spammer1')
+    expect(cli).toHaveTextContent('“Scam channel”. Run by admin@example.com as app')
+    expect(hid).toHaveTextContent('@user-mod00001 hid “Fake giveaway”')
+    expect(hid).toHaveTextContent('Spam or misleading. 2 reports closed')
+    expect(within(hid).getByRole('link', { name: '“Fake giveaway”' })).toHaveAttribute(
+      'href',
+      '/watch?v=aaaaaaaaaaa',
+    )
+    expect(gone).toHaveTextContent('restored (deleted)')
+    expect(screen.getByRole('link', { name: 'Audit log' })).toHaveAttribute('aria-current', 'page')
+  })
+
+  it('says when an account behind an entry was deleted', async () => {
+    mockApi({
+      'GET /api/auth/me': () => json(200, ADMIN),
+      'GET /api/moderation/audit-log': () =>
+        json(200, {
+          items: [
+            {
+              id: '0193a5c2-0000-7000-8000-000000000001',
+              created_at: '2026-11-11T12:00:00Z',
+              source: 'api',
+              actor: null,
+              by: null,
+              os_user: null,
+              action: 'restore_video',
+              target: { type: 'video', label: '', video_id: null, handle: null },
+              details: {},
+            },
+          ],
+          next_cursor: null,
+        }),
+    })
+    renderApp('/moderation/audit')
+
+    const list = await screen.findByRole('list', { name: 'Audit log' })
+    expect(list).toHaveTextContent('A deleted account restored (deleted)')
+  })
+
+  describe('audit log filters', () => {
+    const empty = () => json(200, { items: [], next_cursor: null })
+    const queries = (fetch: ReturnType<typeof mockApi>) =>
+      fetch.mock.calls
+        .map(([request]) => new URL(request.url))
+        .filter((url) => url.pathname === '/api/moderation/audit-log')
+        .map((url) => url.search)
+
+    it('narrows the log to the actions of a chip', async () => {
+      const fetch = mockApi({
+        'GET /api/auth/me': () => json(200, ADMIN),
+        'GET /api/moderation/audit-log': empty,
+      })
+      renderApp('/moderation/audit')
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Dismissed' }))
+
+      await waitFor(() =>
+        expect(queries(fetch)).toContain('?action=dismiss_video&action=dismiss_comment'),
+      )
+      expect(screen.getByRole('button', { name: 'Dismissed' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      )
+    })
+
+    it('finds what an account did and what was done to it, by handle', async () => {
+      const fetch = mockApi({
+        'GET /api/auth/me': () => json(200, ADMIN),
+        'GET /api/moderation/audit-log': empty,
+      })
+      renderApp('/moderation/audit')
+
+      await userEvent.type(await screen.findByLabelText('Done by'), '@user-mod00001{Enter}')
+      await waitFor(() => expect(queries(fetch)).toContain('?actor=user-mod00001'))
+
+      await userEvent.type(screen.getByLabelText('About account'), 'user-spammer1{Enter}')
+      await waitFor(() =>
+        expect(queries(fetch)).toContain('?actor=user-mod00001&account=user-spammer1'),
+      )
+    })
+
+    it('refuses what is not a handle without asking the server', async () => {
+      const fetch = mockApi({
+        'GET /api/auth/me': () => json(200, ADMIN),
+        'GET /api/moderation/audit-log': empty,
+      })
+      renderApp('/moderation/audit')
+      const field = await screen.findByLabelText('Done by')
+      await waitFor(() => expect(queries(fetch)).toEqual(['']))
+
+      await userEvent.type(field, 'no spaces{Enter}')
+
+      expect(field).toHaveAccessibleDescription('Enter a handle, like @name')
+      expect(queries(fetch)).toEqual([''])
+    })
+
+    it('shows what was run from the command line', async () => {
+      const fetch = mockApi({
+        'GET /api/auth/me': () => json(200, ADMIN),
+        'GET /api/moderation/audit-log': empty,
+      })
+      renderApp('/moderation/audit?by=user-mod00001')
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Command line' }))
+
+      await waitFor(() => expect(queries(fetch)).toContain('?source=cli'))
+      expect(screen.getByLabelText('Done by')).toBeDisabled()
+      expect(screen.getByLabelText('Done by')).toHaveValue('')
+    })
+
+    it('takes an empty handle in the address for no filter', async () => {
+      const fetch = mockApi({
+        'GET /api/auth/me': () => json(200, ADMIN),
+        'GET /api/moderation/audit-log': empty,
+      })
+      renderApp('/moderation/audit?by=&about=')
+
+      expect(await screen.findByText('Nothing logged yet')).toBeInTheDocument()
+      expect(queries(fetch)).toEqual([''])
+    })
+
+    it('reads the filters from the address and clears them', async () => {
+      const fetch = mockApi({
+        'GET /api/auth/me': () => json(200, ADMIN),
+        'GET /api/moderation/audit-log': empty,
+      })
+      renderApp('/moderation/audit?action=hidden&about=user-spammer1')
+
+      expect(await screen.findByText('No entries match these filters')).toBeInTheDocument()
+      expect(queries(fetch)).toEqual(['?action=hide_video&account=user-spammer1'])
+      expect(screen.getByLabelText('About account')).toHaveValue('user-spammer1')
+
+      await userEvent.click(
+        within(screen.getByRole('main')).getAllByRole('button', { name: 'Clear filters' })[0],
+      )
+
+      expect(await screen.findByText('Nothing logged yet')).toBeInTheDocument()
+      expect(screen.getByLabelText('About account')).toHaveValue('')
+      expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true')
+    })
+  })
+
+  it('keeps the audit log from moderators', async () => {
+    mockApi({ 'GET /api/auth/me': () => json(200, MODERATOR) })
+    renderApp('/moderation/audit')
+
+    expect(await screen.findByText("This page isn't available")).toBeInTheDocument()
+  })
 })

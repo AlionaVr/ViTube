@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import CheckConstraint, DateTime, Uuid, func, text
+from sqlalchemy import CheckConstraint, DateTime, Index, Uuid, func, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -42,6 +42,11 @@ class AuditEntry(Base):
     __table_args__ = (
         # An API action always has a signed-in actor; the CLI has none (details say who ran it).
         CheckConstraint("(source = 'api') = (actor_id IS NOT NULL)", name="actor_iff_api"),
+        # The admins' filters, each newest first (ids are uuidv7).
+        Index("ix_audit_log_action_id", "action", "id"),
+        Index("ix_audit_log_actor_id_id", "actor_id", "id"),
+        Index("ix_audit_log_target_type_target_id_id", "target_type", "target_id", "id"),
+        Index("ix_audit_log_cli_id", "id", postgresql_where=text("source = 'cli'")),
     )
 
     # uuidv7: ordered by time, so "newest first" is id order.

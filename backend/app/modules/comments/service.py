@@ -18,7 +18,8 @@ from app.modules.reactions.models import CommentReaction
 from app.modules.reactions.schemas import Rating
 from app.modules.users.models import User
 from app.modules.videos import repository as videos
-from app.modules.videos.interactions import get_ready, is_ready
+from app.modules.videos.access import can_interact
+from app.modules.videos.interactions import get_ready
 from app.modules.videos.models import Video
 
 PAGE_SIZE = 20
@@ -81,7 +82,7 @@ async def get_readable(
     video = (
         await videos.get_by_id(db, comment.video_id) if comment and not comment.is_deleted else None
     )
-    if comment is None or video is None or not await is_ready(db, user, video):
+    if comment is None or video is None or not await can_interact(db, user, video):
         raise NotFound("Comment not found")
     return comment, video
 

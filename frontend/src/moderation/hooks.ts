@@ -3,10 +3,12 @@ import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-q
 import { commentKeys } from '../comments/hooks'
 import { videoKeys } from '../videos/hooks'
 import {
+  type AuditFilters,
   deleteComment,
   dismissComment,
   dismissVideo,
   hideVideo,
+  listAudit,
   listHidden,
   listReports,
   listRestricted,
@@ -21,6 +23,7 @@ export const moderationKeys = {
   reports: ['moderation', 'reports'] as const,
   hidden: ['moderation', 'hidden'] as const,
   accounts: (status: UserStatus | null) => ['moderation', 'accounts', status] as const,
+  audit: (filters: AuditFilters) => ['moderation', 'audit', filters] as const,
 }
 
 const firstPage = null as string | null
@@ -38,6 +41,15 @@ export function useHiddenVideos() {
   return useInfiniteQuery({
     queryKey: moderationKeys.hidden,
     queryFn: ({ pageParam }) => listHidden(pageParam),
+    initialPageParam: firstPage,
+    getNextPageParam: (page) => page.next_cursor,
+  })
+}
+
+export function useAuditLog(filters: AuditFilters) {
+  return useInfiniteQuery({
+    queryKey: moderationKeys.audit(filters),
+    queryFn: ({ pageParam }) => listAudit(filters, pageParam),
     initialPageParam: firstPage,
     getNextPageParam: (page) => page.next_cursor,
   })

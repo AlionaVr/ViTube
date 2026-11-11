@@ -2567,6 +2567,135 @@
         }
       }
     },
+    "/api/moderation/audit-log": {
+      "get": {
+        "tags": [
+          "moderation"
+        ],
+        "summary": "Who did what, newest first (admins)",
+        "operationId": "list_audit_api_moderation_audit_log_get",
+        "parameters": [
+          {
+            "name": "action",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AuditAction"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Any of these actions",
+              "title": "Action"
+            },
+            "description": "Any of these actions"
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/AuditSource"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "cli: the command line",
+              "title": "Source"
+            },
+            "description": "cli: the command line"
+          },
+          {
+            "name": "actor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9._-]{3,30}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Who acted, without the @",
+              "title": "Actor"
+            },
+            "description": "Who acted, without the @"
+          },
+          {
+            "name": "account",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9._-]{3,30}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The account acted on, its videos and its comments; without the @",
+              "title": "Account"
+            },
+            "description": "The account acted on, its videos and its comments; without the @"
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "next_cursor of the last page",
+              "title": "Cursor"
+            },
+            "description": "next_cursor of the last page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_AuditEntryOut_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/health": {
       "get": {
         "tags": [
@@ -2609,6 +2738,149 @@
           "handle"
         ],
         "title": "AccessGrant"
+      },
+      "AuditAction": {
+        "type": "string",
+        "enum": [
+          "hide_video",
+          "restore_video",
+          "dismiss_video",
+          "delete_comment",
+          "dismiss_comment",
+          "set_user_status",
+          "set_user_role"
+        ],
+        "title": "AuditAction"
+      },
+      "AuditEntryOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "source": {
+            "$ref": "#/components/schemas/AuditSource"
+          },
+          "actor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChannelSummary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Who acted through the API; null for the CLI"
+          },
+          "by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "By",
+            "description": "CLI: the admin named with --by (claimed, not proven)"
+          },
+          "os_user": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Os User",
+            "description": "CLI: the shell user"
+          },
+          "action": {
+            "$ref": "#/components/schemas/AuditAction"
+          },
+          "target": {
+            "$ref": "#/components/schemas/AuditTarget"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details",
+            "description": "reason, reports, replies, from, to"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "created_at",
+          "source",
+          "actor",
+          "by",
+          "os_user",
+          "action",
+          "target",
+          "details"
+        ],
+        "title": "AuditEntryOut"
+      },
+      "AuditSource": {
+        "type": "string",
+        "enum": [
+          "api",
+          "cli"
+        ],
+        "title": "AuditSource"
+      },
+      "AuditTarget": {
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/TargetType"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "Video title, comment text or @handle; empty if it is gone"
+          },
+          "video_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Id",
+            "description": "Public id of the video, or of the comment's video"
+          },
+          "handle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handle",
+            "description": "The user, for a user target"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "label",
+          "video_id",
+          "handle"
+        ],
+        "title": "AuditTarget",
+        "description": "What an entry is about, as a person reads it."
       },
       "Category": {
         "type": "string",
@@ -3086,6 +3358,34 @@
           "password"
         ],
         "title": "NewAccount"
+      },
+      "Page_AuditEntryOut_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AuditEntryOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "Page[AuditEntryOut]"
       },
       "Page_CommentOut_": {
         "properties": {
@@ -3859,6 +4159,15 @@
           "is_subscribed"
         ],
         "title": "SubscriptionOut"
+      },
+      "TargetType": {
+        "type": "string",
+        "enum": [
+          "video",
+          "comment",
+          "user"
+        ],
+        "title": "TargetType"
       },
       "UploadLimits": {
         "properties": {

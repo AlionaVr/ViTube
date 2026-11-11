@@ -840,6 +840,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/moderation/audit-log": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Who did what, newest first (admins) */
+        get: operations["list_audit_api_moderation_audit_log_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -868,6 +885,73 @@ export interface components {
              * @description Who may watch, without the @
              */
             handle: string;
+        };
+        /**
+         * AuditAction
+         * @enum {string}
+         */
+        AuditAction: "hide_video" | "restore_video" | "dismiss_video" | "delete_comment" | "dismiss_comment" | "set_user_status" | "set_user_role";
+        /** AuditEntryOut */
+        AuditEntryOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            source: components["schemas"]["AuditSource"];
+            /** @description Who acted through the API; null for the CLI */
+            actor: components["schemas"]["ChannelSummary"] | null;
+            /**
+             * By
+             * @description CLI: the admin named with --by (claimed, not proven)
+             */
+            by: string | null;
+            /**
+             * Os User
+             * @description CLI: the shell user
+             */
+            os_user: string | null;
+            action: components["schemas"]["AuditAction"];
+            target: components["schemas"]["AuditTarget"];
+            /**
+             * Details
+             * @description reason, reports, replies, from, to
+             */
+            details: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * AuditSource
+         * @enum {string}
+         */
+        AuditSource: "api" | "cli";
+        /**
+         * AuditTarget
+         * @description What an entry is about, as a person reads it.
+         */
+        AuditTarget: {
+            type: components["schemas"]["TargetType"];
+            /**
+             * Label
+             * @description Video title, comment text or @handle; empty if it is gone
+             */
+            label: string;
+            /**
+             * Video Id
+             * @description Public id of the video, or of the comment's video
+             */
+            video_id: string | null;
+            /**
+             * Handle
+             * @description The user, for a user target
+             */
+            handle: string | null;
         };
         /**
          * Category
@@ -1092,6 +1176,13 @@ export interface components {
             email: string;
             /** Password */
             password: string;
+        };
+        /** Page[AuditEntryOut] */
+        Page_AuditEntryOut_: {
+            /** Items */
+            items: components["schemas"]["AuditEntryOut"][];
+            /** Next Cursor */
+            next_cursor: string | null;
         };
         /** Page[CommentOut] */
         Page_CommentOut_: {
@@ -1379,6 +1470,11 @@ export interface components {
             /** Is Subscribed */
             is_subscribed: boolean;
         };
+        /**
+         * TargetType
+         * @enum {string}
+         */
+        TargetType: "video" | "comment" | "user";
         /** UploadLimits */
         UploadLimits: {
             /** Max Size Bytes */
@@ -3264,6 +3360,46 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_audit_api_moderation_audit_log_get: {
+        parameters: {
+            query?: {
+                /** @description Any of these actions */
+                action?: components["schemas"]["AuditAction"][] | null;
+                /** @description cli: the command line */
+                source?: components["schemas"]["AuditSource"] | null;
+                /** @description Who acted, without the @ */
+                actor?: string | null;
+                /** @description The account acted on, its videos and its comments; without the @ */
+                account?: string | null;
+                /** @description next_cursor of the last page */
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_AuditEntryOut_"];
+                };
             };
             /** @description Validation Error */
             422: {

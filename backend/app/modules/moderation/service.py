@@ -5,6 +5,7 @@ audit entry, commit. So the log never lacks an action or holds one that didn't h
 """
 
 import logging
+from collections.abc import Collection
 from uuid import UUID
 
 from redis.exceptions import RedisError
@@ -13,13 +14,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import Forbidden, NotFound
 from app.core.pagination import Page, decode_cursor, split_page
 from app.modules.audit import repository as audit
-from app.modules.audit.models import AuditAction, TargetType
+from app.modules.audit.models import AuditAction, AuditSource, TargetType
 from app.modules.audit.repository import Actor
 from app.modules.auth.sessions import SessionStore
 from app.modules.comments import repository as comments_repository
 from app.modules.comments.models import Comment
 from app.modules.moderation import repository as moderation
 from app.modules.moderation.schemas import (
+    AuditEntryOut,
+    AuditTarget,
     ModeratedComment,
     ModeratedVideo,
     ReportCase,
@@ -36,6 +39,7 @@ log = logging.getLogger(__name__)
 QUEUE_PAGE_SIZE = 20
 HIDDEN_PAGE_SIZE = 20
 ACCOUNTS_PAGE_SIZE = 20
+AUDIT_PAGE_SIZE = 30
 
 
 async def list_cases(db: AsyncSession, cursor: str | None) -> Page[ReportCase]:
@@ -80,6 +84,66 @@ async def list_restricted(
     )
     page, next_cursor = split_page(rows, ACCOUNTS_PAGE_SIZE, lambda user: (user.id,))
     return Page(items=[RestrictedAccount.of(user) for user in page], next_cursor=next_cursor)
+
+
+async def list_audit(
+    db: AsyncSession,
+    cursor: str | None,
+    *,
+    actions: Collection[AuditAction] = (),
+    source: AuditSource | None = None,
+    actor: str | None = None,
+    account: str | None = None,
+) -> Page[AuditEntryOut]:
+    """The audit log, newest first, each entry's target named: one query per kind, per page.
+
+    `actor` and `account` are handles; an unknown one matches nothing.
+    """
+    before = decode_cursor(cursor, tuple[UUID])[0] if cursor else None
+    actor_user = await users.get_by_handle(db, actor) if actor else None
+    account_user = await users.get_by_handle(db, account) if account else None
+    if (actor and actor_user is None) or (account and account_user is None):
+        return Page(items=[], next_cursor=None)
+    filters = moderation.AuditFilter(
+        actions=actions,
+        source=source,
+        actor_id=actor_user.id if actor_user else None,
+        account_id=account_user.id if account_user else None,
+    )
+    rows = await moderation.list_audit(db, filters, before=before, limit=AUDIT_PAGE_SIZE + 1)
+    page, next_cursor = split_page(rows, AUDIT_PAGE_SIZE, lambda entry: (entry.id,))
+
+    def ids(kind: TargetType) -> set[UUID]:
+        return {entry.target_id for entry in page if entry.target_type is kind}
+
+    comments = await moderation.comments_by_ids(db, ids(TargetType.COMMENT))
+    videos = await moderation.videos_by_ids(
+        db, ids(TargetType.VIDEO) | {comment.video_id for comment in comments.values()}
+    )
+    people = ids(TargetType.USER) | {entry.actor_id for entry in page if entry.actor_id}
+    named = await moderation.users_by_ids(db, people)
+
+    def target(kind: TargetType, target_id: UUID) -> AuditTarget:
+        video, comment, user = videos.get(target_id), comments.get(target_id), named.get(target_id)
+        if kind is TargetType.VIDEO and video:
+            return AuditTarget(type=kind, label=video.title, video_id=video.public_id, handle=None)
+        if kind is TargetType.COMMENT and comment and (on := videos.get(comment.video_id)):
+            return AuditTarget(type=kind, label=comment.text, video_id=on.public_id, handle=None)
+        if kind is TargetType.USER and user:
+            return AuditTarget(
+                type=kind, label=f"@{user.handle}", video_id=None, handle=user.handle
+            )
+        return AuditTarget(type=kind, label="", video_id=None, handle=None)  # deleted since
+
+    items = [
+        AuditEntryOut.of(
+            entry,
+            named.get(entry.actor_id) if entry.actor_id else None,
+            target(entry.target_type, entry.target_id),
+        )
+        for entry in page
+    ]
+    return Page(items=items, next_cursor=next_cursor)
 
 
 async def set_status(
