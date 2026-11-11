@@ -12,6 +12,7 @@ import Player from '../../player/Player'
 import { useRelatedVideos, useVideo } from '../../videos/hooks'
 import { watchUrl } from '../../videos/paths'
 import type { Video } from '../../videos/types'
+import { useViewReport } from '../../views/useViewReport'
 import Comments from './comments/Comments'
 import Description from './Description'
 import UpNext from './UpNext'
@@ -64,6 +65,7 @@ export default function WatchPage() {
   const related = useRelatedVideos(id)
   const twoColumns = useMediaQuery(TWO_COLUMNS)
   const [theater, toggleTheater] = useStoredFlag('vitube:theater', false)
+  const reportPlayed = useViewReport(id, video.data?.duration_sec ?? 0)
 
   const next = related.data?.pages[0]?.items[0]
   const notFound = video.error instanceof ApiError && video.error.status === 404
@@ -85,6 +87,7 @@ export default function WatchPage() {
                 theater={theater}
                 onTheaterToggle={toggleTheater}
                 onNext={next && (() => navigate(watchUrl(next.id)))}
+                onPlayed={reportPlayed}
               />
             ) : (
               <NotReady video={video.data} />

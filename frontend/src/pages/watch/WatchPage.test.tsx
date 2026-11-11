@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vitest'
 
@@ -25,6 +25,8 @@ function mockWatch(video: Video = VIDEO, viewer = SIGNED_IN) {
       const author = { handle: ANNA.handle, name: ANNA.handle, avatar_url: null }
       return json(201, comment(2, { text, author, published_at: new Date().toISOString() }))
     },
+    [`POST ${base}/views/start`]: () => json(204),
+    [`POST ${base}/views`]: () => json(204),
     [`PUT ${base}/rating`]: async (request) => {
       const { rating } = (await request.json()) as { rating: Rating }
       return json(200, {
@@ -58,6 +60,27 @@ describe('WatchPage', () => {
     expect(within(upNext).getByRole('link', { name: /Video 2/ })).toHaveAttribute(
       'href',
       '/watch?v=video-00002',
+    )
+  })
+
+  it('reports playback for the view count: start at once, the view after 30 s played', async () => {
+    const fetch = mockWatch()
+    await openWatch()
+    const sent = () =>
+      fetch.mock.calls
+        .map(([request]) => `${request.method} ${new URL(request.url).pathname}`)
+        .filter((call) => call.includes('/views'))
+    // The player autoplays.
+    await waitFor(() => expect(sent()).toEqual(['POST /api/videos/video-00001/views/start']))
+
+    const video = document.querySelector('video')!
+    Object.defineProperty(video, 'played', { value: { length: 1, start: () => 0, end: () => 30 } })
+    fireEvent.timeUpdate(video)
+    await waitFor(() =>
+      expect(sent()).toEqual([
+        'POST /api/videos/video-00001/views/start',
+        'POST /api/videos/video-00001/views',
+      ]),
     )
   })
 

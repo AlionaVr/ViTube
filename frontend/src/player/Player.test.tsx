@@ -5,7 +5,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { loadMetadata } from '../test/media'
 import Player from './Player'
 
-function renderPlayer(props: { onTheaterToggle?: () => void; onNext?: () => void } = {}) {
+interface Callbacks {
+  onTheaterToggle?: () => void
+  onNext?: () => void
+  onPlayed?: (seconds: number) => void
+}
+
+function renderPlayer(props: Callbacks = {}) {
   const view = render(
     <>
       <input aria-label="Comment" />
@@ -15,6 +21,7 @@ function renderPlayer(props: { onTheaterToggle?: () => void; onNext?: () => void
         theater={false}
         onTheaterToggle={props.onTheaterToggle ?? (() => {})}
         onNext={props.onNext}
+        onPlayed={props.onPlayed}
       />
     </>,
   )
@@ -114,5 +121,26 @@ describe('Player', () => {
       fireEvent.error(video)
     })
     expect(screen.getByRole('alert')).toHaveTextContent('Can’t play this video')
+  })
+
+  it('reports the seconds played, not the seconds skipped, while playing', async () => {
+    const onPlayed = vi.fn()
+    const video = renderPlayer({ onPlayed })
+    // Played 0–10 s, skipped to 40 s, played 40–45 s.
+    const played = [
+      [0, 10],
+      [40, 45],
+    ]
+    Object.defineProperty(video, 'played', {
+      value: { length: 2, start: (i: number) => played[i][0], end: (i: number) => played[i][1] },
+    })
+
+    fireEvent.timeUpdate(video)
+    expect(onPlayed).toHaveBeenLastCalledWith(15)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Pause' }))
+    onPlayed.mockClear()
+    fireEvent.timeUpdate(video)
+    expect(onPlayed).not.toHaveBeenCalled()
   })
 })
