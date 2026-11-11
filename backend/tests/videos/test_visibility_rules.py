@@ -1,6 +1,7 @@
 """The visibility rules agree with each other, on every kind of video and viewer.
 
 - `can_view` (videos/access.py): may this viewer open this one video?
+- `viewable` (videos/access.py): the same as a SQL condition, for lists (playlists).
 - `LISTED` (videos/repository.py): may the video appear in public lists? The same for every
   viewer, the owner too.
 - `LISTED_SQL` (videos/models.py): the condition of the partial indexes; LISTED must imply it.
@@ -17,11 +18,11 @@ from sqlalchemy import ColumnElement, TextClause, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.users.models import Role, User
-from app.modules.videos.access import can_view
+from app.modules.videos.access import can_view, viewable
 from app.modules.videos.models import LISTED_SQL, Video, VideoAccess, VideoStatus, Visibility
 from app.modules.videos.repository import LISTED
 from tests.videos.factories import make_user, make_video
-from tests.videos.test_access import Viewer
+from tests.videos.test_access import Viewer, expected
 
 type State = tuple[Visibility, VideoStatus]
 
@@ -86,3 +87,18 @@ async def test_every_viewer_may_watch_every_listed_video(
     for state, video in videos.items():
         if listed(*state):
             assert await can_view(db, viewers[viewer], video), (viewer, state)
+
+
+@pytest.mark.parametrize("viewer", list(Viewer))
+async def test_viewable_is_can_view_as_sql(
+    db: AsyncSession,
+    videos: dict[State, Video],
+    viewers: dict[Viewer, User | None],
+    viewer: Viewer,
+) -> None:
+    user = viewers[viewer]
+    allowed = {video.id for video in videos.values() if await can_view(db, user, video)}
+
+    assert await ids_where(db, viewable(user)) == allowed
+    # And both follow the policy's oracle, so a rule can't drift in both at once.
+    assert allowed == {video.id for state, video in videos.items() if expected(viewer, *state)}

@@ -3,12 +3,13 @@
 import re
 from uuid import UUID
 
+from sqlalchemy import ColumnElement, and_, exists, or_, true
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import NotFound
 from app.modules.users.models import Role, User
 from app.modules.videos import repository as videos
-from app.modules.videos.models import Video, VideoStatus, Visibility
+from app.modules.videos.models import Video, VideoAccess, VideoStatus, Visibility
 
 _UUID = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
 # The only files /media serves: a ready video and its thumbnail. Never originals (ADR 0002).
@@ -26,6 +27,21 @@ async def can_view(db: AsyncSession, user: User | None, video: Video) -> bool:
     if video.visibility is not Visibility.PRIVATE:
         return True
     return user is not None and await videos.has_access(db, video.id, user.id)
+
+
+def viewable(user: User | None) -> ColumnElement[bool]:
+    """can_view as a SQL condition, for lists that may hold more than public videos (playlists).
+
+    The same rule: tests/videos/test_visibility_rules.py checks the two agree on every case.
+    """
+    if user is not None and user.role.at_least(Role.MODERATOR):
+        return true()
+    ready = Video.status == VideoStatus.READY
+    open_to_all = and_(ready, Video.visibility != Visibility.PRIVATE)
+    if user is None:
+        return open_to_all
+    granted = exists().where(VideoAccess.video_id == Video.id, VideoAccess.user_id == user.id)
+    return or_(Video.owner_id == user.id, open_to_all, and_(ready, granted))
 
 
 async def get_viewable(db: AsyncSession, user: User | None, public_id: str) -> Video:

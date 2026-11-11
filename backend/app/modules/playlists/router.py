@@ -1,0 +1,102 @@
+"""Playlists. Anyone reads public and unlisted ones; the owner reads and writes their own."""
+
+from fastapi import APIRouter, status
+
+from app.core.pagination import Cursor, Page
+from app.core.redis import RedisClient
+from app.db.session import DbSession
+from app.modules.auth.deps import CurrentUser, OptionalUser
+from app.modules.playlists import service
+from app.modules.playlists.schemas import (
+    MyPlaylist,
+    PlaylistCreate,
+    PlaylistId,
+    PlaylistItemOut,
+    PlaylistOut,
+    VideoQuery,
+)
+from app.modules.videos.schemas import PublicId
+
+router = APIRouter(prefix="/api", tags=["playlists"])
+
+
+@router.post(
+    "/playlists",
+    status_code=status.HTTP_201_CREATED,
+    response_model=PlaylistOut,
+    summary="Create a playlist",
+)
+async def create_playlist(
+    body: PlaylistCreate, user: CurrentUser, db: DbSession, redis: RedisClient
+) -> PlaylistOut:
+    return await service.create(db, redis, user, body)
+
+
+@router.get("/playlists/{playlist_id}", response_model=PlaylistOut, summary="A playlist")
+async def get_playlist(playlist_id: PlaylistId, user: OptionalUser, db: DbSession) -> PlaylistOut:
+    return await service.get_playlist(db, user, playlist_id)
+
+
+@router.get(
+    "/playlists/{playlist_id}/items",
+    response_model=Page[PlaylistItemOut],
+    summary="A playlist's videos, in order",
+    description="Only the videos this viewer may watch.",
+)
+async def list_items(
+    playlist_id: PlaylistId, user: OptionalUser, db: DbSession, cursor: Cursor = None
+) -> Page[PlaylistItemOut]:
+    return await service.list_items(db, user, playlist_id, cursor)
+
+
+@router.put(
+    "/playlists/{playlist_id}/items/{public_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Add a video to the end of your playlist",
+    description="Adding it again changes nothing.",
+)
+async def add_video(
+    playlist_id: PlaylistId,
+    public_id: PublicId,
+    user: CurrentUser,
+    db: DbSession,
+    redis: RedisClient,
+) -> None:
+    await service.add_video(db, redis, user, playlist_id, public_id)
+
+
+@router.delete(
+    "/playlists/{playlist_id}/items/{public_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Remove a video from your playlist",
+    description="Removing it again, or a video that isn't there, changes nothing.",
+)
+async def remove_video(
+    playlist_id: PlaylistId,
+    public_id: PublicId,
+    user: CurrentUser,
+    db: DbSession,
+    redis: RedisClient,
+) -> None:
+    await service.remove_video(db, redis, user, playlist_id, public_id)
+
+
+@router.get(
+    "/me/playlists",
+    response_model=Page[MyPlaylist],
+    summary="Your playlists, newest first",
+)
+async def list_mine(
+    user: CurrentUser, db: DbSession, video: VideoQuery = None, cursor: Cursor = None
+) -> Page[MyPlaylist]:
+    return await service.list_mine(db, user, video, cursor)
+
+
+@router.get(
+    "/me/watch-later",
+    response_model=PlaylistOut,
+    summary="Your Watch later playlist",
+    description="Every user has one; its id opens it like any other playlist.",
+)
+async def get_watch_later(user: CurrentUser, db: DbSession) -> PlaylistOut:
+    return await service.get_watch_later(db, user)

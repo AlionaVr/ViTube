@@ -9,7 +9,6 @@ from sqlalchemy import (
     CheckConstraint,
     Computed,
     DateTime,
-    Enum,
     ForeignKey,
     Index,
     Integer,
@@ -23,6 +22,7 @@ from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
+from app.db.types import str_enum
 
 TITLE_MAX = 100  # YouTube's limits
 DESCRIPTION_MAX = 5000
@@ -72,18 +72,6 @@ LISTED_SQL = "visibility = 'public' AND status = 'ready'"
 
 # Word stems for search (ADR 0007): "trailers" finds "trailer". Queries must use the same config.
 SEARCH_CONFIG = "english"
-
-
-def _str_enum(enum_class: type[enum.StrEnum], name: str) -> Enum:
-    # varchar + CHECK, not a Postgres enum: adding a value is a plain migration.
-    return Enum(
-        enum_class,
-        name=name,
-        native_enum=False,
-        create_constraint=True,
-        length=16,
-        values_callable=lambda members: [member.value for member in members],
-    )
 
 
 class Video(Base):
@@ -140,13 +128,13 @@ class Video(Base):
     title: Mapped[str] = mapped_column(Text)
     description: Mapped[str] = mapped_column(Text, server_default="")
     visibility: Mapped[Visibility] = mapped_column(
-        _str_enum(Visibility, "visibility"), server_default=Visibility.PRIVATE.value
+        str_enum(Visibility, "visibility"), server_default=Visibility.PRIVATE.value
     )
     status: Mapped[VideoStatus] = mapped_column(
-        _str_enum(VideoStatus, "status"), server_default=VideoStatus.UPLOADING.value
+        str_enum(VideoStatus, "status"), server_default=VideoStatus.UPLOADING.value
     )
     category: Mapped[Category] = mapped_column(
-        _str_enum(Category, "category"), server_default=Category.PEOPLE.value
+        str_enum(Category, "category"), server_default=Category.PEOPLE.value
     )
     # Set by a DB trigger on every status change; the sweeper finds stuck jobs by it (ADR 0003).
     status_changed_at: Mapped[datetime] = mapped_column(

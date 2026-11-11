@@ -1448,6 +1448,350 @@
         }
       }
     },
+    "/api/playlists": {
+      "post": {
+        "tags": [
+          "playlists"
+        ],
+        "summary": "Create a playlist",
+        "operationId": "create_playlist_api_playlists_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaylistCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaylistOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/playlists/{playlist_id}": {
+      "get": {
+        "tags": [
+          "playlists"
+        ],
+        "summary": "A playlist",
+        "operationId": "get_playlist_api_playlists__playlist_id__get",
+        "parameters": [
+          {
+            "name": "playlist_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Playlist id, as in /playlist?list=<id>",
+              "title": "Playlist Id"
+            },
+            "description": "Playlist id, as in /playlist?list=<id>"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaylistOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/playlists/{playlist_id}/items": {
+      "get": {
+        "tags": [
+          "playlists"
+        ],
+        "summary": "A playlist's videos, in order",
+        "description": "Only the videos this viewer may watch.",
+        "operationId": "list_items_api_playlists__playlist_id__items_get",
+        "parameters": [
+          {
+            "name": "playlist_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Playlist id, as in /playlist?list=<id>",
+              "title": "Playlist Id"
+            },
+            "description": "Playlist id, as in /playlist?list=<id>"
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "next_cursor of the last page",
+              "title": "Cursor"
+            },
+            "description": "next_cursor of the last page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_PlaylistItemOut_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/playlists/{playlist_id}/items/{public_id}": {
+      "put": {
+        "tags": [
+          "playlists"
+        ],
+        "summary": "Add a video to the end of your playlist",
+        "description": "Adding it again changes nothing.",
+        "operationId": "add_video_api_playlists__playlist_id__items__public_id__put",
+        "parameters": [
+          {
+            "name": "playlist_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Playlist id, as in /playlist?list=<id>",
+              "title": "Playlist Id"
+            },
+            "description": "Playlist id, as in /playlist?list=<id>"
+          },
+          {
+            "name": "public_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{11}$",
+              "description": "Public video id",
+              "title": "Public Id"
+            },
+            "description": "Public video id"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "playlists"
+        ],
+        "summary": "Remove a video from your playlist",
+        "description": "Removing it again, or a video that isn't there, changes nothing.",
+        "operationId": "remove_video_api_playlists__playlist_id__items__public_id__delete",
+        "parameters": [
+          {
+            "name": "playlist_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Playlist id, as in /playlist?list=<id>",
+              "title": "Playlist Id"
+            },
+            "description": "Playlist id, as in /playlist?list=<id>"
+          },
+          {
+            "name": "public_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{11}$",
+              "description": "Public video id",
+              "title": "Public Id"
+            },
+            "description": "Public video id"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me/playlists": {
+      "get": {
+        "tags": [
+          "playlists"
+        ],
+        "summary": "Your playlists, newest first",
+        "operationId": "list_mine_api_me_playlists_get",
+        "parameters": [
+          {
+            "name": "video",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9_-]{11}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "A public video id: mark the playlists with it",
+              "title": "Video"
+            },
+            "description": "A public video id: mark the playlists with it"
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "next_cursor of the last page",
+              "title": "Cursor"
+            },
+            "description": "next_cursor of the last page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_MyPlaylist_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me/watch-later": {
+      "get": {
+        "tags": [
+          "playlists"
+        ],
+        "summary": "Your Watch later playlist",
+        "description": "Every user has one; its id opens it like any other playlist.",
+        "operationId": "get_watch_later_api_me_watch_later_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaylistOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/health": {
       "get": {
         "tags": [
@@ -1719,6 +2063,87 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "MyPlaylist": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/Visibility"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/PlaylistKind",
+            "description": "watch_later: the owner's own, can't be renamed or deleted"
+          },
+          "video_count": {
+            "type": "integer",
+            "title": "Video Count",
+            "description": "All items, also those this viewer may not watch"
+          },
+          "thumbnail_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnail Url",
+            "description": "The first video this viewer may watch"
+          },
+          "owner": {
+            "$ref": "#/components/schemas/ChannelSummary"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "contains_video": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contains Video",
+            "description": "With ?video=: whether it is in this playlist"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "description",
+          "visibility",
+          "kind",
+          "video_count",
+          "thumbnail_url",
+          "owner",
+          "created_at",
+          "updated_at",
+          "contains_video"
+        ],
+        "title": "MyPlaylist"
+      },
       "NewAccount": {
         "properties": {
           "email": {
@@ -1767,6 +2192,62 @@
           "next_cursor"
         ],
         "title": "Page[CommentOut]"
+      },
+      "Page_MyPlaylist_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/MyPlaylist"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "Page[MyPlaylist]"
+      },
+      "Page_PlaylistItemOut_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PlaylistItemOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "Page[PlaylistItemOut]"
       },
       "Page_SearchResult_": {
         "properties": {
@@ -1879,6 +2360,127 @@
           "next_cursor"
         ],
         "title": "Page[VideoSummary]"
+      },
+      "PlaylistCreate": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 150,
+            "minLength": 1,
+            "pattern": "^[^\\x00-\\x1f\\x7f]*$",
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 5000,
+            "pattern": "^[^\\x00-\\x08\\x0b\\x0c\\x0e-\\x1f\\x7f]*$",
+            "title": "Description",
+            "default": ""
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/Visibility",
+            "default": "private"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title"
+        ],
+        "title": "PlaylistCreate"
+      },
+      "PlaylistItemOut": {
+        "properties": {
+          "video": {
+            "$ref": "#/components/schemas/VideoSummary"
+          },
+          "added_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Added At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "video",
+          "added_at"
+        ],
+        "title": "PlaylistItemOut"
+      },
+      "PlaylistKind": {
+        "type": "string",
+        "enum": [
+          "user",
+          "watch_later"
+        ],
+        "title": "PlaylistKind"
+      },
+      "PlaylistOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/Visibility"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/PlaylistKind",
+            "description": "watch_later: the owner's own, can't be renamed or deleted"
+          },
+          "video_count": {
+            "type": "integer",
+            "title": "Video Count",
+            "description": "All items, also those this viewer may not watch"
+          },
+          "thumbnail_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnail Url",
+            "description": "The first video this viewer may watch"
+          },
+          "owner": {
+            "$ref": "#/components/schemas/ChannelSummary"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "description",
+          "visibility",
+          "kind",
+          "video_count",
+          "thumbnail_url",
+          "owner",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "PlaylistOut"
       },
       "Rating": {
         "type": "string",

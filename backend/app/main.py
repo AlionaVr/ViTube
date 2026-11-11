@@ -14,6 +14,7 @@ from app.modules.auth.router import router as auth_router
 from app.modules.auth.sessions import SessionStore
 from app.modules.channels.router import router as channels_router
 from app.modules.comments.router import router as comments_router
+from app.modules.playlists.router import router as playlists_router
 from app.modules.reactions.router import router as reactions_router
 from app.modules.search.router import router as search_router
 from app.modules.videos.internal import router as internal_router
@@ -57,6 +58,7 @@ app.include_router(reactions_router)
 app.include_router(comments_router)
 app.include_router(views_router)
 app.include_router(channels_router)
+app.include_router(playlists_router)
 app.include_router(internal_router)
 
 

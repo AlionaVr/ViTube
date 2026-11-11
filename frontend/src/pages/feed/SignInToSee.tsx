@@ -1,14 +1,20 @@
-import Icon from '../../components/Icon'
+import Icon, { type IconName } from '../../components/Icon'
 import SignInButton from '../../components/SignInButton'
 import styles from './SignInToSee.module.css'
 
-/** What a guest sees on the subscription pages, as on YouTube. */
-export default function SignInToSee() {
+interface SignInToSeeProps {
+  icon: IconName
+  title: string
+  text: string
+}
+
+/** What a guest sees on a page of their own things (subscriptions, Watch later), as on YouTube. */
+export default function SignInToSee({ icon, title, text }: SignInToSeeProps) {
   return (
     <div className={styles.prompt}>
-      <Icon name="subscriptions" size={120} />
-      <h1 className={styles.title}>Don’t miss new videos</h1>
-      <p className={styles.text}>Sign in to see updates from your favorite ViTube channels</p>
+      <Icon name={icon} size={120} />
+      <h1 className={styles.title}>{title}</h1>
+      <p className={styles.text}>{text}</p>
       <SignInButton />
     </div>
   )

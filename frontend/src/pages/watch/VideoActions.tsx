@@ -7,6 +7,7 @@ import Avatar from '../../components/Avatar'
 import Icon from '../../components/Icon'
 import SignInGate from '../../components/SignInGate'
 import { formatCompact, formatExact, formatSubscribers } from '../../lib/format'
+import SaveDialog from '../../playlists/SaveDialog'
 import buttons from '../../styles/buttons.module.css'
 import { useRateVideo } from '../../videos/hooks'
 import { channelUrl } from '../../videos/paths'
@@ -86,6 +87,7 @@ function RatingButtons({ video }: { video: Video }) {
 export default function VideoActions({ video }: { video: Video }) {
   const { channel } = video
   const [sharing, setSharing] = useState(false)
+  const [saving, setSaving] = useState(false)
   // The channel page's cache entry: subscribing here or there updates both.
   const owner = useChannel(channel.handle)
   const viewer = useViewer()
@@ -123,6 +125,25 @@ export default function VideoActions({ video }: { video: Video }) {
           Share
         </button>
         <ShareDialog videoId={video.id} open={sharing} onClose={() => setSharing(false)} />
+        <SignInGate
+          title="Want to watch this again later?"
+          text="Sign in to add this video to a playlist."
+          align="end"
+          onAction={() => setSaving(true)}
+        >
+          {(props) => (
+            <button
+              type="button"
+              className={`${buttons.pill} ${buttons.tonal} ${buttons.iconLeading}`}
+              aria-haspopup="dialog"
+              {...props}
+            >
+              <Icon name="playlistAdd" />
+              Save
+            </button>
+          )}
+        </SignInGate>
+        <SaveDialog videoId={video.id} open={saving} onClose={() => setSaving(false)} />
       </div>
     </div>
   )

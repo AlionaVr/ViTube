@@ -69,7 +69,11 @@ export default function SubscriptionsPage() {
     <div className={grid.page}>
       <title>Subscriptions - ViTube</title>
       {viewer.status === 'guest' ? (
-        <SignInToSee />
+        <SignInToSee
+          icon="subscriptions"
+          title="Don’t miss new videos"
+          text="Sign in to see updates from your favorite ViTube channels"
+        />
       ) : (
         viewer.status === 'authenticated' && (
           <>

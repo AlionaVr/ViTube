@@ -474,6 +474,121 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/playlists": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a playlist */
+        post: operations["create_playlist_api_playlists_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/playlists/{playlist_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A playlist */
+        get: operations["get_playlist_api_playlists__playlist_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/playlists/{playlist_id}/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A playlist's videos, in order
+         * @description Only the videos this viewer may watch.
+         */
+        get: operations["list_items_api_playlists__playlist_id__items_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/playlists/{playlist_id}/items/{public_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Add a video to the end of your playlist
+         * @description Adding it again changes nothing.
+         */
+        put: operations["add_video_api_playlists__playlist_id__items__public_id__put"];
+        post?: never;
+        /**
+         * Remove a video from your playlist
+         * @description Removing it again, or a video that isn't there, changes nothing.
+         */
+        delete: operations["remove_video_api_playlists__playlist_id__items__public_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/me/playlists": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Your playlists, newest first */
+        get: operations["list_mine_api_me_playlists_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/me/watch-later": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Your Watch later playlist
+         * @description Every user has one; its id opens it like any other playlist.
+         */
+        get: operations["get_watch_later_api_me_watch_later_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -609,6 +724,47 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /** MyPlaylist */
+        MyPlaylist: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Title */
+            title: string;
+            /** Description */
+            description: string;
+            visibility: components["schemas"]["Visibility"];
+            /** @description watch_later: the owner's own, can't be renamed or deleted */
+            kind: components["schemas"]["PlaylistKind"];
+            /**
+             * Video Count
+             * @description All items, also those this viewer may not watch
+             */
+            video_count: number;
+            /**
+             * Thumbnail Url
+             * @description The first video this viewer may watch
+             */
+            thumbnail_url: string | null;
+            owner: components["schemas"]["ChannelSummary"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Contains Video
+             * @description With ?video=: whether it is in this playlist
+             */
+            contains_video: boolean | null;
+        };
         /** NewAccount */
         NewAccount: {
             /**
@@ -623,6 +779,20 @@ export interface components {
         Page_CommentOut_: {
             /** Items */
             items: components["schemas"]["CommentOut"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
+        /** Page[MyPlaylist] */
+        Page_MyPlaylist_: {
+            /** Items */
+            items: components["schemas"]["MyPlaylist"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
+        /** Page[PlaylistItemOut] */
+        Page_PlaylistItemOut_: {
+            /** Items */
+            items: components["schemas"]["PlaylistItemOut"][];
             /** Next Cursor */
             next_cursor: string | null;
         };
@@ -653,6 +823,68 @@ export interface components {
             items: components["schemas"]["VideoSummary"][];
             /** Next Cursor */
             next_cursor: string | null;
+        };
+        /** PlaylistCreate */
+        PlaylistCreate: {
+            /** Title */
+            title: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** @default private */
+            visibility: components["schemas"]["Visibility"];
+        };
+        /** PlaylistItemOut */
+        PlaylistItemOut: {
+            video: components["schemas"]["VideoSummary"];
+            /**
+             * Added At
+             * Format: date-time
+             */
+            added_at: string;
+        };
+        /**
+         * PlaylistKind
+         * @enum {string}
+         */
+        PlaylistKind: "user" | "watch_later";
+        /** PlaylistOut */
+        PlaylistOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Title */
+            title: string;
+            /** Description */
+            description: string;
+            visibility: components["schemas"]["Visibility"];
+            /** @description watch_later: the owner's own, can't be renamed or deleted */
+            kind: components["schemas"]["PlaylistKind"];
+            /**
+             * Video Count
+             * @description All items, also those this viewer may not watch
+             */
+            video_count: number;
+            /**
+             * Thumbnail Url
+             * @description The first video this viewer may watch
+             */
+            thumbnail_url: string | null;
+            owner: components["schemas"]["ChannelSummary"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
         };
         /**
          * Rating
@@ -1865,6 +2097,224 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_playlist_api_playlists_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlaylistCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaylistOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_playlist_api_playlists__playlist_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Playlist id, as in /playlist?list=<id> */
+                playlist_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaylistOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_items_api_playlists__playlist_id__items_get: {
+        parameters: {
+            query?: {
+                /** @description next_cursor of the last page */
+                cursor?: string | null;
+            };
+            header?: never;
+            path: {
+                /** @description Playlist id, as in /playlist?list=<id> */
+                playlist_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_PlaylistItemOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_video_api_playlists__playlist_id__items__public_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Playlist id, as in /playlist?list=<id> */
+                playlist_id: string;
+                /** @description Public video id */
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_video_api_playlists__playlist_id__items__public_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Playlist id, as in /playlist?list=<id> */
+                playlist_id: string;
+                /** @description Public video id */
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_mine_api_me_playlists_get: {
+        parameters: {
+            query?: {
+                /** @description A public video id: mark the playlists with it */
+                video?: string | null;
+                /** @description next_cursor of the last page */
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_MyPlaylist_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_watch_later_api_me_watch_later_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaylistOut"];
                 };
             };
         };
