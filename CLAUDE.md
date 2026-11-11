@@ -41,6 +41,7 @@ FastAPI + PostgreSQL + MinIO + Celery + React. Deployed with `./install.sh` (Doc
   (likeness is graded).
 - **Verify before done.**
     - Never call a task done without proof: run tests, check logs, show it works.
+    - Run a suite once after a change. Rerun it only after a code change or for a flake you saw, never "to be sure".
     - Ask: "Would a staff engineer approve this?"
 - **Elegance, balanced.**
     - For non-trivial changes, ask "is there a simpler, cleaner way?"
