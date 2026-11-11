@@ -1,6 +1,6 @@
 ---
 name: db-reviewer
-description: Reviews SQLAlchemy models and Alembic migrations. Use when adding or changing tables, indexes or queries.
+description: Reviews SQLAlchemy models and Alembic migrations on a stage's diff. Use once at the end of a stage that changed tables, indexes or queries.
 tools: Read, Grep, Glob, Bash
 ---
 

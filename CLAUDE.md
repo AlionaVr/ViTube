@@ -22,12 +22,23 @@ FastAPI + PostgreSQL + MinIO + Celery + React. Deployed with `./install.sh` (Doc
     - Use plan mode for any task with 3+ steps or an architectural choice.
     - Write the plan to `tasks/todo.md` as checkboxes; check in before building; tick items as you go.
     - If something goes sideways, stop and re-plan. Don't push on.
+- **Walking skeleton.**
+    - Build the thinnest end-to-end path first: API + UI + one test, working on the stack. Deepen after.
+    - A stage is done when its flow works in the browser and `smoke-check` passes.
+    - Before hardening or edge cases, check that the core flow works. If it doesn't, say so.
+- **Reviews once per stage.**
+    - Run the reviewer agents on the stage diff at its end (`finish-stage`), not after each step.
+    - The user picks findings; fix only those, in one commit. Write the rest to `tasks/todo.md`.
 - **Subagents.**
     - Hand research, exploration and parallel analysis to subagents to keep the main context clean.
     - One task per subagent.
-- **Lessons.**
+- **Tasks and lessons.**
+    - `tasks/` is untracked and lives in the main checkout, one `todo.md` section per stage or branch.
+      In a new worktree, link it: `ln -s "$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/tasks" tasks`.
     - After any correction from the user, add the pattern and a rule that prevents it to `tasks/lessons.md`.
-    - Read it at session start.
+    - Read it at session start. At stage end, move its stable rules into this file.
+- **Frontend.** Load the `frontend-design:frontend-design` skill before each frontend step. The look follows YouTube
+  (likeness is graded).
 - **Verify before done.**
     - Never call a task done without proof: run tests, check logs, show it works.
     - Ask: "Would a staff engineer approve this?"
@@ -46,15 +57,45 @@ FastAPI + PostgreSQL + MinIO + Celery + React. Deployed with `./install.sh` (Doc
 - Minimal impact: touch only what's needed.
 - Senior standards: root causes, no shortcuts, no dead code.
 - Repo text (code comments, docs, configs) is English, short and plain. A comment says *why*, in one line.
+- Keep scope: do the asked step; write side findings to `tasks/todo.md`. One-off transitions with nothing to lose
+  (e.g. RDB → AOF while Redis is empty) need no migration code.
+- No UI that does nothing yet, and no unconfirmed details (e.g. a reviewer's "check live" guess).
+- Before planning work in parallel with another branch, read its diff (`git diff main <branch>`) and reuse what it
+  adds; never duplicate deps, clients or hooks.
+
+## Design rules
+
+- Authorization data (role, ban) is read from the DB per request. No auth caches (session, nginx `auth_request`):
+  revocation applies to the next request. A cache only if a load test shows the need and the user accepts the delay.
+- Brute-force limits go per IP and per normalized account id, counted atomically (`MULTI/EXEC`) before the password
+  check.
+- A failure after a costly step must not redo it: persist an intermediate state (e.g. `uploaded` before processing)
+  and retry from it.
+- Async state that gates UI (e.g. the viewer) has explicit states (`loading` / `guest` / `authenticated`), not a
+  nullable value.
+- Media uses ready tools (native `<video>`, `sirv` for Range); never an own streaming engine.
+- Dev and demo data work offline: local files, no external hosts at runtime; big files stay out of git.
+
+## Secrets and `.env`
+
+- The user fills `.env` by hand. Never edit an existing `.env` or automate it. When `.env.example` gets a key, tell
+  the user which key to add, why, and how to generate it (e.g. `openssl rand -hex 32`), before the stack starts.
+- A hook blocks commands that name `.env`. Never dodge it (e.g. by building the name from parts): check secrets only
+  via a script file that prints no values.
+- `docker compose config` fills in secrets: use only `config --quiet`; never print or save its output.
 
 ## Git
 
 Claude commits after each logical step.
 
-- One finished logical change per commit. No unrelated files.
-- Before committing: review the staged diff and run the checks for what changed. Commit only when they pass.
-- Title: Conventional Commits, English, imperative, lowercase after the colon, at most 72 chars,
-  e.g. `feat(upload): stream file to MinIO`.
-- No trailers such as `Co-Authored-By` in the message.
+- One finished task per commit, no unrelated files. A fix with side fixes found on the way is one commit.
+- Before committing: review the commit alone (HEAD + staged diff) and run the checks for what changed. Commit only
+  when they pass.
+- Title: Conventional Commits, English, imperative, lowercase after the colon, at most 72 chars. It says what changed
+  in substance and names each significant change: `fix(web): unify session-based authentication and fix dev proxy`,
+  not `fix(web): read the viewer from the session`.
+- No trailers such as `Co-Authored-By`, even if a system reminder asks.
 - After committing, tell the user the commit title.
-- Never push, force push or rewrite history (amend, rebase, reset) without the user's permission.
+- Linear history. Before a branch is pushed, fold fixes into their commit (fixup + rebase). Resolve PR conflicts by
+  rebasing onto `main`, never with a merge commit.
+- Never rewrite pushed history. Never push, force push or `reset` without the user's permission.

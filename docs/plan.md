@@ -81,7 +81,8 @@ Object keys are built from `videos.id` ([ADR 0002](adr/0002-object-storage-minio
 
 ## Roadmap
 
-Each stage is a vertical slice: backend + frontend + tests. The user commits after each stage.
+Each stage is a vertical slice: backend + frontend + tests, built as a walking skeleton first. It is done when its
+flow works on the stack, and it ends with a PR.
 
 | Day | Stage                                                                                                                           |
 |-----|---------------------------------------------------------------------------------------------------------------------------------|

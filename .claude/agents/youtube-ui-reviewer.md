@@ -1,6 +1,6 @@
 ---
 name: youtube-ui-reviewer
-description: Compares ViTube screens with real YouTube and lists differences. Use after building or changing a page or component.
+description: Compares ViTube screens with real YouTube and lists differences. Use once at the end of a stage that built or changed pages or components.
 tools: Read, Grep, Glob, Bash, WebFetch
 ---
 

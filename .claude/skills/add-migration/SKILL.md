@@ -19,4 +19,4 @@ description: Create and review an Alembic migration for ViTube after changing SQ
 5. Apply: `docker compose build api && docker compose run --rm migrate`. Test: `docker compose run --rm migrate alembic downgrade -1`, then
    `... alembic upgrade head`.
 6. Never edit a migration that was already committed. Add a new one.
-7. For bigger schema changes, ask the `db-reviewer` agent.
+7. The `db-reviewer` agent checks the stage's migrations once, at its end (`finish-stage` skill).
