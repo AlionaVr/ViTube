@@ -17,7 +17,7 @@ Must work right after deploy: **register → upload → watch → like → comme
 | guest     | watch public/unlisted, search, read comments                                    |
 | user      | + upload, like, comment, subscribe, playlists, report, share own private videos |
 | moderator | + review reports, hide/restore videos, delete comments                          |
-| admin     | + set roles, ban users (CLI/API), read audit log                                |
+| admin     | + set roles (CLI), ban users, terminate channels, read audit log                |
 
 ## Screens
 
@@ -35,7 +35,8 @@ YouTube layout: header with logo, search and avatar; collapsible sidebar.
 5. **Upload** — drag & drop, progress bar, metadata form, processing status, clear limit errors.
 6. **Sign in / Sign up** — email and password; the server gives a random @handle (editable later). A channel is
    created on sign-up.
-7. **Moderation** `/moderation` — report queue, actions, audit log.
+7. **Moderation** `/moderation` — report queue, hidden videos; for admins, restricted accounts and the audit log
+   with filters.
 
 ## Acceptance
 
@@ -44,6 +45,9 @@ YouTube layout: header with logo, search and avatar; collapsible sidebar.
 - **Private video, stranger:** gets 404 on the page and on `/media/...`.
 - **Private video, after access is granted:** the user can watch.
 - **Media without a cookie:** 401.
+- **Hidden video or terminated channel:** 404 for everyone but the owner (hidden only) and moderators, on the page
+  and on `/media/...`; never in lists.
+- **Banned user:** open sessions stop working at once; signing in is refused.
 
 ## Architecture
 
@@ -64,7 +68,7 @@ One access policy, `can_view(user, video)`, is used everywhere.
 
 | Table             | Key fields / constraints                                                                                                                             |
 |-------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `users`           | email, handle (citext, unique), password_hash, role, is_banned, avatar, banner                                                                       |
+| `users`           | email, handle (citext, unique), password_hash, role, status (active / banned / terminated), avatar, banner                                           |
 | `videos`          | public_id (11 chars), owner, title, description, visibility, status, is_hidden, duration, counters, `search_vector` (GIN), title trigram (GIN)       |
 | `video_access`    | (video, user); only the owner grants                                                                                                                 |
 | `video_reactions` | (user, video), value ±1                                                                                                                              |
@@ -74,7 +78,7 @@ One access policy, `can_view(user, video)`, is used everywhere.
 | `playlist_items`  | (playlist, video), position                                                                                                                          |
 | `watch_history`   | (user, video), last_position_sec, watched_at                                                                                                         |
 | `reports`         | reporter, target (video xor comment), reason, status, resolved_by                                                                                    |
-| `audit_log`       | actor, action, target, details jsonb                                                                                                                 |
+| `audit_log`       | source (api / cli), actor, action, target, details jsonb; append-only, no foreign keys                                                               |
 
 Not in Postgres: sessions, rate limits and view de-duplication live in Redis.
 Object keys are built from `videos.id` ([ADR 0002](adr/0002-object-storage-minio.md)), so they aren't stored.
@@ -98,4 +102,5 @@ flow works on the stack, and it ends with a PR.
 
 - **Checks:** `pytest`, `ruff`, `pyright`, frontend build and tests.
 - **Clean Ubuntu VM:** `./install.sh` → site at `http://<ip>/`, Swagger at `/docs`, demo data present.
-- **E2E:** `tests/e2e/test_scenario.py` runs the core flow and the private-video checks.
+- **E2E:** `tests/e2e/test_scenario.py` runs the core flow and the private-video checks; `test_moderation.py` runs
+  report, hide, restore, comment delete, ban, terminate and the audit log.
