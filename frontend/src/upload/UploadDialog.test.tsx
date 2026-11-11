@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ANNA, json, mockApi } from '../test/api'
 import { renderApp } from '../test/render'
+import { page } from '../test/videos'
 import type { OwnVideo } from '../videos/types'
 
 const GIB = 1024 ** 3
@@ -102,6 +103,7 @@ async function answerUpload(status: number, response: unknown) {
 
 describe('UploadDialog', () => {
   let detail: OwnVideo
+  let listed: OwnVideo[]
   let api: ReturnType<typeof mockApi>
 
   beforeEach(() => {
@@ -109,7 +111,9 @@ describe('UploadDialog', () => {
     vi.stubGlobal('XMLHttpRequest', FakeXhr)
     document.cookie = 'csrf_token=token-123'
     detail = READY
+    listed = []
     api = mockApi({
+      'GET /api/me/videos': () => json(200, page(listed)),
       'GET /api/auth/me': () => json(200, ANNA),
       'GET /api/videos/upload-limits': () =>
         json(200, { max_size_bytes: GIB, max_duration_sec: 1800 }),
@@ -282,6 +286,29 @@ describe('UploadDialog', () => {
       visibility: 'public',
       category: 'travel',
     })
+  })
+
+  it('keeps the list in Studio up to date: the draft, the upload, the details', async () => {
+    renderApp('/studio/videos')
+    expect(await screen.findByText('No content available')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Create' }))
+    const dialog = screen.getByRole('dialog', { name: 'Upload videos' })
+    await within(dialog).findByText('Up to 1 GB and 30 minutes')
+
+    listed = [video()]
+    await pick(dialog, file())
+    expect(await screen.findByText('Draft')).toBeInTheDocument()
+
+    listed = [READY]
+    await answerUpload(200, video({ status: 'uploaded' }))
+    expect(await screen.findByText('Ready')).toBeInTheDocument()
+
+    listed = [{ ...READY, title: 'Summer in Riga' }]
+    const title = within(dialog).getByLabelText('Title (required)')
+    await userEvent.clear(title)
+    await userEvent.type(title, 'Summer in Riga')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save' }))
+    expect(await screen.findByRole('link', { name: 'Summer in Riga' })).toBeInTheDocument()
   })
 
   it('asks before closing during an upload, and stops it when closed', async () => {

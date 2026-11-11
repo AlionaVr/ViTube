@@ -1,14 +1,22 @@
 import { act, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { formatDate } from '../../lib/format'
 import { ANNA, json, mockApi } from '../../test/api'
 import { intersectAll } from '../../test/observers'
 import { renderApp } from '../../test/render'
 import { own, page } from '../../test/videos'
+import type { VideoStatus } from '../../videos/types'
 
 const SIGNED_IN = { 'GET /api/auth/me': () => json(200, ANNA) }
+
+/** The query string of each list request, in order. */
+const listRequests = (fetch: ReturnType<typeof mockApi>) =>
+  fetch.mock.calls
+    .map(([request]) => new URL(request.url))
+    .filter((url) => url.pathname === '/api/me/videos')
+    .map((url) => url.search)
 
 const rowOf = (title: string) => {
   const row = screen.getByRole('link', { name: title }).closest('tr')
@@ -17,6 +25,10 @@ const rowOf = (title: string) => {
 }
 
 describe('StudioVideosPage', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('sends a guest to sign in and back here', async () => {
     const router = renderApp('/studio/videos')
 
@@ -127,11 +139,26 @@ describe('StudioVideosPage', () => {
 
     act(() => intersectAll())
     expect(await screen.findByRole('link', { name: 'Video 2' })).toBeInTheDocument()
-    const lists = fetch.mock.calls
-      .map(([request]) => new URL(request.url))
-      .filter((url) => url.pathname === '/api/me/videos')
-      .map((url) => url.search)
-    expect(lists).toEqual(['', '?cursor=next'])
+    expect(listRequests(fetch)).toEqual(['', '?cursor=next'])
+  })
+
+  it('shows the new status while a video processes, then stops asking', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    let status: VideoStatus = 'processing'
+    const fetch = mockApi({
+      ...SIGNED_IN,
+      'GET /api/me/videos': () => json(200, page([own(1, { status })])),
+    })
+    renderApp('/studio/videos')
+    expect(await screen.findByText('Processing')).toBeInTheDocument()
+
+    status = 'ready'
+    await act(() => vi.advanceTimersByTimeAsync(2000))
+    expect(await screen.findByText('Ready')).toBeInTheDocument()
+
+    const asked = listRequests(fetch).length
+    await act(() => vi.advanceTimersByTimeAsync(10_000))
+    expect(listRequests(fetch)).toHaveLength(asked)
   })
 
   it('says so when the user has no videos', async () => {

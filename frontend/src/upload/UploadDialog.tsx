@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { type CSSProperties, type FormEvent, useId, useRef, useState } from 'react'
 
 import Icon from '../components/Icon'
@@ -7,6 +7,7 @@ import Spinner from '../components/Spinner'
 import { useModalDialog } from '../hooks/useModalDialog'
 import buttons from '../styles/buttons.module.css'
 import { CATEGORIES, CATEGORY_LABELS } from '../videos/categories'
+import { videoKeys } from '../videos/hooks'
 import { watchUrl } from '../videos/paths'
 import type { Category, OwnVideo, Visibility } from '../videos/types'
 import { VISIBILITY_LABELS } from '../videos/visibility'
@@ -155,8 +156,10 @@ function Details({
   const [description, setDescription] = useState(video.description)
   const [visibility, setVisibility] = useState<Visibility>(video.visibility)
   const [category, setCategory] = useState<Category>(video.category)
+  const queryClient = useQueryClient()
   const save = useMutation({
     mutationFn: () => updateVideo(video.id, { title, description, visibility, category }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: videoKeys.mine }),
   })
   const categoryId = useId()
   const link = `${window.location.origin}${watchUrl(video.id)}`
