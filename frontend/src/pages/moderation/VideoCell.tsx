@@ -3,13 +3,8 @@ import { Link } from 'react-router'
 import Thumbnail from '../../components/Thumbnail'
 import type { ModeratedVideo } from '../../moderation/api'
 import { channelUrl, watchUrl } from '../../videos/paths'
+import { VISIBILITY_LABELS } from '../../videos/visibility'
 import styles from './ModerationPage.module.css'
-
-const VISIBILITY: Record<ModeratedVideo['visibility'], string> = {
-  public: 'Public',
-  unlisted: 'Unlisted',
-  private: 'Private',
-}
 
 /** Thumbnail, title, channel and visibility: the start of every row. */
 export default function VideoCell({ video }: { video: ModeratedVideo }) {
@@ -30,7 +25,7 @@ export default function VideoCell({ video }: { video: ModeratedVideo }) {
           {video.channel.name}
         </Link>
         <p className={styles.meta}>
-          {VISIBILITY[video.visibility]}
+          {VISIBILITY_LABELS[video.visibility]}
           {video.is_hidden && <span className={styles.hiddenBadge}>Hidden</span>}
         </p>
       </div>
