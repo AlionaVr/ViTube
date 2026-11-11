@@ -25,15 +25,14 @@ const SUBSCRIPTIONS: NavItem = {
 const YOU: NavItem = { to: '/feed/you', label: 'You', icon: 'you', activeIcon: 'youFill' }
 const HISTORY: NavItem = { to: '/feed/history', label: 'History', icon: 'history' }
 
-function library(handle: string): NavItem[] {
-  return [
-    HISTORY,
-    { to: '/feed/playlists', label: 'Playlists', icon: 'playlists' },
-    { to: `${channelUrl(handle)}/videos`, label: 'Your videos', icon: 'yourVideos' },
-    { to: '/playlist?list=WL', label: 'Watch later', icon: 'watchLater' },
-    { to: '/playlist?list=LL', label: 'Liked videos', icon: 'like', activeIcon: 'likeFill' },
-  ]
-}
+const LIBRARY: NavItem[] = [
+  HISTORY,
+  { to: '/feed/playlists', label: 'Playlists', icon: 'playlists' },
+  // Studio, as on YouTube: all of the user's videos; the channel tab shows only public ones.
+  { to: '/studio/videos', label: 'Your videos', icon: 'yourVideos' },
+  { to: '/playlist?list=WL', label: 'Watch later', icon: 'watchLater' },
+  { to: '/playlist?list=LL', label: 'Liked videos', icon: 'like', activeIcon: 'likeFill' },
+]
 
 interface NavProps {
   /** The drawer closes itself when a link is followed. */
@@ -96,7 +95,7 @@ export function GuideContent({ onNavigate }: NavProps) {
               You
               <Icon name="chevronRight" size={20} />
             </Link>
-            <NavItems items={library(viewer.user.handle)} onNavigate={onNavigate} />
+            <NavItems items={LIBRARY} onNavigate={onNavigate} />
           </section>
           <SubscriptionList onNavigate={onNavigate} />
         </>

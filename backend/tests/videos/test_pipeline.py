@@ -17,7 +17,7 @@ from types_aiobotocore_s3 import S3Client
 from app.core.storage import Storage, get_storage_settings, open_s3_client
 from app.modules.videos import pipeline
 from app.modules.videos.config import get_video_settings
-from app.modules.videos.models import Video, VideoStatus
+from app.modules.videos.models import GAVE_UP_REASON, Video, VideoStatus
 from tests.videos.factories import make_user, make_video
 
 
@@ -358,4 +358,4 @@ async def test_the_last_failed_attempt_gives_up(
     await pipeline.process(video.id)
 
     video = await reload(db, video)
-    assert (video.status, video.error_message) == (VideoStatus.FAILED, "Processing failed")
+    assert (video.status, video.error_message) == (VideoStatus.FAILED, GAVE_UP_REASON)

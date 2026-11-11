@@ -27,6 +27,8 @@ from app.db.base import Base
 TITLE_MAX = 100  # YouTube's limits
 DESCRIPTION_MAX = 5000
 ERROR_MESSAGE_MAX = 1000  # a sentence for the owner, never raw ffmpeg output
+# The reason after the last attempt failed for something that's not the file's fault.
+GAVE_UP_REASON = "The video could not be processed. Upload it again."
 
 
 class Visibility(enum.StrEnum):

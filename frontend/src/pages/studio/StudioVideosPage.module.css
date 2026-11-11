@@ -1,0 +1,193 @@
+/* YouTube Studio's Content page: the table spans the page, its side gap sits in the end cells. */
+.page {
+  --side: 24px;
+  padding: 24px 0;
+}
+
+@media (max-width: 600px) {
+  .page {
+    --side: 16px;
+    padding: 16px 0;
+  }
+}
+
+.heading {
+  margin: 0 0 16px;
+  padding: 0 var(--side);
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 32px;
+}
+
+.scroller {
+  overflow-x: auto;
+}
+
+/* Fixed layout: a long title or description can't push the other columns aside. */
+.table {
+  width: 100%;
+  min-width: 960px;
+  table-layout: fixed;
+  /* Separate borders: collapsed ones don't move with the sticky column. */
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.videoColumn {
+  width: 40%;
+}
+
+.visibilityColumn {
+  width: 10%;
+}
+
+.statusColumn {
+  width: 14%;
+}
+
+.dateColumn {
+  width: 11%;
+}
+
+.countColumn {
+  width: 8%;
+}
+
+.commentsColumn {
+  width: 9%;
+}
+
+.table th {
+  height: 48px;
+  padding: 0 12px;
+  border-top: 1px solid var(--color-divider);
+  border-bottom: 1px solid var(--color-divider);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--color-divider);
+  vertical-align: top;
+}
+
+.table .number {
+  text-align: right;
+}
+
+/* As in Studio: the Video column stays while the others scroll sideways. */
+.table :is(th, td):first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  padding-left: var(--side);
+  background: var(--color-bg);
+}
+
+.table :is(th, td):last-child {
+  padding-right: var(--side);
+}
+
+/* After the sticky rule, same specificity: the hover covers the sticky cell too. */
+.row:hover td {
+  background: var(--color-surface);
+}
+
+.video {
+  display: flex;
+  gap: 16px;
+}
+
+.thumbnail {
+  flex: none;
+  width: 120px;
+}
+
+.placeholder {
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  background: var(--color-placeholder);
+}
+
+.details {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  color: var(--color-text);
+}
+
+.title:hover {
+  text-decoration: underline;
+}
+
+.secondary,
+.description {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+/* One line under the title, as in Studio. */
+.description {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.failed {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-error);
+}
+
+.bar {
+  height: 16px;
+  margin-bottom: 8px;
+  border-radius: 4px;
+  background: var(--color-placeholder);
+}
+
+.short {
+  width: 40%;
+}
+
+/* A phone: a narrower sticky column leaves room to scroll the rest past it. */
+@media (max-width: 600px) {
+  .table {
+    min-width: 720px;
+  }
+
+  .videoColumn {
+    width: 240px;
+  }
+
+  .video {
+    gap: 12px;
+  }
+
+  .thumbnail {
+    width: 80px;
+  }
+}
+
+.more {
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+}

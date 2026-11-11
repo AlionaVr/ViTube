@@ -2,15 +2,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 
 import { ApiError } from '../api/client'
-import { pollWhileProcessing } from '../videos/hooks'
-import {
-  createDraft,
-  getUploadLimits,
-  getVideo,
-  type OwnVideo,
-  type UploadLimits,
-  uploadFile,
-} from './api'
+import { pollWhileProcessing, videoKeys } from '../videos/hooks'
+import type { OwnVideo } from '../videos/types'
+import { createDraft, getUploadLimits, getVideo, type UploadLimits, uploadFile } from './api'
 import { formatSize } from './format'
 
 /** The file's trip to the server. After `stored`, the video's status tells the rest. */
@@ -84,6 +78,7 @@ export function useUpload() {
         controller.signal,
       )
       queryClient.setQueryData(uploadKeys.video(stored.id), stored)
+      void queryClient.invalidateQueries({ queryKey: videoKeys.mine })
       setTransfer({ phase: 'stored' })
     } catch (error) {
       if (controller.signal.aborted) return
@@ -103,6 +98,8 @@ export function useUpload() {
     }
     try {
       const created = await createDraft(titleOf(chosen))
+      // Studio lists the draft at once, as YouTube Studio does.
+      void queryClient.invalidateQueries({ queryKey: videoKeys.mine })
       setFile(chosen)
       setDraft(created)
       await send(created, chosen)

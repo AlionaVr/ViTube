@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.users.models import User
 from app.modules.videos.models import (
+    GAVE_UP_REASON,
     SEARCH_CONFIG,
     Category,
     Video,
@@ -78,6 +79,13 @@ async def list_newest(
     if category is not None:
         query = query.where(Video.category == category)
     return await _newest(db, query, before, limit)
+
+
+async def list_owned(
+    db: AsyncSession, owner_id: UUID, *, before: UUID | None, limit: int
+) -> Sequence[VideoRow]:
+    """All of the owner's videos, whatever their status or visibility."""
+    return await _newest(db, _WITH_OWNER.where(Video.owner_id == owner_id), before, limit)
 
 
 async def list_up_next(
@@ -270,7 +278,7 @@ async def take_back_stale(
     await db.execute(
         update(Video)
         .where(*stale, Video.processing_attempts >= max_attempts)
-        .values(status=VideoStatus.FAILED, error_message="Processing failed")
+        .values(status=VideoStatus.FAILED, error_message=GAVE_UP_REASON)
     )
     rows = await db.scalars(
         update(Video).where(*stale).values(status=VideoStatus.UPLOADED).returning(Video.id)

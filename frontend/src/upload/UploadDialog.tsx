@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { type CSSProperties, type FormEvent, useId, useRef, useState } from 'react'
 
 import Icon from '../components/Icon'
@@ -7,9 +7,11 @@ import Spinner from '../components/Spinner'
 import { useModalDialog } from '../hooks/useModalDialog'
 import buttons from '../styles/buttons.module.css'
 import { CATEGORIES, CATEGORY_LABELS } from '../videos/categories'
+import { videoKeys } from '../videos/hooks'
 import { watchUrl } from '../videos/paths'
-import type { Category } from '../videos/types'
-import { type OwnVideo, updateVideo, type Visibility } from './api'
+import type { Category, OwnVideo, Visibility } from '../videos/types'
+import { VISIBILITY_LABELS } from '../videos/visibility'
+import { updateVideo } from './api'
 import { formatLimits } from './format'
 import styles from './UploadDialog.module.css'
 import { type Transfer, useUpload } from './useUpload'
@@ -20,11 +22,15 @@ const DESCRIPTION_MAX = 5000
 const VISIBILITY: { value: Visibility; label: string; hint: string }[] = [
   {
     value: 'private',
-    label: 'Private',
+    label: VISIBILITY_LABELS.private,
     hint: 'Only you and people you choose can watch your video',
   },
-  { value: 'unlisted', label: 'Unlisted', hint: 'Anyone with the video link can watch your video' },
-  { value: 'public', label: 'Public', hint: 'Everyone can watch your video' },
+  {
+    value: 'unlisted',
+    label: VISIBILITY_LABELS.unlisted,
+    hint: 'Anyone with the video link can watch your video',
+  },
+  { value: 'public', label: VISIBILITY_LABELS.public, hint: 'Everyone can watch your video' },
 ]
 
 /** YouTube Studio's "Upload videos" modal. Mounted while open; closing unmounts it. */
@@ -150,8 +156,10 @@ function Details({
   const [description, setDescription] = useState(video.description)
   const [visibility, setVisibility] = useState<Visibility>(video.visibility)
   const [category, setCategory] = useState<Category>(video.category)
+  const queryClient = useQueryClient()
   const save = useMutation({
     mutationFn: () => updateVideo(video.id, { title, description, visibility, category }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: videoKeys.mine }),
   })
   const categoryId = useId()
   const link = `${window.location.origin}${watchUrl(video.id)}`

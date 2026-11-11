@@ -1,6 +1,6 @@
 // Videos API. Requests go through openapi-fetch with types from schema.d.ts (src/api/client.ts).
 import { api, unwrap } from '../api/client'
-import type { Category, Page, Rating, Video, VideoSummary } from './types'
+import type { Category, OwnVideo, Page, Rating, Video, VideoSummary } from './types'
 
 const video = (id: string) => ({ path: { public_id: id } })
 
@@ -10,6 +10,11 @@ export function listVideos(
   cursor: string | null,
 ): Promise<Page<VideoSummary>> {
   return unwrap(api.GET('/api/videos', { params: { query: { category, cursor } } }))
+}
+
+/** Studio: all the signed-in user's videos, newest first. Throws ApiError 401 for a guest. */
+export function listMyVideos(cursor: string | null): Promise<Page<OwnVideo>> {
+  return unwrap(api.GET('/api/me/videos', { params: { query: { cursor } } }))
 }
 
 /** Categories that have public videos, in YouTube's order. */
