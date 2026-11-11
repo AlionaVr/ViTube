@@ -213,6 +213,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/me/videos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Your videos, newest first: drafts, processing, failed and private ones too */
+        get: operations["list_my_videos_api_me_videos_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/search": {
         parameters: {
             query?: never;
@@ -489,6 +506,13 @@ export interface components {
         Page_SearchResult_: {
             /** Items */
             items: components["schemas"]["SearchResult"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
+        /** Page[VideoOut] */
+        Page_VideoOut_: {
+            /** Items */
+            items: components["schemas"]["VideoOut"][];
             /** Next Cursor */
             next_cursor: string | null;
         };
@@ -1153,6 +1177,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Category"][];
+                };
+            };
+        };
+    };
+    list_my_videos_api_me_videos_get: {
+        parameters: {
+            query?: {
+                /** @description next_cursor of the last page */
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_VideoOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

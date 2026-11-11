@@ -16,7 +16,7 @@ from app.modules.comments.router import router as comments_router
 from app.modules.reactions.router import router as reactions_router
 from app.modules.search.router import router as search_router
 from app.modules.videos.internal import router as internal_router
-from app.modules.videos.router import categories_router
+from app.modules.videos.router import categories_router, me_router
 from app.modules.videos.router import router as videos_router
 from app.modules.views.router import router as views_router
 
@@ -50,6 +50,7 @@ register_error_handlers(app)
 app.include_router(auth_router)
 app.include_router(videos_router)
 app.include_router(categories_router)
+app.include_router(me_router)
 app.include_router(search_router)
 app.include_router(reactions_router)
 app.include_router(comments_router)

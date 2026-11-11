@@ -1,4 +1,5 @@
-"""/api/videos: the feed, drafts, metadata, the file upload, the watch page data and sharing."""
+"""/api/videos: the feed, drafts, metadata, the file upload, the watch page data and sharing.
+/api/me/videos: the owner's list for Studio."""
 
 from typing import Annotated
 
@@ -27,6 +28,7 @@ from app.modules.videos.schemas import (
 
 router = APIRouter(prefix="/api/videos", tags=["videos"])
 categories_router = APIRouter(prefix="/api/categories", tags=["videos"])
+me_router = APIRouter(prefix="/api/me", tags=["videos"])
 
 # The body is the file itself, any Content-Type (ADR 0006).
 FILE_BODY = {
@@ -55,6 +57,15 @@ async def list_feed(
 )
 async def list_categories(db: DbSession) -> list[Category]:
     return await service.list_categories(db)
+
+
+@me_router.get(
+    "/videos",
+    response_model=Page[VideoOut],
+    summary="Your videos, newest first: drafts, processing, failed and private ones too",
+)
+async def list_my_videos(user: CurrentUser, db: DbSession, cursor: Cursor = None) -> Page[VideoOut]:
+    return await service.list_mine(db, user, cursor)
 
 
 @router.post(

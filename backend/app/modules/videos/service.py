@@ -57,6 +57,7 @@ UPLOAD_DEADLINE_SEC = 2 * 3600
 PROCESS_TASK = "videos.process"  # by name: the api doesn't import worker code
 FEED_PAGE_SIZE = 24  # full rows in a grid of 2, 3, 4 or 6 columns
 UP_NEXT_PAGE_SIZE = 20
+MY_VIDEOS_PAGE_SIZE = 30  # YouTube Studio's default rows per page
 
 
 def upload_limits() -> UploadLimits:
@@ -99,6 +100,14 @@ async def list_feed(
     return Page(
         items=[VideoSummary.of(video, owner) for video, owner in page], next_cursor=next_cursor
     )
+
+
+async def list_mine(db: AsyncSession, user: User, cursor: str | None) -> Page[VideoOut]:
+    """Studio: the user's videos, drafts and failed ones too, newest first."""
+    before = decode_cursor(cursor, tuple[UUID])[0] if cursor else None
+    rows = await videos.list_owned(db, user.id, before=before, limit=MY_VIDEOS_PAGE_SIZE + 1)
+    page, next_cursor = split_page(rows, MY_VIDEOS_PAGE_SIZE, lambda row: (row[0].id,))
+    return Page(items=[VideoOut.of(video, owner) for video, owner in page], next_cursor=next_cursor)
 
 
 async def list_up_next(

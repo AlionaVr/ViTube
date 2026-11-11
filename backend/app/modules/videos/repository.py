@@ -80,6 +80,13 @@ async def list_newest(
     return await _newest(db, query, before, limit)
 
 
+async def list_owned(
+    db: AsyncSession, owner_id: UUID, *, before: UUID | None, limit: int
+) -> Sequence[VideoRow]:
+    """All of the owner's videos, whatever their status or visibility."""
+    return await _newest(db, _WITH_OWNER.where(Video.owner_id == owner_id), before, limit)
+
+
 async def list_up_next(
     db: AsyncSession, video: Video, *, same_channel: bool, before: UUID | None, limit: int
 ) -> Sequence[VideoRow]:
