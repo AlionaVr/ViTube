@@ -658,6 +658,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/comments/{comment_id}/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Report a comment to moderators
+         * @description One open report per user and comment: reporting it again changes nothing.
+         */
+        post: operations["report_comment_api_comments__comment_id__report_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/moderation/reports": {
         parameters: {
             query?: never;
@@ -665,7 +685,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Open reports by video, oldest first */
+        /** Open reports by video or comment, oldest first */
         get: operations["list_reports_api_moderation_reports_get"];
         put?: never;
         post?: never;
@@ -740,6 +760,43 @@ export interface paths {
         put?: never;
         /** Close a video's reports: nothing wrong with it */
         post: operations["dismiss_video_api_moderation_videos__public_id__dismiss_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/moderation/comments/{comment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a comment and close its reports
+         * @description Deleting a thread's first comment deletes its replies too.
+         */
+        delete: operations["delete_comment_api_moderation_comments__comment_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/moderation/comments/{comment_id}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Close a comment's reports: nothing wrong with it */
+        post: operations["dismiss_comment_api_moderation_comments__comment_id__dismiss_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -893,6 +950,30 @@ export interface components {
              * @description The playlist's video to put it before; null: at the end
              */
             before: string | null;
+        };
+        /**
+         * ModeratedComment
+         * @description A comment as a moderator sees it, with the video it is on.
+         */
+        ModeratedComment: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Text */
+            text: string;
+            author: components["schemas"]["ChannelSummary"];
+            /**
+             * Published At
+             * Format: date-time
+             */
+            published_at: string;
+            /** Is Reply */
+            is_reply: boolean;
+            /** Is Deleted */
+            is_deleted: boolean;
+            video: components["schemas"]["ModeratedVideo"];
         };
         /**
          * ModeratedVideo
@@ -1135,10 +1216,13 @@ export interface components {
         };
         /**
          * ReportCase
-         * @description The open reports of one video.
+         * @description The open reports of one video or one comment.
          */
         ReportCase: {
-            video: components["schemas"]["ModeratedVideo"];
+            /** @description The reported video; null for a comment */
+            video: components["schemas"]["ModeratedVideo"] | null;
+            /** @description The reported comment; null for a video */
+            comment: components["schemas"]["ModeratedComment"] | null;
             /** Report Count */
             report_count: number;
             /** Reasons */
@@ -2808,6 +2892,39 @@ export interface operations {
             };
         };
     };
+    report_comment_api_comments__comment_id__report_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_reports_api_moderation_reports_get: {
         parameters: {
             query?: {
@@ -2943,6 +3060,64 @@ export interface operations {
             path: {
                 /** @description Public video id */
                 public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_comment_api_moderation_comments__comment_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dismiss_comment_api_moderation_comments__comment_id__dismiss_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comment_id: string;
             };
             cookie?: never;
         };

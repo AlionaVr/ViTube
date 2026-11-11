@@ -1,7 +1,9 @@
 from datetime import datetime
+from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from app.modules.comments.models import Comment
 from app.modules.reports.models import ReportReason
 from app.modules.reports.repository import OpenCase
 from app.modules.users.models import User
@@ -39,19 +41,51 @@ class ModeratedVideo(BaseModel):
         )
 
 
-class ReportCase(BaseModel):
-    """The open reports of one video."""
+class ModeratedComment(BaseModel):
+    """A comment as a moderator sees it, with the video it is on."""
 
+    id: UUID
+    text: str
+    author: ChannelSummary
+    published_at: datetime
+    is_reply: bool
+    is_deleted: bool
     video: ModeratedVideo
+
+    @classmethod
+    def of(cls, comment: Comment, author: User, video: ModeratedVideo) -> "ModeratedComment":
+        return cls(
+            id=comment.id,
+            text=comment.text,
+            author=ChannelSummary.of(author),
+            published_at=comment.created_at,
+            is_reply=comment.parent_id is not None,
+            is_deleted=comment.is_deleted,
+            video=video,
+        )
+
+
+class ReportCase(BaseModel):
+    """The open reports of one video or one comment."""
+
+    video: ModeratedVideo | None = Field(description="The reported video; null for a comment")
+    comment: ModeratedComment | None = Field(description="The reported comment; null for a video")
     report_count: int
     reasons: list[ReportReason]
     notes: list[str] = Field(description="The newest report texts")
     last_reported_at: datetime
 
     @classmethod
-    def of(cls, case: OpenCase, video: ModeratedVideo) -> "ReportCase":
+    def of(
+        cls,
+        case: OpenCase,
+        *,
+        video: ModeratedVideo | None = None,
+        comment: ModeratedComment | None = None,
+    ) -> "ReportCase":
         return cls(
             video=video,
+            comment=comment,
             report_count=case.report_count,
             reasons=case.reasons,
             notes=case.notes,

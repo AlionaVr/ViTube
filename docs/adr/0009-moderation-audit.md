@@ -20,7 +20,10 @@
   partial indexes, which keep their predicate (hidden videos are few).
 - A hidden video is frozen for everyone, its owner and moderators too: no comments, ratings, views or reports
   until it is restored. A restore doesn't reopen closed reports.
-- Moderators don't act on their own videos: another moderator decides.
+- Moderators don't act on their own videos or comments: another moderator decides.
+- Deleting a comment is soft: the row stays as evidence, lists and counters leave it out, and a thread's first comment
+  takes its replies along. Everyone who writes to a thread (a reply, a delete) locks its first comment first, so a
+  reply racing a delete either goes with the thread or is refused, and counters stay exact.
 - An action is one transaction: lock the target, change it, close its open reports, write the audit entry. Either
   all of it happens or none of it. A repeated action that changes nothing writes no entry.
 - `audit_log` records every moderator and admin action: who, what, target, when, details (jsonb). It is

@@ -3,7 +3,17 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer, Text, func
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    Text,
+    false,
+    func,
+)
 from sqlalchemy import text as sql  # the model has a `text` column
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -53,4 +63,7 @@ class Comment(Base):
     # Updated in place (x = x + n) by ratings and replies.
     like_count: Mapped[int] = mapped_column(Integer, server_default="0")
     reply_count: Mapped[int] = mapped_column(Integer, server_default="0")
+    # Deleted by a moderator (ADR 0009): gone from every list, the row stays as evidence. Deleting
+    # a thread's root deletes its replies too. Counters count only the comments not deleted.
+    is_deleted: Mapped[bool] = mapped_column(Boolean, server_default=false())
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

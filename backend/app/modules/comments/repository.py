@@ -23,7 +23,9 @@ async def list_newest(
     db: AsyncSession, video_id: UUID, *, before: UUID | None, limit: int
 ) -> Sequence[CommentRow]:
     """Top-level comments, newest first, after the cursor."""
-    query = _WITH_AUTHOR.where(Comment.video_id == video_id, Comment.parent_id.is_(None))
+    query = _WITH_AUTHOR.where(
+        Comment.video_id == video_id, Comment.parent_id.is_(None), ~Comment.is_deleted
+    )
     if before is not None:
         query = query.where(Comment.id < before)
     # parent_id is NULL in every row here, but keep it: it makes (video_id, parent_id, id) the
@@ -37,7 +39,9 @@ async def list_top(
     db: AsyncSession, video_id: UUID, *, after: tuple[int, UUID] | None, limit: int
 ) -> Sequence[CommentRow]:
     """Top-level comments, most liked first; newer first among equals."""
-    query = _WITH_AUTHOR.where(Comment.video_id == video_id, Comment.parent_id.is_(None))
+    query = _WITH_AUTHOR.where(
+        Comment.video_id == video_id, Comment.parent_id.is_(None), ~Comment.is_deleted
+    )
     if after is not None:
         query = query.where(tuple_(Comment.like_count, Comment.id) < tuple_(*after))
     order = (Comment.like_count.desc(), Comment.id.desc())
@@ -48,7 +52,7 @@ async def list_replies(
     db: AsyncSession, parent_id: UUID, *, after: UUID | None, limit: int
 ) -> Sequence[CommentRow]:
     """A thread's replies, oldest first, after the cursor."""
-    query = _WITH_AUTHOR.where(Comment.parent_id == parent_id)
+    query = _WITH_AUTHOR.where(Comment.parent_id == parent_id, ~Comment.is_deleted)
     if after is not None:
         query = query.where(Comment.id > after)
     return (await db.execute(query.order_by(Comment.id).limit(limit))).all()
@@ -65,11 +69,18 @@ async def insert_comment(
     return (await db.execute(statement)).scalar_one()
 
 
-async def add_reply(db: AsyncSession, root_id: UUID) -> None:
-    """reply_count + 1 in the DB itself, so parallel replies don't overwrite each other."""
-    await db.execute(
-        update(Comment).where(Comment.id == root_id).values(reply_count=Comment.reply_count + 1)
+async def add_reply(db: AsyncSession, root_id: UUID) -> bool:
+    """reply_count + 1 in the DB itself, so parallel replies don't overwrite each other.
+
+    False if the root is deleted, also if a moderator deleted it while this waited for its lock.
+    """
+    statement = (
+        update(Comment)
+        .where(Comment.id == root_id, ~Comment.is_deleted)
+        .values(reply_count=Comment.reply_count + 1)
+        .returning(Comment.id)
     )
+    return await db.scalar(statement) is not None
 
 
 async def add_comment(db: AsyncSession, video_id: UUID) -> None:

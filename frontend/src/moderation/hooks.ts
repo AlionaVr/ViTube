@@ -1,7 +1,10 @@
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
+import { commentKeys } from '../comments/hooks'
 import { videoKeys } from '../videos/hooks'
 import {
+  deleteComment,
+  dismissComment,
   dismissVideo,
   hideVideo,
   listHidden,
@@ -61,4 +64,26 @@ export function useRestoreVideo() {
 
 export function useDismissVideo() {
   return useVideoAction(({ id }: { id: string }) => dismissVideo(id))
+}
+
+/** A moderator action on a comment; the moderation lists and the video's comments load again. */
+function useCommentAction(action: (id: string) => Promise<void>) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id }: { id: string; videoId: string }) => action(id),
+    onSuccess: (_data, { videoId }) =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: moderationKeys.all }),
+        queryClient.invalidateQueries({ queryKey: commentKeys.all(videoId) }),
+        queryClient.invalidateQueries({ queryKey: videoKeys.detail(videoId) }),
+      ]),
+  })
+}
+
+export function useDeleteComment() {
+  return useCommentAction(deleteComment)
+}
+
+export function useDismissComment() {
+  return useCommentAction(dismissComment)
 }

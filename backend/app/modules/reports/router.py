@@ -1,4 +1,6 @@
-"""Reports: a signed-in user flags a video for moderators (ADR 0009)."""
+"""Reports: a signed-in user flags a video or a comment for moderators (ADR 0009)."""
+
+from uuid import UUID
 
 from fastapi import APIRouter, status
 
@@ -22,3 +24,15 @@ async def report_video(
     public_id: PublicId, body: ReportIn, user: CurrentUser, db: DbSession, redis: RedisClient
 ) -> None:
     await service.report_video(db, redis, user, public_id, body)
+
+
+@router.post(
+    "/comments/{comment_id}/report",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Report a comment to moderators",
+    description="One open report per user and comment: reporting it again changes nothing.",
+)
+async def report_comment(
+    comment_id: UUID, body: ReportIn, user: CurrentUser, db: DbSession, redis: RedisClient
+) -> None:
+    await service.report_comment(db, redis, user, comment_id, body)

@@ -56,14 +56,14 @@ async def add_comment(db: AsyncSession, user: User, public_id: str, data: Commen
     root_id = None
     if data.parent_id is not None:
         parent = await comments.get(db, data.parent_id)
-        if parent is None or parent.video_id != video.id:
+        if parent is None or parent.video_id != video.id or parent.is_deleted:
             raise NotFound("Comment not found")
         root_id = parent.parent_id or parent.id  # one level: replies go to the thread root
     # Locks first, in one order for all: the thread root, then the video. The insert comes last,
     # under them: posts to one list take ids in commit order, so a reader paging by id never
     # passes an id whose comment commits later.
-    if root_id is not None:
-        await comments.add_reply(db, root_id)
+    if root_id is not None and not await comments.add_reply(db, root_id):
+        raise NotFound("Comment not found")  # deleted meanwhile: nothing written yet
     await comments.add_comment(db, video.id)
     comment = await comments.insert_comment(
         db, video_id=video.id, author_id=user.id, parent_id=root_id, text=data.text
@@ -75,9 +75,12 @@ async def add_comment(db: AsyncSession, user: User, public_id: str, data: Commen
 async def get_readable(
     db: AsyncSession, user: User | None, comment_id: UUID
 ) -> tuple[Comment, Video]:
-    """The comment and its video, or NotFound if either is missing or hidden from the viewer."""
+    """The comment and its video, or NotFound if either is missing, deleted or hidden from the
+    viewer."""
     comment = await comments.get(db, comment_id)
-    video = await videos.get_by_id(db, comment.video_id) if comment else None
+    video = (
+        await videos.get_by_id(db, comment.video_id) if comment and not comment.is_deleted else None
+    )
     if comment is None or video is None or not await is_ready(db, user, video):
         raise NotFound("Comment not found")
     return comment, video

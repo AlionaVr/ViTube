@@ -2,7 +2,13 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 
-import type { HiddenPage, ModeratedVideo, ReportCase, ReportPage } from '../../moderation/api'
+import type {
+  HiddenPage,
+  ModeratedComment,
+  ModeratedVideo,
+  ReportCase,
+  ReportPage,
+} from '../../moderation/api'
 import { ANNA, json, mockApi } from '../../test/api'
 import { renderApp } from '../../test/render'
 
@@ -26,11 +32,31 @@ function moderated(id: string, changes: Partial<ModeratedVideo> = {}): Moderated
 function reportCase(id: string, changes: Partial<ReportCase> = {}): ReportCase {
   return {
     video: moderated(id),
+    comment: null,
     report_count: 2,
     reasons: ['harassment', 'spam'],
     notes: ['Mocks a classmate'],
     last_reported_at: '2026-11-11T12:00:00Z',
     ...changes,
+  }
+}
+
+function commentCase(id: string, changes: Partial<ModeratedComment> = {}): ReportCase {
+  return {
+    ...reportCase('vvvvvvvvvvv'),
+    video: null,
+    comment: {
+      id,
+      text: 'Buy followers at example.com',
+      author: { handle: 'user-spammer1', name: 'user-spammer1', avatar_url: null },
+      published_at: '2026-11-11T10:00:00Z',
+      is_reply: false,
+      is_deleted: false,
+      video: moderated('vvvvvvvvvvv'),
+      ...changes,
+    },
+    reasons: ['spam'],
+    notes: [],
   }
 }
 
@@ -68,7 +94,7 @@ describe('moderation page', () => {
     })
     renderApp('/moderation')
 
-    const list = await screen.findByRole('list', { name: 'Reported videos' })
+    const list = await screen.findByRole('list', { name: 'Reports' })
     const [first, second] = Array.from(list.children) as HTMLElement[]
     expect(within(first).getByRole('link', { name: 'Video aaaaaaaaaaa' })).toHaveAttribute(
       'href',
@@ -209,5 +235,65 @@ describe('moderation page', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Another moderator decides about your own video',
     )
+  })
+
+  it('shows a reported comment with its video and deletes it after asking', async () => {
+    let queue = [commentCase('0193a5c2-0000-7000-8000-000000000001')]
+    const fetch = mockApi({
+      'GET /api/auth/me': () => json(200, MODERATOR),
+      'GET /api/moderation/reports': () => json(200, page(queue)),
+      'DELETE /api/moderation/comments/0193a5c2-0000-7000-8000-000000000001': () => {
+        queue = []
+        return noContent()
+      },
+    })
+    renderApp('/moderation')
+
+    expect(await screen.findByText('Buy followers at example.com')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '@user-spammer1' })).toHaveAttribute(
+      'href',
+      '/@user-spammer1',
+    )
+    expect(screen.getByText(/Comment on/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Delete comment by @user-spammer1' }))
+    const dialog = within(screen.getByRole('dialog', { name: 'Delete comment' }))
+    expect(dialog.getByText(/with its replies/)).toBeInTheDocument()
+    await userEvent.click(dialog.getByRole('button', { name: 'Delete' }))
+
+    expect(await screen.findByText('No open reports')).toBeInTheDocument()
+    expect(fetch.mock.calls.some(([request]) => request.method === 'DELETE')).toBe(true)
+  })
+
+  it('dismisses the reports of a comment', async () => {
+    let queue = [commentCase('0193a5c2-0000-7000-8000-000000000001', { is_reply: true })]
+    mockApi({
+      'GET /api/auth/me': () => json(200, MODERATOR),
+      'GET /api/moderation/reports': () => json(200, page(queue)),
+      'POST /api/moderation/comments/0193a5c2-0000-7000-8000-000000000001/dismiss': () => {
+        queue = []
+        return noContent()
+      },
+    })
+    renderApp('/moderation')
+
+    expect(await screen.findByText(/Reply on/)).toBeInTheDocument()
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Dismiss reports of comment by @user-spammer1' }),
+    )
+
+    expect(await screen.findByText('No open reports')).toBeInTheDocument()
+  })
+
+  it("offers no actions on the moderator's own comment", async () => {
+    const author = { handle: MODERATOR.handle, name: MODERATOR.handle, avatar_url: null }
+    mockApi({
+      'GET /api/auth/me': () => json(200, MODERATOR),
+      'GET /api/moderation/reports': () =>
+        json(200, page([commentCase('0193a5c2-0000-7000-8000-000000000001', { author })])),
+    })
+    renderApp('/moderation')
+
+    expect(await screen.findByText('Your comment: another moderator decides')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Delete|Dismiss/ })).not.toBeInTheDocument()
   })
 })

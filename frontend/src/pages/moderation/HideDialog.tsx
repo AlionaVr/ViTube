@@ -1,18 +1,24 @@
 import { useState } from 'react'
 
 import Dialog from '../../components/Dialog'
-import type { ReportCase, ReportReason } from '../../moderation/api'
+import type { ModeratedVideo, ReportReason } from '../../moderation/api'
 import { useHideVideo } from '../../moderation/hooks'
 import { REASON_LABELS, REASONS } from '../../moderation/reasons'
 import buttons from '../../styles/buttons.module.css'
 import styles from './ModerationPage.module.css'
+
+export interface HideTarget {
+  video: ModeratedVideo
+  /** What viewers reported: the first one is offered first. */
+  reasons: ReportReason[]
+}
 
 /** Asks which rule the video breaks, then hides it. */
 export default function HideDialog({
   target,
   onClose,
 }: {
-  target: ReportCase | null
+  target: HideTarget | null
   onClose: () => void
 }) {
   return (
@@ -23,7 +29,7 @@ export default function HideDialog({
   )
 }
 
-function HideForm({ target, onDone }: { target: ReportCase; onDone: () => void }) {
+function HideForm({ target, onDone }: { target: HideTarget; onDone: () => void }) {
   const [reason, setReason] = useState<ReportReason>(target.reasons[0] ?? REASONS[0])
   const hide = useHideVideo()
 

@@ -2101,12 +2101,59 @@
         }
       }
     },
+    "/api/comments/{comment_id}/report": {
+      "post": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Report a comment to moderators",
+        "description": "One open report per user and comment: reporting it again changes nothing.",
+        "operationId": "report_comment_api_comments__comment_id__report_post",
+        "parameters": [
+          {
+            "name": "comment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Comment Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/moderation/reports": {
       "get": {
         "tags": [
           "moderation"
         ],
-        "summary": "Open reports by video, oldest first",
+        "summary": "Open reports by video or comment, oldest first",
         "operationId": "list_reports_api_moderation_reports_get",
         "parameters": [
           {
@@ -2311,6 +2358,79 @@
               "title": "Public Id"
             },
             "description": "Public video id"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/moderation/comments/{comment_id}": {
+      "delete": {
+        "tags": [
+          "moderation"
+        ],
+        "summary": "Delete a comment and close its reports",
+        "description": "Deleting a thread's first comment deletes its replies too.",
+        "operationId": "delete_comment_api_moderation_comments__comment_id__delete",
+        "parameters": [
+          {
+            "name": "comment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Comment Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/moderation/comments/{comment_id}/dismiss": {
+      "post": {
+        "tags": [
+          "moderation"
+        ],
+        "summary": "Close a comment's reports: nothing wrong with it",
+        "operationId": "dismiss_comment_api_moderation_comments__comment_id__dismiss_post",
+        "parameters": [
+          {
+            "name": "comment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Comment Id"
+            }
           }
         ],
         "responses": {
@@ -2635,6 +2755,50 @@
           "before"
         ],
         "title": "ItemMove"
+      },
+      "ModeratedComment": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "author": {
+            "$ref": "#/components/schemas/ChannelSummary"
+          },
+          "published_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Published At"
+          },
+          "is_reply": {
+            "type": "boolean",
+            "title": "Is Reply"
+          },
+          "is_deleted": {
+            "type": "boolean",
+            "title": "Is Deleted"
+          },
+          "video": {
+            "$ref": "#/components/schemas/ModeratedVideo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "text",
+          "author",
+          "published_at",
+          "is_reply",
+          "is_deleted",
+          "video"
+        ],
+        "title": "ModeratedComment",
+        "description": "A comment as a moderator sees it, with the video it is on."
       },
       "ModeratedVideo": {
         "properties": {
@@ -3292,7 +3456,26 @@
       "ReportCase": {
         "properties": {
           "video": {
-            "$ref": "#/components/schemas/ModeratedVideo"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModeratedVideo"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The reported video; null for a comment"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModeratedComment"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The reported comment; null for a video"
           },
           "report_count": {
             "type": "integer",
@@ -3322,13 +3505,14 @@
         "type": "object",
         "required": [
           "video",
+          "comment",
           "report_count",
           "reasons",
           "notes",
           "last_reported_at"
         ],
         "title": "ReportCase",
-        "description": "The open reports of one video."
+        "description": "The open reports of one video or one comment."
       },
       "ReportIn": {
         "properties": {

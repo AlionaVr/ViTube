@@ -42,3 +42,21 @@ export async function dismissVideo(id: string): Promise<void> {
     api.POST('/api/moderation/videos/{public_id}/dismiss', { params: { path: { public_id: id } } }),
   )
 }
+
+export type ModeratedComment = components['schemas']['ModeratedComment']
+
+/** Deletes the comment for everyone; a thread's first comment takes its replies along. */
+export async function deleteComment(id: string): Promise<void> {
+  await unwrap(
+    api.DELETE('/api/moderation/comments/{comment_id}', { params: { path: { comment_id: id } } }),
+  )
+}
+
+/** Closes the comment's open reports: nothing wrong with it. */
+export async function dismissComment(id: string): Promise<void> {
+  await unwrap(
+    api.POST('/api/moderation/comments/{comment_id}/dismiss', {
+      params: { path: { comment_id: id } },
+    }),
+  )
+}

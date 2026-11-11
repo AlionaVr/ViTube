@@ -5,19 +5,22 @@ import ErrorState from '../../components/ErrorState'
 import Spinner from '../../components/Spinner'
 import { useInfiniteScroll } from '../../hooks/useInfiniteScroll'
 import { formatTimeAgo } from '../../lib/format'
-import type { ReportCase } from '../../moderation/api'
-import { useDismissVideo, useReportQueue } from '../../moderation/hooks'
+import type { ModeratedComment, ModeratedVideo, ReportCase } from '../../moderation/api'
+import { useDismissComment, useDismissVideo, useReportQueue } from '../../moderation/hooks'
 import { REASON_LABELS } from '../../moderation/reasons'
 import buttons from '../../styles/buttons.module.css'
-import HideDialog from './HideDialog'
+import CommentCell from './CommentCell'
+import DeleteCommentDialog from './DeleteCommentDialog'
+import HideDialog, { type HideTarget } from './HideDialog'
 import styles from './ModerationPage.module.css'
 import { useModerator } from './useModerator'
-import VideoCell, { OwnVideoNote } from './VideoCell'
+import VideoCell, { OwnNote } from './VideoCell'
 
-/** Open reports, one row per video, oldest first: the order moderators work through them. */
+/** Open reports, one row per video or comment, oldest first: the order moderators work in. */
 export default function ReportQueue() {
   const queue = useReportQueue()
-  const [hiding, setHiding] = useState<ReportCase | null>(null)
+  const [hiding, setHiding] = useState<HideTarget | null>(null)
+  const [deleting, setDeleting] = useState<ModeratedComment | null>(null)
   const sentinel = useInfiniteScroll<HTMLDivElement>(
     () => queue.fetchNextPage(),
     queue.hasNextPage && !queue.isFetchingNextPage,
@@ -40,14 +43,26 @@ export default function ReportQueue() {
 
   return (
     <>
-      <ol className={styles.rows} aria-label="Reported videos">
-        {cases.map((reportCase) => (
-          <CaseRow
-            key={reportCase.video.id}
-            reportCase={reportCase}
-            onHide={() => setHiding(reportCase)}
-          />
-        ))}
+      <ol className={styles.rows} aria-label="Reports">
+        {cases.map((reportCase) =>
+          reportCase.video ? (
+            <VideoCaseRow
+              key={reportCase.video.id}
+              video={reportCase.video}
+              reportCase={reportCase}
+              onHide={setHiding}
+            />
+          ) : (
+            reportCase.comment && (
+              <CommentCaseRow
+                key={reportCase.comment.id}
+                comment={reportCase.comment}
+                reportCase={reportCase}
+                onDelete={setDeleting}
+              />
+            )
+          ),
+        )}
       </ol>
       <div ref={sentinel} />
       {queue.isFetchingNextPage && (
@@ -56,34 +71,29 @@ export default function ReportQueue() {
         </div>
       )}
       <HideDialog target={hiding} onClose={() => setHiding(null)} />
+      <DeleteCommentDialog target={deleting} onClose={() => setDeleting(null)} />
     </>
   )
 }
 
-function CaseRow({ reportCase, onHide }: { reportCase: ReportCase; onHide: () => void }) {
-  const { video, report_count: count } = reportCase
+function VideoCaseRow({
+  video,
+  reportCase,
+  onHide,
+}: {
+  video: ModeratedVideo
+  reportCase: ReportCase
+  onHide: (target: HideTarget) => void
+}) {
   const own = video.channel.handle === useModerator().handle
   const dismiss = useDismissVideo()
   return (
     <li className={`${styles.row} ${styles.withReports}`}>
       <VideoCell video={video} />
-      <div className={styles.reports}>
-        <p className={styles.count}>{count === 1 ? '1 report' : `${count} reports`}</p>
-        <ul className={styles.reasons}>
-          {reportCase.reasons.map((reason) => (
-            <li key={reason}>{REASON_LABELS[reason]}</li>
-          ))}
-        </ul>
-        {reportCase.notes.map((note, index) => (
-          <blockquote key={index} className={styles.note}>
-            {note}
-          </blockquote>
-        ))}
-        <p className={styles.meta}>Last report {formatTimeAgo(reportCase.last_reported_at)}</p>
-      </div>
+      <ReportsCell reportCase={reportCase} />
       <div className={styles.actions}>
         {own ? (
-          <OwnVideoNote />
+          <OwnNote what="video" />
         ) : (
           <>
             <button
@@ -91,7 +101,7 @@ function CaseRow({ reportCase, onHide }: { reportCase: ReportCase; onHide: () =>
               className={`${buttons.pill} ${buttons.tonal} ${buttons.small}`}
               aria-haspopup="dialog"
               aria-label={`Hide “${video.title}”`}
-              onClick={onHide}
+              onClick={() => onHide({ video, reasons: reportCase.reasons })}
             >
               Hide
             </button>
@@ -113,5 +123,77 @@ function CaseRow({ reportCase, onHide }: { reportCase: ReportCase; onHide: () =>
         )}
       </div>
     </li>
+  )
+}
+
+function CommentCaseRow({
+  comment,
+  reportCase,
+  onDelete,
+}: {
+  comment: ModeratedComment
+  reportCase: ReportCase
+  onDelete: (target: ModeratedComment) => void
+}) {
+  const own = comment.author.handle === useModerator().handle
+  const dismiss = useDismissComment()
+  const label = `comment by @${comment.author.handle}`
+  return (
+    <li className={`${styles.row} ${styles.withReports}`}>
+      <CommentCell comment={comment} />
+      <ReportsCell reportCase={reportCase} />
+      <div className={styles.actions}>
+        {own ? (
+          <OwnNote what="comment" />
+        ) : (
+          <>
+            <button
+              type="button"
+              className={`${buttons.pill} ${buttons.tonal} ${buttons.small}`}
+              aria-haspopup="dialog"
+              aria-label={`Delete ${label}`}
+              onClick={() => onDelete(comment)}
+            >
+              Delete
+            </button>
+            <button
+              type="button"
+              className={`${buttons.pill} ${buttons.text} ${buttons.small}`}
+              aria-label={`Dismiss reports of ${label}`}
+              disabled={dismiss.isPending}
+              onClick={() => dismiss.mutate({ id: comment.id, videoId: comment.video.id })}
+            >
+              Dismiss
+            </button>
+          </>
+        )}
+        {dismiss.isError && (
+          <p className={styles.error} role="alert">
+            {dismiss.error.message}
+          </p>
+        )}
+      </div>
+    </li>
+  )
+}
+
+/** How many reported it, why, and what they wrote. */
+function ReportsCell({ reportCase }: { reportCase: ReportCase }) {
+  const count = reportCase.report_count
+  return (
+    <div className={styles.reports}>
+      <p className={styles.count}>{count === 1 ? '1 report' : `${count} reports`}</p>
+      <ul className={styles.reasons}>
+        {reportCase.reasons.map((reason) => (
+          <li key={reason}>{REASON_LABELS[reason]}</li>
+        ))}
+      </ul>
+      {reportCase.notes.map((note, index) => (
+        <blockquote key={index} className={styles.note}>
+          {note}
+        </blockquote>
+      ))}
+      <p className={styles.meta}>Last report {formatTimeAgo(reportCase.last_reported_at)}</p>
+    </div>
   )
 }

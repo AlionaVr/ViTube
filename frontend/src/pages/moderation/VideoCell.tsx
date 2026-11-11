@@ -38,7 +38,7 @@ export default function VideoCell({ video }: { video: ModeratedVideo }) {
   )
 }
 
-/** Moderators don't decide about their own videos; the API refuses it too. */
-export function OwnVideoNote() {
-  return <p className={styles.ownNote}>Your video: another moderator decides</p>
+/** Moderators don't decide about their own videos or comments; the API refuses it too. */
+export function OwnNote({ what }: { what: 'video' | 'comment' }) {
+  return <p className={styles.ownNote}>Your {what}: another moderator decides</p>
 }

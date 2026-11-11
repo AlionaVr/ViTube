@@ -7,7 +7,7 @@ import { useHiddenVideos, useRestoreVideo } from '../../moderation/hooks'
 import buttons from '../../styles/buttons.module.css'
 import styles from './ModerationPage.module.css'
 import { useModerator } from './useModerator'
-import VideoCell, { OwnVideoNote } from './VideoCell'
+import VideoCell, { OwnNote } from './VideoCell'
 
 /** Videos moderators hid, newest first: where a hide is undone. */
 export default function HiddenVideos() {
@@ -61,7 +61,7 @@ function HiddenRow({ video }: { video: ModeratedVideo }) {
       <VideoCell video={video} />
       <div className={styles.actions}>
         {own ? (
-          <OwnVideoNote />
+          <OwnNote what="video" />
         ) : (
           <button
             type="button"

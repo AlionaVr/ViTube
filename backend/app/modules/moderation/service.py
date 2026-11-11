@@ -13,8 +13,10 @@ from app.core.pagination import Page, decode_cursor, split_page
 from app.modules.audit import repository as audit
 from app.modules.audit.models import AuditAction, TargetType
 from app.modules.audit.repository import Actor
+from app.modules.comments import repository as comments_repository
+from app.modules.comments.models import Comment
 from app.modules.moderation import repository as moderation
-from app.modules.moderation.schemas import ModeratedVideo, ReportCase
+from app.modules.moderation.schemas import ModeratedComment, ModeratedVideo, ReportCase
 from app.modules.reports import repository as reports
 from app.modules.reports.models import ReportReason, ReportStatus
 from app.modules.users.models import User
@@ -28,14 +30,24 @@ async def list_cases(db: AsyncSession, cursor: str | None) -> Page[ReportCase]:
     after = decode_cursor(cursor, tuple[UUID])[0] if cursor else None
     cases = await reports.list_open_cases(db, after=after, limit=QUEUE_PAGE_SIZE + 1)
     page, next_cursor = split_page(cases, QUEUE_PAGE_SIZE, lambda case: (case.first_id,))
-    video_ids = [case.video_id for case in page if case.video_id]
-    videos = await moderation.videos_with_owners(db, video_ids)
-    items = [
-        ReportCase.of(case, ModeratedVideo.of(*found))
-        for case in page
-        # A video deleted meanwhile took its reports with it.
-        if case.video_id and (found := videos.get(case.video_id))
-    ]
+    comments = await moderation.comments_with_authors(
+        db, [case.comment_id for case in page if case.comment_id]
+    )
+    video_ids = {case.video_id for case in page if case.video_id}
+    video_ids |= {comment.video_id for comment, _ in comments.values()}
+    videos = {
+        video_id: ModeratedVideo.of(video, owner)
+        for video_id, (video, owner) in (await moderation.videos_with_owners(db, video_ids)).items()
+    }
+    items = []
+    for case in page:
+        # A row deleted meanwhile took its reports with it: skip its case.
+        if case.video_id and (video := videos.get(case.video_id)):
+            items.append(ReportCase.of(case, video=video))
+        elif case.comment_id and (found := comments.get(case.comment_id)):
+            comment, author = found
+            moderated = ModeratedComment.of(comment, author, videos[comment.video_id])
+            items.append(ReportCase.of(case, comment=moderated))
     return Page(items=items, next_cursor=next_cursor)
 
 
@@ -97,6 +109,68 @@ async def dismiss_video(db: AsyncSession, moderator: User, public_id: str) -> No
             reports=closed,
         )
     await db.commit()
+
+
+async def delete_comment(db: AsyncSession, moderator: User, comment_id: UUID) -> None:
+    """Delete the comment, and the replies of a thread's root; close their open reports.
+
+    Locks the thread's root first, as a new reply does: a reply either lands before the delete
+    and is deleted with the thread, or waits and finds the root deleted. Counters drop by exactly
+    what was deleted here, so two deletes at once never take a comment off twice.
+    """
+    comment = await _comment(db, moderator, comment_id)
+    root_id = comment.parent_id or comment.id
+    await moderation.lock_thread(db, root_id)
+    deleted = []
+    if await moderation.mark_deleted(db, comment.id):
+        deleted.append(comment.id)
+        if comment.parent_id is None:
+            deleted += await moderation.mark_replies_deleted(db, comment.id)
+        else:
+            await moderation.remove_reply(db, comment.parent_id)
+        await moderation.remove_comments(db, comment.video_id, len(deleted))
+    closed = await reports.resolve_open_of_comments(
+        db, deleted or [comment.id], status=ReportStatus.ACTIONED, resolved_by=moderator.id
+    )
+    if deleted or closed:
+        await audit.record(
+            db,
+            Actor.of(moderator),
+            AuditAction.DELETE_COMMENT,
+            TargetType.COMMENT,
+            comment.id,
+            replies=max(len(deleted) - 1, 0),
+            reports=closed,
+        )
+    await db.commit()
+
+
+async def dismiss_comment(db: AsyncSession, moderator: User, comment_id: UUID) -> None:
+    """Close the comment's open reports: nothing wrong with it."""
+    comment = await _comment(db, moderator, comment_id)
+    await moderation.lock_thread(db, comment.parent_id or comment.id)  # same order as a delete
+    closed = await reports.resolve_open_of_comments(
+        db, [comment.id], status=ReportStatus.DISMISSED, resolved_by=moderator.id
+    )
+    if closed:
+        await audit.record(
+            db,
+            Actor.of(moderator),
+            AuditAction.DISMISS_COMMENT,
+            TargetType.COMMENT,
+            comment.id,
+            reports=closed,
+        )
+    await db.commit()
+
+
+async def _comment(db: AsyncSession, moderator: User, comment_id: UUID) -> Comment:
+    comment = await comments_repository.get(db, comment_id)
+    if comment is None:
+        raise NotFound("Comment not found")
+    if comment.author_id == moderator.id:
+        raise Forbidden("Another moderator decides about your own comment")
+    return comment
 
 
 async def _lock_video(db: AsyncSession, moderator: User, public_id: str) -> Video:

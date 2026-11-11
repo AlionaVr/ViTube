@@ -1,6 +1,7 @@
 """/api/moderation: the report queue and moderator actions (ADR 0009). Moderators and admins."""
 
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
 
@@ -18,7 +19,9 @@ Moderator = Annotated[User, Depends(require_role(Role.MODERATOR))]
 
 
 @router.get(
-    "/reports", response_model=Page[ReportCase], summary="Open reports by video, oldest first"
+    "/reports",
+    response_model=Page[ReportCase],
+    summary="Open reports by video or comment, oldest first",
 )
 async def list_reports(_: Moderator, db: DbSession, cursor: Cursor = None) -> Page[ReportCase]:
     return await service.list_cases(db, cursor)
@@ -61,3 +64,22 @@ async def restore_video(public_id: PublicId, moderator: Moderator, db: DbSession
 )
 async def dismiss_video(public_id: PublicId, moderator: Moderator, db: DbSession) -> None:
     await service.dismiss_video(db, moderator, public_id)
+
+
+@router.delete(
+    "/comments/{comment_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a comment and close its reports",
+    description="Deleting a thread's first comment deletes its replies too.",
+)
+async def delete_comment(comment_id: UUID, moderator: Moderator, db: DbSession) -> None:
+    await service.delete_comment(db, moderator, comment_id)
+
+
+@router.post(
+    "/comments/{comment_id}/dismiss",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Close a comment's reports: nothing wrong with it",
+)
+async def dismiss_comment(comment_id: UUID, moderator: Moderator, db: DbSession) -> None:
+    await service.dismiss_comment(db, moderator, comment_id)

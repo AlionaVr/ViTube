@@ -1,10 +1,11 @@
 """Report queries. No commits: the service decides when a transaction ends."""
 
+from collections.abc import Collection
 from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import func, select, update
+from sqlalchemy import ColumnElement, func, select, update
 from sqlalchemy.dialects.postgresql import aggregate_order_by, array_agg, insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -89,9 +90,22 @@ async def resolve_open_of_video(
     db: AsyncSession, video_id: UUID, *, status: ReportStatus, resolved_by: UUID
 ) -> int:
     """Close the video's open reports. Returns how many were closed."""
+    return await _resolve(db, Report.video_id == video_id, status, resolved_by)
+
+
+async def resolve_open_of_comments(
+    db: AsyncSession, comment_ids: Collection[UUID], *, status: ReportStatus, resolved_by: UUID
+) -> int:
+    """Close the open reports of these comments. Returns how many were closed."""
+    return await _resolve(db, Report.comment_id.in_(comment_ids), status, resolved_by)
+
+
+async def _resolve(
+    db: AsyncSession, target: ColumnElement[bool], status: ReportStatus, resolved_by: UUID
+) -> int:
     closed = await db.scalars(
         update(Report)
-        .where(Report.video_id == video_id, Report.status == ReportStatus.OPEN)
+        .where(target, Report.status == ReportStatus.OPEN)
         .values(status=status, resolved_by=resolved_by, resolved_at=func.now())
         .returning(Report.id)
     )
