@@ -38,6 +38,8 @@ SETUP = (
     f"ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO {APP_ROLE}",
     # Migration bookkeeping is not app data.
     f"REVOKE ALL ON alembic_version FROM {APP_ROLE}",
+    # The audit log is append-only (ADR 0009): even an injection can't rewrite or erase it.
+    f"REVOKE UPDATE, DELETE ON audit_log FROM {APP_ROLE}",
 )
 
 

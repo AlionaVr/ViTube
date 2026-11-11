@@ -2052,6 +2052,284 @@
         }
       }
     },
+    "/api/videos/{public_id}/report": {
+      "post": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Report a video to moderators",
+        "description": "One open report per user and video: reporting it again changes nothing.",
+        "operationId": "report_video_api_videos__public_id__report_post",
+        "parameters": [
+          {
+            "name": "public_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{11}$",
+              "description": "Public video id",
+              "title": "Public Id"
+            },
+            "description": "Public video id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/moderation/reports": {
+      "get": {
+        "tags": [
+          "moderation"
+        ],
+        "summary": "Open reports by video, oldest first",
+        "operationId": "list_reports_api_moderation_reports_get",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "next_cursor of the last page",
+              "title": "Cursor"
+            },
+            "description": "next_cursor of the last page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_ReportCase_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/moderation/videos/hidden": {
+      "get": {
+        "tags": [
+          "moderation"
+        ],
+        "summary": "Hidden videos, newest first",
+        "operationId": "list_hidden_api_moderation_videos_hidden_get",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "next_cursor of the last page",
+              "title": "Cursor"
+            },
+            "description": "next_cursor of the last page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_ModeratedVideo_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/moderation/videos/{public_id}/hide": {
+      "post": {
+        "tags": [
+          "moderation"
+        ],
+        "summary": "Hide a video and close its reports",
+        "description": "Only its owner and moderators can open it then; everyone else gets 404.",
+        "operationId": "hide_video_api_moderation_videos__public_id__hide_post",
+        "parameters": [
+          {
+            "name": "public_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{11}$",
+              "description": "Public video id",
+              "title": "Public Id"
+            },
+            "description": "Public video id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HideIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/moderation/videos/{public_id}/restore": {
+      "post": {
+        "tags": [
+          "moderation"
+        ],
+        "summary": "Show a hidden video again",
+        "operationId": "restore_video_api_moderation_videos__public_id__restore_post",
+        "parameters": [
+          {
+            "name": "public_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{11}$",
+              "description": "Public video id",
+              "title": "Public Id"
+            },
+            "description": "Public video id"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/moderation/videos/{public_id}/dismiss": {
+      "post": {
+        "tags": [
+          "moderation"
+        ],
+        "summary": "Close a video's reports: nothing wrong with it",
+        "operationId": "dismiss_video_api_moderation_videos__public_id__dismiss_post",
+        "parameters": [
+          {
+            "name": "public_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{11}$",
+              "description": "Public video id",
+              "title": "Public Id"
+            },
+            "description": "Public video id"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/health": {
       "get": {
         "tags": [
@@ -2323,6 +2601,19 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "HideIn": {
+        "properties": {
+          "reason": {
+            "$ref": "#/components/schemas/ReportReason",
+            "description": "The rule the video breaks"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "HideIn"
+      },
       "ItemMove": {
         "properties": {
           "before": {
@@ -2344,6 +2635,74 @@
           "before"
         ],
         "title": "ItemMove"
+      },
+      "ModeratedVideo": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Public id, as in /watch?v=<id>"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "thumbnail_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnail Url",
+            "description": "Set once the video is ready"
+          },
+          "duration_sec": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Sec"
+          },
+          "status": {
+            "$ref": "#/components/schemas/VideoStatus"
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/Visibility"
+          },
+          "is_hidden": {
+            "type": "boolean",
+            "title": "Is Hidden"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "channel": {
+            "$ref": "#/components/schemas/ChannelSummary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "thumbnail_url",
+          "duration_sec",
+          "status",
+          "visibility",
+          "is_hidden",
+          "created_at",
+          "channel"
+        ],
+        "title": "ModeratedVideo",
+        "description": "A video as a moderator sees it: in any state, hidden or not."
       },
       "MyPlaylist": {
         "properties": {
@@ -2475,6 +2834,34 @@
         ],
         "title": "Page[CommentOut]"
       },
+      "Page_ModeratedVideo_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ModeratedVideo"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "Page[ModeratedVideo]"
+      },
       "Page_MyPlaylist_": {
         "properties": {
           "items": {
@@ -2558,6 +2945,34 @@
           "next_cursor"
         ],
         "title": "Page[PlaylistOut]"
+      },
+      "Page_ReportCase_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReportCase"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "Page[ReportCase]"
       },
       "Page_SearchResult_": {
         "properties": {
@@ -2874,6 +3289,83 @@
         ],
         "title": "RatingOut"
       },
+      "ReportCase": {
+        "properties": {
+          "video": {
+            "$ref": "#/components/schemas/ModeratedVideo"
+          },
+          "report_count": {
+            "type": "integer",
+            "title": "Report Count"
+          },
+          "reasons": {
+            "items": {
+              "$ref": "#/components/schemas/ReportReason"
+            },
+            "type": "array",
+            "title": "Reasons"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Notes",
+            "description": "The newest report texts"
+          },
+          "last_reported_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Reported At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "video",
+          "report_count",
+          "reasons",
+          "notes",
+          "last_reported_at"
+        ],
+        "title": "ReportCase",
+        "description": "The open reports of one video."
+      },
+      "ReportIn": {
+        "properties": {
+          "reason": {
+            "$ref": "#/components/schemas/ReportReason"
+          },
+          "details": {
+            "type": "string",
+            "maxLength": 500,
+            "pattern": "^[^\\x00-\\x08\\x0b\\x0c\\x0e-\\x1f\\x7f]*$",
+            "title": "Details",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "ReportIn"
+      },
+      "ReportReason": {
+        "type": "string",
+        "enum": [
+          "sexual",
+          "violent",
+          "hateful",
+          "harassment",
+          "harmful",
+          "misinformation",
+          "child_abuse",
+          "terrorism",
+          "spam",
+          "legal"
+        ],
+        "title": "ReportReason",
+        "description": "YouTube's reasons, for videos and comments alike. Also why a moderator hid a video."
+      },
       "Role": {
         "type": "string",
         "enum": [
@@ -3159,6 +3651,11 @@
             ],
             "title": "Duration Sec"
           },
+          "is_hidden": {
+            "type": "boolean",
+            "title": "Is Hidden",
+            "description": "Hidden by a moderator: only its owner and moderators see it"
+          },
           "thumbnail_url": {
             "anyOf": [
               {
@@ -3217,6 +3714,7 @@
           "status",
           "error_message",
           "duration_sec",
+          "is_hidden",
           "thumbnail_url",
           "media_url",
           "view_count",
@@ -3276,6 +3774,11 @@
             ],
             "title": "Duration Sec"
           },
+          "is_hidden": {
+            "type": "boolean",
+            "title": "Is Hidden",
+            "description": "Hidden by a moderator: only its owner and moderators see it"
+          },
           "thumbnail_url": {
             "anyOf": [
               {
@@ -3331,6 +3834,7 @@
           "status",
           "error_message",
           "duration_sec",
+          "is_hidden",
           "thumbnail_url",
           "media_url",
           "view_count",

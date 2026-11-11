@@ -1,0 +1,273 @@
+/* Like YouTube Studio's content list: one row per video, columns read left to right. */
+.page {
+  container-type: inline-size;
+  max-width: 1284px;
+  padding: 0 24px 24px;
+}
+
+.title {
+  margin: 24px 0 8px;
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 32px;
+}
+
+/* Like a channel's tabs: the open one is underlined in the text color. */
+.tabs {
+  margin-bottom: 8px;
+  display: flex;
+  gap: 24px;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.tab {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  border-bottom: 2px solid transparent;
+  color: var(--color-text-secondary);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 22px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.tab:hover {
+  border-bottom-color: var(--color-text-secondary);
+}
+
+.tab.active {
+  border-bottom-color: var(--color-text);
+  color: var(--color-text);
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+}
+
+.loading {
+  padding: 48px 0;
+  display: grid;
+  place-items: center;
+}
+
+.rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--color-divider);
+}
+
+.row {
+  padding: 12px 8px;
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  grid-template-areas:
+    'thumb video'
+    'thumb actions';
+  gap: 8px 16px;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.withReports {
+  grid-template-areas:
+    'thumb video'
+    'thumb reports'
+    'thumb actions';
+}
+
+.row:hover {
+  background: var(--color-surface);
+}
+
+@container (min-width: 760px) {
+  .row {
+    grid-template-columns: 120px minmax(0, 1fr) auto;
+    grid-template-areas: 'thumb video actions';
+  }
+
+  .withReports {
+    grid-template-columns: 120px minmax(0, 3fr) minmax(0, 2fr) auto;
+    grid-template-areas: 'thumb video reports actions';
+  }
+}
+
+.thumb {
+  grid-area: thumb;
+  align-self: start;
+}
+
+.noThumb {
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  background: var(--color-placeholder);
+}
+
+.video {
+  grid-area: video;
+  min-width: 0;
+}
+
+.videoTitle {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  text-decoration: none;
+}
+
+.videoTitle:hover {
+  text-decoration: underline;
+}
+
+.meta {
+  display: block;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 18px;
+  text-decoration: none;
+}
+
+a.meta:hover {
+  color: var(--color-text);
+}
+
+.hiddenBadge {
+  margin-left: 8px;
+  padding: 0 4px;
+  border-radius: 2px;
+  background: var(--color-hover);
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.reports {
+  grid-area: reports;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.count {
+  margin: 0;
+  font-weight: 500;
+}
+
+.reasons {
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.note {
+  margin: 6px 0 0;
+  padding-left: 8px;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  border-left: 2px solid var(--color-divider);
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.reports .meta {
+  margin-top: 6px;
+}
+
+.actions {
+  grid-area: actions;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-content: flex-start;
+}
+
+/* Sized like the buttons it stands in for, so rows keep one rhythm. */
+.ownNote {
+  margin: 0;
+  max-width: 168px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.actions .error {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+/* Dialogs */
+
+.dialogTitle {
+  margin: 0 0 8px;
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 28px;
+}
+
+.dialogText {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+
+.reasonList {
+  margin: 16px 0 0;
+  padding: 0;
+  border: none;
+}
+
+.legend {
+  margin-bottom: 4px;
+  padding: 0;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.option {
+  padding: 6px 0;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-size: 14px;
+  line-height: 20px;
+  cursor: pointer;
+}
+
+.option input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  flex: none;
+  accent-color: var(--color-text);
+}
+
+.option input:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.error {
+  margin: 12px 0 0;
+  color: var(--color-error);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.dialogActions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

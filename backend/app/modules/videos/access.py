@@ -19,10 +19,11 @@ MEDIA_PATH = re.compile(
 
 
 async def can_view(db: AsyncSession, user: User | None, video: Video) -> bool:
-    """Owner and moderators: always. Others: ready videos only; private ones need a grant."""
+    """Owner and moderators: always, hidden videos too (to review them). Others: ready videos
+    not hidden by a moderator (ADR 0009); private ones need a grant."""
     if user is not None and (user.id == video.owner_id or user.role.at_least(Role.MODERATOR)):
         return True
-    if video.status is not VideoStatus.READY:
+    if video.status is not VideoStatus.READY or video.is_hidden:
         return False
     if video.visibility is not Visibility.PRIVATE:
         return True

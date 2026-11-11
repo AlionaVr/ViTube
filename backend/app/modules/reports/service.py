@@ -1,0 +1,28 @@
+"""Reporting rules. The service commits, like @Transactional."""
+
+from redis.asyncio import Redis
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.errors import DomainError
+from app.core.rate_limit import RateLimit
+from app.modules.reports import repository as reports
+from app.modules.reports.schemas import ReportIn
+from app.modules.users.models import User
+from app.modules.videos.interactions import get_ready
+
+# Counted before any check, per account: a script can't flood the queue.
+REPORTS_PER_USER = RateLimit("report", limit=20, window=60 * 60)
+
+
+async def report_video(
+    db: AsyncSession, redis: Redis, user: User, public_id: str, data: ReportIn
+) -> None:
+    """Report a video the user may watch. Reporting it again while open changes nothing."""
+    await REPORTS_PER_USER.hit(redis, str(user.id))
+    video = await get_ready(db, user, public_id)
+    if video.owner_id == user.id:
+        raise DomainError("You can't report your own video")
+    await reports.add(
+        db, reporter_id=user.id, video_id=video.id, reason=data.reason, details=data.details
+    )
+    await db.commit()

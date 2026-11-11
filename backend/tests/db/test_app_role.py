@@ -21,6 +21,8 @@ FORBIDDEN = {
     "run a shell command": "COPY users TO PROGRAM 'id'",
     "create a role": "CREATE ROLE intruder",
     "take a privileged role": "SET ROLE pg_execute_server_program",
+    "rewrite the audit log": "UPDATE audit_log SET details = '{}'",
+    "erase the audit log": "DELETE FROM audit_log",
 }
 
 

@@ -265,6 +265,7 @@ async def test_draft_is_created_private_and_waiting_for_its_file(client: AsyncCl
         "status": "uploading",
         "error_message": None,
         "duration_sec": None,
+        "is_hidden": False,
         "thumbnail_url": None,
         "media_url": None,
         "view_count": 0,

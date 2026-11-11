@@ -27,6 +27,7 @@ export function detail(n: number, overrides: Partial<Video> = {}): Video {
     category: 'film',
     status: 'ready',
     error_message: null,
+    is_hidden: false,
     media_url: `/media/videos/${n}/720p.mp4`,
     like_count: 120,
     comment_count: 1,

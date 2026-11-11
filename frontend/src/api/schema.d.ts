@@ -638,6 +638,114 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/videos/{public_id}/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Report a video to moderators
+         * @description One open report per user and video: reporting it again changes nothing.
+         */
+        post: operations["report_video_api_videos__public_id__report_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/moderation/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Open reports by video, oldest first */
+        get: operations["list_reports_api_moderation_reports_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/moderation/videos/hidden": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Hidden videos, newest first */
+        get: operations["list_hidden_api_moderation_videos_hidden_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/moderation/videos/{public_id}/hide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Hide a video and close its reports
+         * @description Only its owner and moderators can open it then; everyone else gets 404.
+         */
+        post: operations["hide_video_api_moderation_videos__public_id__hide_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/moderation/videos/{public_id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Show a hidden video again */
+        post: operations["restore_video_api_moderation_videos__public_id__restore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/moderation/videos/{public_id}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Close a video's reports: nothing wrong with it */
+        post: operations["dismiss_video_api_moderation_videos__public_id__dismiss_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -773,6 +881,11 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /** HideIn */
+        HideIn: {
+            /** @description The rule the video breaks */
+            reason: components["schemas"]["ReportReason"];
+        };
         /** ItemMove */
         ItemMove: {
             /**
@@ -780,6 +893,36 @@ export interface components {
              * @description The playlist's video to put it before; null: at the end
              */
             before: string | null;
+        };
+        /**
+         * ModeratedVideo
+         * @description A video as a moderator sees it: in any state, hidden or not.
+         */
+        ModeratedVideo: {
+            /**
+             * Id
+             * @description Public id, as in /watch?v=<id>
+             */
+            id: string;
+            /** Title */
+            title: string;
+            /**
+             * Thumbnail Url
+             * @description Set once the video is ready
+             */
+            thumbnail_url: string | null;
+            /** Duration Sec */
+            duration_sec: number | null;
+            status: components["schemas"]["VideoStatus"];
+            visibility: components["schemas"]["Visibility"];
+            /** Is Hidden */
+            is_hidden: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            channel: components["schemas"]["ChannelSummary"];
         };
         /** MyPlaylist */
         MyPlaylist: {
@@ -839,6 +982,13 @@ export interface components {
             /** Next Cursor */
             next_cursor: string | null;
         };
+        /** Page[ModeratedVideo] */
+        Page_ModeratedVideo_: {
+            /** Items */
+            items: components["schemas"]["ModeratedVideo"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
         /** Page[MyPlaylist] */
         Page_MyPlaylist_: {
             /** Items */
@@ -857,6 +1007,13 @@ export interface components {
         Page_PlaylistOut_: {
             /** Items */
             items: components["schemas"]["PlaylistOut"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
+        /** Page[ReportCase] */
+        Page_ReportCase_: {
+            /** Items */
+            items: components["schemas"]["ReportCase"][];
             /** Next Cursor */
             next_cursor: string | null;
         };
@@ -976,6 +1133,42 @@ export interface components {
             like_count: number;
             my_rating: components["schemas"]["Rating"];
         };
+        /**
+         * ReportCase
+         * @description The open reports of one video.
+         */
+        ReportCase: {
+            video: components["schemas"]["ModeratedVideo"];
+            /** Report Count */
+            report_count: number;
+            /** Reasons */
+            reasons: components["schemas"]["ReportReason"][];
+            /**
+             * Notes
+             * @description The newest report texts
+             */
+            notes: string[];
+            /**
+             * Last Reported At
+             * Format: date-time
+             */
+            last_reported_at: string;
+        };
+        /** ReportIn */
+        ReportIn: {
+            reason: components["schemas"]["ReportReason"];
+            /**
+             * Details
+             * @default
+             */
+            details: string;
+        };
+        /**
+         * ReportReason
+         * @description YouTube's reasons, for videos and comments alike. Also why a moderator hid a video.
+         * @enum {string}
+         */
+        ReportReason: "sexual" | "violent" | "hateful" | "harassment" | "harmful" | "misinformation" | "child_abuse" | "terrorism" | "spam" | "legal";
         /**
          * Role
          * @description Nested roles (ADR 0009): each one has all rights of the ones before it.
@@ -1110,6 +1303,11 @@ export interface components {
             /** Duration Sec */
             duration_sec: number | null;
             /**
+             * Is Hidden
+             * @description Hidden by a moderator: only its owner and moderators see it
+             */
+            is_hidden: boolean;
+            /**
              * Thumbnail Url
              * @description Set once the video is ready
              */
@@ -1154,6 +1352,11 @@ export interface components {
             error_message: string | null;
             /** Duration Sec */
             duration_sec: number | null;
+            /**
+             * Is Hidden
+             * @description Hidden by a moderator: only its owner and moderators see it
+             */
+            is_hidden: boolean;
             /**
              * Thumbnail Url
              * @description Set once the video is ready
@@ -2559,6 +2762,198 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["SavedOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    report_video_api_videos__public_id__report_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Public video id */
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_reports_api_moderation_reports_get: {
+        parameters: {
+            query?: {
+                /** @description next_cursor of the last page */
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_ReportCase_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_hidden_api_moderation_videos_hidden_get: {
+        parameters: {
+            query?: {
+                /** @description next_cursor of the last page */
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_ModeratedVideo_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    hide_video_api_moderation_videos__public_id__hide_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Public video id */
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HideIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    restore_video_api_moderation_videos__public_id__restore_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Public video id */
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dismiss_video_api_moderation_videos__public_id__dismiss_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Public video id */
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

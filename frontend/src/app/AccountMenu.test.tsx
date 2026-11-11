@@ -39,6 +39,25 @@ describe('header account area', () => {
     expect(screen.queryByRole('link', { name: 'Sign in' })).not.toBeInTheDocument()
   })
 
+  it('leads moderators to the moderation page', async () => {
+    mockApi({ 'GET /api/auth/me': () => json(200, { ...ANNA, role: 'moderator' }) })
+    const router = renderApp('/')
+    await openMenu()
+
+    await userEvent.click(screen.getByRole('link', { name: 'Moderation' }))
+
+    expect(router.state.location.pathname).toBe('/moderation')
+  })
+
+  it('shows no moderation link to other users', async () => {
+    signedIn()
+    renderApp('/')
+
+    await openMenu()
+
+    expect(screen.queryByRole('link', { name: 'Moderation' })).not.toBeInTheDocument()
+  })
+
   it('signs out', async () => {
     const fetch = signedIn()
     renderApp('/')

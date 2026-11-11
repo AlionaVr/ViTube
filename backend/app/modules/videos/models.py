@@ -6,6 +6,7 @@ from uuid import UUID
 
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     CheckConstraint,
     Computed,
     DateTime,
@@ -15,6 +16,7 @@ from sqlalchemy import (
     SmallInteger,
     String,
     Text,
+    false,
     func,
     text,
 )
@@ -142,6 +144,10 @@ class Video(Base):
     )
     processing_attempts: Mapped[int] = mapped_column(SmallInteger, server_default="0")
     error_message: Mapped[str | None] = mapped_column(Text)
+    # Hidden by a moderator (ADR 0009). Apart from `status`: the worker never writes it, so hiding
+    # survives processing, and restoring needs no memory of a previous status. Its index for the
+    # moderation page is in moderation.models.
+    is_hidden: Mapped[bool] = mapped_column(Boolean, server_default=false())
     # Whole seconds, rounded down; set by the worker.
     duration_sec: Mapped[int | None] = mapped_column(Integer)
     # Counters are updated in place (x = x + n) by the features that own them.

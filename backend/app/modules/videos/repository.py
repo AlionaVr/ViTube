@@ -45,6 +45,9 @@ TYPO_SIMILARITY = 0.5
 LISTED = (
     Video.visibility == literal(Visibility.PUBLIC, Video.visibility.type, literal_execute=True),
     Video.status == literal(VideoStatus.READY, Video.status.type, literal_execute=True),
+    # Hidden by a moderator (ADR 0009). Not in LISTED_SQL: hidden videos are few, so filtering
+    # them out on top of the indexes costs less than rebuilding them.
+    ~Video.is_hidden,
 )
 
 _WITH_OWNER = select(Video, User).join(User, User.id == Video.owner_id)

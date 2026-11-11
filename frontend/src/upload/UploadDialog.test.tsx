@@ -19,6 +19,7 @@ function video(changes: Partial<OwnVideo> = {}): OwnVideo {
     status: 'uploading',
     error_message: null,
     duration_sec: null,
+    is_hidden: false,
     thumbnail_url: null,
     media_url: null,
     view_count: 0,
