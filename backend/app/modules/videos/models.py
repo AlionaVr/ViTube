@@ -10,6 +10,7 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
+    Index,
     Integer,
     SmallInteger,
     String,
@@ -78,6 +79,12 @@ class Video(Base):
         CheckConstraint(
             "view_count >= 0 AND like_count >= 0 AND comment_count >= 0",
             name="counters_not_negative",
+        ),
+        # The home feed: listed videos (repository.LISTED), newest first.
+        Index(
+            "ix_videos_listed_id",
+            "id",
+            postgresql_where=text("visibility = 'public' AND status = 'ready'"),
         ),
     )
 

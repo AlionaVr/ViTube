@@ -1,22 +1,21 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { getVideo, listCategories, listRelated, listVideos, rateVideo } from './api'
+import { getVideo, listRelated, listVideos, rateVideo } from './api'
 import type { Rating, Video } from './types'
 
 export const videoKeys = {
-  feed: (category: string | null) => ['videos', 'feed', category] as const,
+  feed: ['videos', 'feed'] as const,
   detail: (id: string) => ['videos', 'detail', id] as const,
   details: ['videos', 'detail'] as const,
   related: (id: string) => ['videos', 'related', id] as const,
-  categories: ['videos', 'categories'] as const,
 }
 
 const firstPage = null as string | null
 
-export function useVideoFeed(category: string | null) {
+export function useVideoFeed() {
   return useInfiniteQuery({
-    queryKey: videoKeys.feed(category),
-    queryFn: ({ pageParam }) => listVideos({ category, cursor: pageParam }),
+    queryKey: videoKeys.feed,
+    queryFn: ({ pageParam }) => listVideos(pageParam),
     initialPageParam: firstPage,
     getNextPageParam: (page) => page.next_cursor,
   })
@@ -33,10 +32,6 @@ export function useRelatedVideos(id: string) {
     initialPageParam: firstPage,
     getNextPageParam: (page) => page.next_cursor,
   })
-}
-
-export function useCategories() {
-  return useQuery({ queryKey: videoKeys.categories, queryFn: listCategories, staleTime: Infinity })
 }
 
 /** The like count after the viewer changes their rating; the server's answer replaces it. */

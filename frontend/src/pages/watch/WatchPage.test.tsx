@@ -3,19 +3,12 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { ANNA, json, mockApi } from '../../test/api'
-import { listVideos } from '../../videos/api'
-import { resetMockServer } from '../../mocks/server'
+import { demoVideoId, resetMockServer } from '../../mocks/server'
 import { renderApp } from '../../test/render'
 import { setScreenWidth } from '../../test/screen'
 
-async function firstVideoId(title: string) {
-  const { items } = await listVideos({ category: null, cursor: null })
-  return items.find((video) => video.title === title)!.id
-}
-
 async function openWatch(title = 'Sintel – trailer') {
-  const id = await firstVideoId(title)
-  const router = renderApp(`/watch?v=${id}`)
+  const router = renderApp(`/watch?v=${demoVideoId(title)}`)
   await screen.findByRole('heading', { level: 1, name: title })
   return router
 }

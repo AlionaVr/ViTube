@@ -1,21 +1,11 @@
-// Hand-written until the API exists; then replaced by types from schema.d.ts. snake_case as FastAPI sends it.
-import type { Channel, ChannelSummary } from '../channels/types'
+// Types from the API (schema.d.ts). The watch page's are hand-written until it reads the API.
+import type { components } from '../api/schema'
+import type { Channel } from '../channels/types'
 
 export type Rating = 'like' | 'dislike' | 'none'
 
-/** A video in a feed: home grid, Up next, search. */
-export interface VideoSummary {
-  /** 11-character public id, as in /watch?v=<id>. */
-  id: string
-  title: string
-  thumbnail_url: string
-  duration_sec: number
-  view_count: number
-  published_at: string
-  channel: ChannelSummary
-  /** Where the viewer stopped last time; null if never watched. */
-  last_position_sec: number | null
-}
+/** A video in a list: home grid, Up next, search. */
+export type VideoSummary = components['schemas']['VideoSummary']
 
 /** The watch page. */
 export interface Video extends Omit<VideoSummary, 'channel'> {
@@ -25,11 +15,6 @@ export interface Video extends Omit<VideoSummary, 'channel'> {
   my_rating: Rating
   comment_count: number
   channel: Channel
-}
-
-export interface Category {
-  id: string
-  name: string
 }
 
 export interface Page<T> {

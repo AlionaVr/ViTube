@@ -10,12 +10,15 @@ a row can move past the cursor: it is skipped, or shows twice. Clients drop repe
 import base64
 import binascii
 from collections.abc import Callable, Sequence
-from typing import Any
+from typing import Annotated, Any
 
+from fastapi import Query
 from pydantic import BaseModel, TypeAdapter, ValidationError
 from pydantic_core import to_json
 
 from app.core.errors import DomainError
+
+Cursor = Annotated[str | None, Query(max_length=200, description="next_cursor of the last page")]
 
 
 class Page[T](BaseModel):

@@ -144,6 +144,56 @@
       }
     },
     "/api/videos": {
+      "get": {
+        "tags": [
+          "videos"
+        ],
+        "summary": "Home feed: public videos, newest first",
+        "operationId": "list_feed_api_videos_get",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "next_cursor of the last page",
+              "title": "Cursor"
+            },
+            "description": "next_cursor of the last page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_VideoSummary_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
         "tags": [
           "videos"
@@ -151,14 +201,14 @@
         "summary": "Create a draft",
         "operationId": "create_draft_api_videos_post",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/VideoCreate"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "201": {
@@ -1055,6 +1105,34 @@
         ],
         "title": "Page[CommentOut]"
       },
+      "Page_VideoSummary_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/VideoSummary"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "Page[VideoSummary]"
+      },
       "Rating": {
         "type": "string",
         "enum": [
@@ -1441,6 +1519,51 @@
         ],
         "title": "VideoStatus",
         "description": "uploading \u2192 uploaded \u2192 processing \u2192 ready | failed (ADR 0003)."
+      },
+      "VideoSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Public id, as in /watch?v=<id>"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "thumbnail_url": {
+            "type": "string",
+            "title": "Thumbnail Url"
+          },
+          "duration_sec": {
+            "type": "integer",
+            "title": "Duration Sec"
+          },
+          "view_count": {
+            "type": "integer",
+            "title": "View Count"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "channel": {
+            "$ref": "#/components/schemas/ChannelSummary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "thumbnail_url",
+          "duration_sec",
+          "view_count",
+          "created_at",
+          "channel"
+        ],
+        "title": "VideoSummary",
+        "description": "A video in a public list: home feed, Up next, search. Only ready videos are listed."
       },
       "VideoUpdate": {
         "properties": {

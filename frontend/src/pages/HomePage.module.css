@@ -4,20 +4,6 @@
   padding: 0 24px 24px;
 }
 
-.chips {
-  position: sticky;
-  top: var(--header-height);
-  z-index: 4;
-  height: 56px;
-  display: flex;
-  align-items: center;
-  background: var(--color-bg);
-}
-
-.chips > * {
-  flex: 1;
-}
-
 /* YouTube's columns by content width. */
 .grid {
   --columns: 1;

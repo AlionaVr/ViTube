@@ -16,6 +16,7 @@ from redis.exceptions import LockError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import Conflict, DomainError, NotFound, PayloadTooLarge, RequestTimeout
+from app.core.pagination import Page, decode_cursor, split_page
 from app.core.rate_limit import RateLimit
 from app.core.slots import Slots, hold
 from app.core.storage import Storage
@@ -31,6 +32,7 @@ from app.modules.videos.schemas import (
     VideoCreate,
     VideoDetail,
     VideoOut,
+    VideoSummary,
     VideoUpdate,
 )
 from app.worker.celery_app import celery_app
@@ -52,6 +54,7 @@ UPLOADS_TOTAL = Slots("uploads_total", limit=32, ttl=UPLOAD_LOCK_SECONDS)
 # 1 GiB fits even at ~1.2 Mbit/s; a client trickling bytes can't hold a slot longer.
 UPLOAD_DEADLINE_SEC = 2 * 3600
 PROCESS_TASK = "videos.process"  # by name: the api doesn't import worker code
+FEED_PAGE_SIZE = 24  # full rows in a grid of 2, 3, 4 or 6 columns
 
 
 def upload_limits() -> UploadLimits:
@@ -81,6 +84,16 @@ async def create_draft(db: AsyncSession, redis: Redis, user: User, data: VideoCr
             await db.commit()
             return VideoOut.of(video, user)
     raise RuntimeError("No free public id found")  # 2^64 ids: practically never
+
+
+async def list_feed(db: AsyncSession, cursor: str | None) -> Page[VideoSummary]:
+    """The home feed: the same for every viewer, so no user is read."""
+    before = decode_cursor(cursor, tuple[UUID])[0] if cursor else None
+    rows = await videos.list_newest(db, before=before, limit=FEED_PAGE_SIZE + 1)
+    page, next_cursor = split_page(rows, FEED_PAGE_SIZE, lambda row: (row[0].id,))
+    return Page(
+        items=[VideoSummary.of(video, owner) for video, owner in page], next_cursor=next_cursor
+    )
 
 
 async def get_video(db: AsyncSession, user: User | None, public_id: str) -> VideoDetail:

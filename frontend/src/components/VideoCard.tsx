@@ -13,11 +13,7 @@ export default function VideoCard({ video }: { video: VideoSummary }) {
   return (
     <article className={styles.card}>
       <Link to={watchUrl(video.id)} tabIndex={-1} aria-hidden="true">
-        <Thumbnail
-          src={video.thumbnail_url}
-          durationSec={video.duration_sec}
-          lastPositionSec={video.last_position_sec}
-        />
+        <Thumbnail src={video.thumbnail_url} durationSec={video.duration_sec} />
       </Link>
       <div className={styles.details}>
         <Link to={channelUrl(channel.handle)} tabIndex={-1} aria-hidden="true">
@@ -33,7 +29,7 @@ export default function VideoCard({ video }: { video: VideoSummary }) {
             {channel.name}
           </Link>
           <p className={styles.stats}>
-            {formatViews(video.view_count)} • {formatTimeAgo(video.published_at)}
+            {formatViews(video.view_count)} • {formatTimeAgo(video.created_at)}
           </p>
         </div>
       </div>

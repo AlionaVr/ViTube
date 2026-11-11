@@ -6,6 +6,7 @@ from fastapi import APIRouter, Path, Request, status
 from starlette.requests import ClientDisconnect
 
 from app.core.errors import DomainError
+from app.core.pagination import Cursor, Page
 from app.core.redis import RedisClient
 from app.core.storage import StorageClient
 from app.db.session import DbSession
@@ -19,6 +20,7 @@ from app.modules.videos.schemas import (
     VideoCreate,
     VideoDetail,
     VideoOut,
+    VideoSummary,
     VideoUpdate,
 )
 
@@ -37,6 +39,11 @@ FILE_BODY = {
 @router.get("/upload-limits", response_model=UploadLimits, summary="Upload limits")
 async def upload_limits() -> UploadLimits:
     return service.upload_limits()
+
+
+@router.get("", response_model=Page[VideoSummary], summary="Home feed: public videos, newest first")
+async def list_feed(db: DbSession, cursor: Cursor = None) -> Page[VideoSummary]:
+    return await service.list_feed(db, cursor)
 
 
 @router.post(

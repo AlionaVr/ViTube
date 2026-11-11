@@ -1,6 +1,5 @@
 // Demo catalog: made-up channels and videos around the three open films in demo-data/.
 // Every entry plays a real file and shows a real frame of it.
-import type { Category } from '../videos/types'
 
 // Mirrors demo-data/videos.json: file, duration, thumbnails_at.
 const MEDIA = {
@@ -60,28 +59,16 @@ export type ChannelKey = keyof typeof CHANNELS
 /** Any signed-in viewer starts subscribed to these (one shared demo state). */
 export const INITIAL_SUBSCRIPTIONS: ChannelKey[] = ['frame', 'dragon', 'bloom', 'multrazbor']
 
-export const CATEGORIES: Category[] = [
-  { id: 'animation', name: 'Animation' },
-  { id: 'film', name: 'Film analysis' },
-  { id: 'nature', name: 'Nature' },
-  { id: 'tutorials', name: 'Tutorials' },
-  { id: 'music', name: 'Music' },
-  { id: 'trailers', name: 'Trailers' },
-]
-
 export interface MockVideo {
   title: string
   channel: ChannelKey
   media: MediaKey
   /** Index into the media's thumbnail frames. */
   frame: number
-  category: string
   views: number
   /** Age in hours. */
   age: number
   description: string
-  /** Part already watched by a signed-in viewer, 0..1. */
-  watched?: number
 }
 
 const DAY = 24
@@ -96,7 +83,6 @@ const ENTRIES: MockVideo[] = [
     channel: 'openmovies',
     media: 'bunny',
     frame: 1,
-    category: 'trailers',
     views: 2_384_112,
     age: 3 * YEAR,
     description: 'A giant rabbit takes revenge on three bullying rodents.',
@@ -106,19 +92,16 @@ const ENTRIES: MockVideo[] = [
     channel: 'frame',
     media: 'bunny',
     frame: 3,
-    category: 'animation',
     views: 412_908,
     age: 5 * DAY,
     description:
       'Millions of hairs, no GPU render farm, and a deadline. We look at the hair system, the shading tricks and what still holds up today.\n\n0:00 Intro\n0:12 The hair system\n0:24 Shading',
-    watched: 0.4,
   },
   {
     title: 'Three rodents, one rabbit: comedic timing breakdown',
     channel: 'beats',
     media: 'bunny',
     frame: 2,
-    category: 'film',
     views: 38_204,
     age: 2 * WEEK,
     description:
@@ -129,7 +112,6 @@ const ENTRIES: MockVideo[] = [
     channel: 'openmovies',
     media: 'sintel',
     frame: 3,
-    category: 'trailers',
     views: 1_920_441,
     age: 2 * YEAR,
     description: 'A lone girl searches for the baby dragon she once saved.',
@@ -139,7 +121,6 @@ const ENTRIES: MockVideo[] = [
     channel: 'dragon',
     media: 'sintel',
     frame: 5,
-    category: 'film',
     views: 96_312,
     age: 9,
     description:
@@ -150,7 +131,6 @@ const ENTRIES: MockVideo[] = [
     channel: 'bloom',
     media: 'flower',
     frame: 3,
-    category: 'nature',
     views: 5_812,
     age: 18,
     description: 'Shot over forty minutes, played back in five. No music, just the flower.',
@@ -160,7 +140,6 @@ const ENTRIES: MockVideo[] = [
     channel: 'multrazbor',
     media: 'bunny',
     frame: 5,
-    category: 'film',
     views: 64_200,
     age: 4 * DAY,
     description:
@@ -171,19 +150,16 @@ const ENTRIES: MockVideo[] = [
     channel: 'dragon',
     media: 'sintel',
     frame: 0,
-    category: 'film',
     views: 143_870,
     age: 3 * WEEK,
     description:
       'Each act of Sintel has its own palette. We line up the color script next to the final frames and see how mood follows color.',
-    watched: 1,
   },
   {
     title: 'Lighting a meadow like Blender Studio',
     channel: 'meadow',
     media: 'bunny',
     frame: 0,
-    category: 'tutorials',
     views: 21_440,
     age: 6 * DAY,
     description:
@@ -194,7 +170,6 @@ const ENTRIES: MockVideo[] = [
     channel: 'macro',
     media: 'flower',
     frame: 1,
-    category: 'tutorials',
     views: 133_012,
     age: 2 * MONTH,
     description:
@@ -205,7 +180,6 @@ const ENTRIES: MockVideo[] = [
     channel: 'kinoteka',
     media: 'sintel',
     frame: 2,
-    category: 'film',
     views: 287_455,
     age: 1 * MONTH,
     description:
@@ -216,7 +190,6 @@ const ENTRIES: MockVideo[] = [
     channel: 'frame',
     media: 'bunny',
     frame: 7,
-    category: 'animation',
     views: 881_230,
     age: 4 * MONTH,
     description:
@@ -227,7 +200,6 @@ const ENTRIES: MockVideo[] = [
     channel: 'score',
     media: 'sintel',
     frame: 1,
-    category: 'music',
     views: 3_204,
     age: 11 * DAY,
     description:
@@ -238,7 +210,6 @@ const ENTRIES: MockVideo[] = [
     channel: 'indie',
     media: 'bunny',
     frame: 4,
-    category: 'animation',
     views: 1_502_877,
     age: 8 * MONTH,
     description:
@@ -249,7 +220,6 @@ const ENTRIES: MockVideo[] = [
     channel: 'bloom',
     media: 'flower',
     frame: 2,
-    category: 'nature',
     views: 742,
     age: 3 * DAY,
     description: 'Light, warmth and pollinators. A short answer with a five-second demo.',
@@ -259,7 +229,6 @@ const ENTRIES: MockVideo[] = [
     channel: 'frame',
     media: 'sintel',
     frame: 4,
-    category: 'tutorials',
     views: 255_610,
     age: 7 * WEEK,
     description:
@@ -270,7 +239,6 @@ const ENTRIES: MockVideo[] = [
     channel: 'render',
     media: 'sintel',
     frame: 3,
-    category: 'animation',
     views: 17_930,
     age: 5 * MONTH,
     description:
@@ -281,7 +249,6 @@ const ENTRIES: MockVideo[] = [
     channel: 'beats',
     media: 'bunny',
     frame: 6,
-    category: 'film',
     views: 9_442,
     age: 2 * DAY,
     description: 'Twelve shots, forty seconds. How the edit builds sympathy before the cruelty.',
@@ -291,7 +258,6 @@ const ENTRIES: MockVideo[] = [
     channel: 'macro',
     media: 'flower',
     frame: 0,
-    category: 'nature',
     views: 48_120,
     age: 3 * WEEK,
     description: 'Снимаем таймлапс цветка на подоконнике: свет, штатив, интервал и монтаж.',
@@ -301,7 +267,6 @@ const ENTRIES: MockVideo[] = [
     channel: 'meadow',
     media: 'sintel',
     frame: 6,
-    category: 'tutorials',
     views: 66_078,
     age: 9 * MONTH,
     description:
@@ -312,7 +277,6 @@ const ENTRIES: MockVideo[] = [
     channel: 'openmovies',
     media: 'bunny',
     frame: 1,
-    category: 'trailers',
     views: 324_501,
     age: 1 * YEAR,
     description:
@@ -323,7 +287,6 @@ const ENTRIES: MockVideo[] = [
     channel: 'beats',
     media: 'sintel',
     frame: 2,
-    category: 'film',
     views: 12_870,
     age: 10 * DAY,
     description:
@@ -334,7 +297,6 @@ const ENTRIES: MockVideo[] = [
     channel: 'score',
     media: 'bunny',
     frame: 6,
-    category: 'music',
     views: 1_108,
     age: 6 * WEEK,
     description: 'Bassoon jokes and clarinet chases. How the music tells you it is safe to laugh.',
@@ -344,7 +306,6 @@ const ENTRIES: MockVideo[] = [
     channel: 'multrazbor',
     media: 'sintel',
     frame: 5,
-    category: 'animation',
     views: 91_300,
     age: 2 * MONTH,
     description: 'Вес, инерция и перекрытие действий. Покадрово разбираем один взмах крыла.',
@@ -354,7 +315,6 @@ const ENTRIES: MockVideo[] = [
     channel: 'dragon',
     media: 'sintel',
     frame: 1,
-    category: 'film',
     views: 41_015,
     age: 1 * YEAR,
     description: 'He has one scene and two lines. Why the mentor still matters to the story.',
@@ -364,7 +324,6 @@ const ENTRIES: MockVideo[] = [
     channel: 'openmovies',
     media: 'flower',
     frame: 3,
-    category: 'nature',
     views: 15_204,
     age: 2 * YEAR,
     description: 'A red flower opens in five seconds.',
@@ -374,19 +333,16 @@ const ENTRIES: MockVideo[] = [
     channel: 'indie',
     media: 'bunny',
     frame: 5,
-    category: 'tutorials',
     views: 204_330,
     age: 3 * MONTH,
     description:
       'Brows first, mouth last. Building a face rig around the expressions your story needs.',
-    watched: 0.15,
   },
   {
     title: 'Shooting timelapse on a budget',
     channel: 'macro',
     media: 'flower',
     frame: 2,
-    category: 'tutorials',
     views: 8_903,
     age: 5 * WEEK,
     description:
@@ -397,7 +353,6 @@ const ENTRIES: MockVideo[] = [
     channel: 'meadow',
     media: 'bunny',
     frame: 0,
-    category: 'tutorials',
     views: 54_660,
     age: 7 * MONTH,
     description: 'Modeling, roots and moss with geometry nodes. Project file in the description.',
@@ -407,7 +362,6 @@ const ENTRIES: MockVideo[] = [
     channel: 'score',
     media: 'sintel',
     frame: 6,
-    category: 'music',
     views: 2_017,
     age: 1 * MONTH,
     description: 'How a tiny motif can carry the loneliness of a whole act.',

@@ -70,6 +70,32 @@ class VideoOut(BaseModel):
         )
 
 
+class VideoSummary(BaseModel):
+    """A video in a public list: home feed, Up next, search. Only ready videos are listed."""
+
+    id: str = Field(description="Public id, as in /watch?v=<id>")
+    title: str
+    thumbnail_url: str
+    duration_sec: int
+    view_count: int
+    created_at: datetime
+    channel: ChannelSummary
+
+    @classmethod
+    def of(cls, video: Video, owner: User) -> "VideoSummary":
+        if video.duration_sec is None:  # the ready_has_duration CHECK rules this out
+            raise ValueError(f"Video {video.id} is listed but has no duration")
+        return cls(
+            id=video.public_id,
+            title=video.title,
+            thumbnail_url=MEDIA_PREFIX + video.thumbnail_key,
+            duration_sec=video.duration_sec,
+            view_count=video.view_count,
+            created_at=video.created_at,
+            channel=ChannelSummary.of(owner),
+        )
+
+
 class VideoDetail(VideoOut):
     """The watch page: the video and what this viewer did with it."""
 

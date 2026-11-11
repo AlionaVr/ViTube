@@ -96,7 +96,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Home feed: public videos, newest first */
+        get: operations["list_feed_api_videos_get"];
         put?: never;
         /** Create a draft */
         post: operations["create_draft_api_videos_post"];
@@ -410,6 +411,13 @@ export interface components {
             /** Next Cursor */
             next_cursor: string | null;
         };
+        /** Page[VideoSummary] */
+        Page_VideoSummary_: {
+            /** Items */
+            items: components["schemas"]["VideoSummary"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
         /**
          * Rating
          * @enum {string}
@@ -573,6 +581,31 @@ export interface components {
          */
         VideoStatus: "uploading" | "uploaded" | "processing" | "ready" | "failed";
         /**
+         * VideoSummary
+         * @description A video in a public list: home feed, Up next, search. Only ready videos are listed.
+         */
+        VideoSummary: {
+            /**
+             * Id
+             * @description Public id, as in /watch?v=<id>
+             */
+            id: string;
+            /** Title */
+            title: string;
+            /** Thumbnail Url */
+            thumbnail_url: string;
+            /** Duration Sec */
+            duration_sec: number;
+            /** View Count */
+            view_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            channel: components["schemas"]["ChannelSummary"];
+        };
+        /**
          * VideoUpdate
          * @description Changes only the given fields; null leaves a field as it is. Works in any status.
          */
@@ -717,6 +750,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UploadLimits"];
+                };
+            };
+        };
+    };
+    list_feed_api_videos_get: {
+        parameters: {
+            query?: {
+                /** @description next_cursor of the last page */
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_VideoSummary_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

@@ -4,9 +4,8 @@ import { ApiError, type User } from '../api/client'
 import { fetchMe } from '../auth/hooks'
 import type { Channel, ChannelSummary } from '../channels/types'
 import type { Comment, CommentSort } from '../comments/types'
-import type { Category, Page, Rating, Video, VideoSummary } from '../videos/types'
+import type { Page, Rating, Video, VideoSummary } from '../videos/types'
 import {
-  CATEGORIES,
   CHANNELS,
   type ChannelKey,
   INITIAL_SUBSCRIPTIONS,
@@ -58,6 +57,13 @@ const ENTRIES: Entry[] = VIDEOS.map((video) => ({
   id: Array.from({ length: 11 }, () => ID_CHARS[Math.floor(idRandom() * 64)]).join(''),
   likes: Math.floor(video.views * (0.015 + idRandom() * 0.035)),
 }))
+
+/** Tests open a demo video by its title: the feed no longer lists them. */
+export function demoVideoId(title: string): string {
+  const entry = ENTRIES.find((e) => e.title === title)
+  if (!entry) throw new Error(`No demo video "${title}"`)
+  return entry.id
+}
 
 function findEntry(id: string): Entry {
   const entry = ENTRIES.find((e) => e.id === id)
@@ -122,17 +128,15 @@ function withRating<T extends { like_count: number }>(item: T, myRating: Rating)
 
 // ---- Videos.
 
-function toSummary(entry: Entry, user: User | null): VideoSummary {
-  const duration = mediaDuration(entry.media)
+function toSummary(entry: Entry): VideoSummary {
   return {
     id: entry.id,
     title: entry.title,
     thumbnail_url: thumbnailUrl(entry.media, entry.frame),
-    duration_sec: duration,
+    duration_sec: mediaDuration(entry.media),
     view_count: entry.views,
-    published_at: new Date(NOW - entry.age * HOUR_MS).toISOString(),
+    created_at: new Date(NOW - entry.age * HOUR_MS).toISOString(),
     channel: channelSummary(entry.channel),
-    last_position_sec: user && entry.watched ? entry.watched * duration : null,
   }
 }
 
@@ -146,7 +150,7 @@ function toVideo(entry: Entry, user: User | null): Video {
   const { top, replies } = commentsOf(entry)
   const replyTotal = [...replies.values()].reduce((sum, list) => sum + list.length, 0)
   return {
-    ...toSummary(entry, user),
+    ...toSummary(entry),
     ...withRating({ like_count: entry.likes }, rating(user, state.ratings, entry.id)),
     description: entry.description,
     media_url: mediaUrl(entry.media),
@@ -155,36 +159,19 @@ function toVideo(entry: Entry, user: User | null): Video {
   }
 }
 
-export async function listVideos(params: {
-  category: string | null
-  cursor: string | null
-}): Promise<Page<VideoSummary>> {
-  const user = await session()
-  const entries = params.category ? ENTRIES.filter((e) => e.category === params.category) : ENTRIES
-  return paginate(
-    entries.map((e) => toSummary(e, user)),
-    params.cursor,
-    12,
-  )
-}
-
 export async function getVideo(id: string): Promise<Video> {
   const user = await session()
   return toVideo(findEntry(id), user)
 }
 
 export async function listRelated(id: string, cursor: string | null): Promise<Page<VideoSummary>> {
-  const user = await session()
+  await delay()
   const current = findEntry(id)
   // Same channel first, then the same film, then the rest.
   const score = (e: Entry) =>
     e.channel === current.channel ? 0 : e.media === current.media ? 1 : 2
   const related = ENTRIES.filter((e) => e.id !== id).sort((a, b) => score(a) - score(b))
-  return paginate(
-    related.map((e) => toSummary(e, user)),
-    cursor,
-    12,
-  )
+  return paginate(related.map(toSummary), cursor, 12)
 }
 
 export async function rateVideo(
@@ -195,11 +182,6 @@ export async function rateVideo(
   const entry = findEntry(id)
   state.ratings.set(id, myRating)
   return withRating({ like_count: entry.likes }, myRating)
-}
-
-export async function listCategories(): Promise<Category[]> {
-  await delay()
-  return CATEGORIES
 }
 
 // ---- Channels.

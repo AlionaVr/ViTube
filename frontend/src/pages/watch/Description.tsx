@@ -14,7 +14,7 @@ export default function Description({ video }: { video: Video }) {
       <div className={`${styles.box} ${styles.collapsed}`} onClick={() => setExpanded(true)}>
         <p className={styles.info}>
           <span>{formatCompact(video.view_count)} views</span>
-          <span>{formatTimeAgo(video.published_at)}</span>
+          <span>{formatTimeAgo(video.created_at)}</span>
         </p>
         <p className={styles.text}>{video.description}</p>
         <button
@@ -36,7 +36,7 @@ export default function Description({ video }: { video: Video }) {
     <div className={styles.box}>
       <p className={styles.info}>
         <span>{formatExact(video.view_count)} views</span>
-        <span>{formatDate(video.published_at)}</span>
+        <span>{formatDate(video.created_at)}</span>
       </p>
       <p className={styles.fullText}>{video.description}</p>
       <button
