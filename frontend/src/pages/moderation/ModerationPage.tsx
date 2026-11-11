@@ -3,14 +3,15 @@ import { NavLink, Outlet } from 'react-router'
 import EmptyState from '../../components/EmptyState'
 import SignInButton from '../../components/SignInButton'
 import Spinner from '../../components/Spinner'
-import { canModerate } from '../../moderation/roles'
+import { canModerate, isAdmin } from '../../moderation/roles'
 import { useViewer } from '../../viewer/useViewer'
 import NotFoundPage from '../NotFoundPage'
 import styles from './ModerationPage.module.css'
 
 const TABS = [
-  { to: '/moderation', label: 'Reports', end: true },
-  { to: '/moderation/hidden', label: 'Hidden videos', end: false },
+  { to: '/moderation', label: 'Reports', end: true, adminOnly: false },
+  { to: '/moderation/hidden', label: 'Hidden videos', end: false, adminOnly: false },
+  { to: '/moderation/accounts', label: 'Accounts', end: false, adminOnly: true },
 ]
 
 /** /moderation: reports from viewers and what moderators do about them (ADR 0009). */
@@ -37,7 +38,7 @@ export default function ModerationPage() {
     <div className={styles.page}>
       <h1 className={styles.title}>Moderation</h1>
       <nav className={styles.tabs} aria-label="Moderation">
-        {TABS.map((tab) => (
+        {TABS.filter((tab) => !tab.adminOnly || isAdmin(viewer.user)).map((tab) => (
           <NavLink
             key={tab.to}
             to={tab.to}

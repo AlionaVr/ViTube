@@ -9,6 +9,7 @@ from sqlalchemy.dialects.postgresql import CITEXT
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
+from app.db.types import str_enum
 
 
 class Role(enum.Enum):
@@ -26,6 +27,14 @@ class Role(enum.Enum):
         return order.index(self) >= order.index(minimum)
 
 
+class UserStatus(enum.StrEnum):
+    """What an admin allowed the account (ADR 0009). A user is also a channel, so it is both."""
+
+    ACTIVE = "active"
+    BANNED = "banned"  # can't sign in or act; their videos and comments stay
+    TERMINATED = "terminated"  # banned, and their videos are gone for all but moderators
+
+
 class User(Base):
     __tablename__ = "users"
     __table_args__ = (
@@ -39,6 +48,10 @@ class User(Base):
     email: Mapped[str] = mapped_column(CITEXT, unique=True)
     handle: Mapped[str] = mapped_column(CITEXT, unique=True)
     password_hash: Mapped[str] = mapped_column(Text)
+    # Read from the DB on every request, like the role: a ban applies to the next request.
+    status: Mapped[UserStatus] = mapped_column(
+        str_enum(UserStatus, "status"), server_default=UserStatus.ACTIVE.value
+    )
     # varchar + CHECK, not a Postgres enum: adding a role is a plain migration.
     role: Mapped[Role] = mapped_column(
         Enum(

@@ -60,3 +60,28 @@ export async function dismissComment(id: string): Promise<void> {
     }),
   )
 }
+
+export type UserStatus = components['schemas']['UserStatus']
+export type RestrictedAccount = components['schemas']['RestrictedAccount']
+export type AccountPage = components['schemas']['Page_RestrictedAccount_']
+
+/** Banned and terminated accounts, or one of the two. Admins only. */
+export function listRestricted(
+  status: UserStatus | null,
+  cursor: string | null,
+): Promise<AccountPage> {
+  return unwrap(api.GET('/api/moderation/users', { params: { query: { status, cursor } } }))
+}
+
+/** Ban, terminate or reinstate (active) an account. Admins only. */
+export async function setStatus(handle: string, status: UserStatus, reason = ''): Promise<void> {
+  await unwrap(
+    api.PUT('/api/moderation/users/{handle}/status', {
+      params: { path: { handle } },
+      body: { status, reason },
+    }),
+  )
+}
+
+/** The channel behind a reported video or comment: the account an admin may restrict. */
+export type Account = components['schemas']['ChannelSummary']

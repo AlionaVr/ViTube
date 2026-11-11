@@ -43,3 +43,30 @@ async def insert_unless_taken(
         .returning(User)
     )
     return await db.scalar(statement)
+
+
+async def get_for_write(db: AsyncSession, user_id: UUID) -> User | None:
+    """The user, read FOR KEY SHARE and held until the transaction ends.
+
+    A status change locks the user FOR UPDATE first (lock_for_status), which waits for this
+    lock: writes already under way finish first, and the ones after it see the new status.
+    """
+    query = (
+        select(User)
+        .where(User.id == user_id)
+        .with_for_update(read=True, key_share=True)
+        .execution_options(populate_existing=True)  # the row as locked, not as cached
+    )
+    return await db.scalar(query)
+
+
+async def lock_for_status(db: AsyncSession, user_id: UUID) -> User | None:
+    """The user, FOR UPDATE: waits for their writes under way (see get_for_write), and makes
+    role and status changes run one at a time."""
+    query = (
+        select(User)
+        .where(User.id == user_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    return await db.scalar(query)

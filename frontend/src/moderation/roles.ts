@@ -4,3 +4,8 @@ import type { User } from '../api/client'
 export function canModerate(user: User): boolean {
   return user.role === 'moderator' || user.role === 'admin'
 }
+
+/** Admins ban, terminate and reinstate accounts and read the audit log (ADR 0009). */
+export function isAdmin(user: User): boolean {
+  return user.role === 'admin'
+}

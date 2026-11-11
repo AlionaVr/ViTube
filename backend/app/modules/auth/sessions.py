@@ -7,6 +7,7 @@ import secrets
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import cast
 from uuid import UUID
 
 from pydantic import SecretStr
@@ -54,10 +55,16 @@ class SessionStore:
             created_at=int(self._now()),
         )
         value = {"user_id": str(user_id), "csrf": session.csrf, "created_at": session.created_at}
-        # One command, so the session never exists without its TTL.
-        await self._redis.set(
-            self._key(session.id), json.dumps(value), ex=min(self._idle, self._absolute)
-        )
+        key, index = self._key(session.id), self._index_key(user_id)
+        # MULTI/EXEC: the session never exists without its TTL or outside the user's index.
+        async with self._redis.pipeline(transaction=True) as pipe:
+            pipe.set(key, json.dumps(value), ex=min(self._idle, self._absolute))
+            # Scored by creation time: sessions past the absolute timeout are gone, so they
+            # leave the index here, and it can't grow without end.
+            pipe.zadd(index, {key: session.created_at})
+            pipe.zremrangebyscore(index, "-inf", session.created_at - self._absolute)
+            pipe.expire(index, self._absolute)
+            await pipe.execute()
         return session
 
     async def read(self, session_id: str) -> UserSession | None:
@@ -73,4 +80,25 @@ class SessionStore:
         return UserSession(session_id, UUID(value["user_id"]), value["csrf"], value["created_at"])
 
     async def delete(self, session_id: str) -> None:
+        # Its index entry stays until the index is pruned: deleting a missing key is harmless.
         await self._redis.delete(self._key(session_id))
+
+    async def revoke_all(self, user_id: UUID) -> None:
+        """End every session of the user (a ban).
+
+        Removes only the entries it read: a session made meanwhile keeps its entry. Not what
+        enforces a ban: requests read the user's status from the DB (ADR 0005), so a session
+        this misses (made just now, or before the index existed) is refused all the same.
+        """
+        index = self._index_key(user_id)
+        keys = cast(list[str], await self._redis.zrange(index, 0, -1))  # no scores asked
+        if keys:
+            async with self._redis.pipeline(transaction=True) as pipe:
+                pipe.delete(*keys)
+                pipe.zrem(index, *keys)
+                await pipe.execute()
+
+    @staticmethod
+    def _index_key(user_id: UUID) -> str:
+        # Holds session keys (HMACs of the ids), never the cookie values.
+        return f"user_sessions:{user_id}"

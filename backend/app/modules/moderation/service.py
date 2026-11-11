@@ -4,8 +4,10 @@ Each action is one transaction: lock the target, change it, close its open repor
 audit entry, commit. So the log never lacks an action or holds one that didn't happen.
 """
 
+import logging
 from uuid import UUID
 
+from redis.exceptions import RedisError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import Forbidden, NotFound
@@ -13,17 +15,27 @@ from app.core.pagination import Page, decode_cursor, split_page
 from app.modules.audit import repository as audit
 from app.modules.audit.models import AuditAction, TargetType
 from app.modules.audit.repository import Actor
+from app.modules.auth.sessions import SessionStore
 from app.modules.comments import repository as comments_repository
 from app.modules.comments.models import Comment
 from app.modules.moderation import repository as moderation
-from app.modules.moderation.schemas import ModeratedComment, ModeratedVideo, ReportCase
+from app.modules.moderation.schemas import (
+    ModeratedComment,
+    ModeratedVideo,
+    ReportCase,
+    RestrictedAccount,
+)
 from app.modules.reports import repository as reports
 from app.modules.reports.models import ReportReason, ReportStatus
-from app.modules.users.models import User
+from app.modules.users import repository as users
+from app.modules.users.models import Role, User, UserStatus
 from app.modules.videos.models import Video
+
+log = logging.getLogger(__name__)
 
 QUEUE_PAGE_SIZE = 20
 HIDDEN_PAGE_SIZE = 20
+ACCOUNTS_PAGE_SIZE = 20
 
 
 async def list_cases(db: AsyncSession, cursor: str | None) -> Page[ReportCase]:
@@ -57,6 +69,54 @@ async def list_hidden(db: AsyncSession, cursor: str | None) -> Page[ModeratedVid
     page, next_cursor = split_page(rows, HIDDEN_PAGE_SIZE, lambda row: (row[0].id,))
     items = [ModeratedVideo.of(video, owner) for video, owner in page]
     return Page(items=items, next_cursor=next_cursor)
+
+
+async def list_restricted(
+    db: AsyncSession, status: UserStatus | None, cursor: str | None
+) -> Page[RestrictedAccount]:
+    before = decode_cursor(cursor, tuple[UUID])[0] if cursor else None
+    rows = await moderation.list_restricted(
+        db, status=status, before=before, limit=ACCOUNTS_PAGE_SIZE + 1
+    )
+    page, next_cursor = split_page(rows, ACCOUNTS_PAGE_SIZE, lambda user: (user.id,))
+    return Page(items=[RestrictedAccount.of(user) for user in page], next_cursor=next_cursor)
+
+
+async def set_status(
+    db: AsyncSession,
+    sessions: SessionStore,
+    actor: Actor,
+    user_id: UUID,
+    status: UserStatus,
+    reason: str = "",
+) -> None:
+    """Ban, terminate or reinstate an account (admins and the CLI).
+
+    The lock FOR UPDATE waits for the user's writes under way (they hold KEY SHARE, see
+    auth.deps.optional_user), so none of them commits after the ban. The ban is in force once
+    this commits: every request reads the status from the DB. Ending the sessions after that
+    only cleans up, so a Redis failure is logged, not an error.
+    """
+    user = await users.lock_for_status(db, user_id)
+    if user is None:
+        raise NotFound("No such user")
+    if user.id == actor.user_id:
+        raise Forbidden("You can't change your own account's status")
+    if user.role is Role.ADMIN:  # read under the lock: a role change can't slip in
+        raise Forbidden("An admin's account can't be restricted: change their role first")
+    previous = user.status
+    if previous is not status:
+        user.status = status
+        details = {"from": previous, "to": status} | ({"reason": reason} if reason else {})
+        await audit.record(
+            db, actor, AuditAction.SET_USER_STATUS, TargetType.USER, user.id, **details
+        )
+    await db.commit()
+    if status is not UserStatus.ACTIVE:  # again on a repeat: a retry finishes a failed revoke
+        try:
+            await sessions.revoke_all(user.id)
+        except RedisError:
+            log.exception("Could not end the sessions of user %s; requests refuse them", user.id)
 
 
 async def hide_video(

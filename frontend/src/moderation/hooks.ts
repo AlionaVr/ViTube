@@ -9,14 +9,18 @@ import {
   hideVideo,
   listHidden,
   listReports,
+  listRestricted,
   type ReportReason,
   restoreVideo,
+  setStatus,
+  type UserStatus,
 } from './api'
 
 export const moderationKeys = {
   all: ['moderation'] as const,
   reports: ['moderation', 'reports'] as const,
   hidden: ['moderation', 'hidden'] as const,
+  accounts: (status: UserStatus | null) => ['moderation', 'accounts', status] as const,
 }
 
 const firstPage = null as string | null
@@ -36,6 +40,32 @@ export function useHiddenVideos() {
     queryFn: ({ pageParam }) => listHidden(pageParam),
     initialPageParam: firstPage,
     getNextPageParam: (page) => page.next_cursor,
+  })
+}
+
+export function useRestrictedAccounts(status: UserStatus | null) {
+  return useInfiniteQuery({
+    queryKey: moderationKeys.accounts(status),
+    queryFn: ({ pageParam }) => listRestricted(status, pageParam),
+    initialPageParam: firstPage,
+    getNextPageParam: (page) => page.next_cursor,
+  })
+}
+
+/** Ban, terminate or reinstate. Their videos may come and go, so everything loads again. */
+export function useSetStatus() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      handle,
+      status,
+      reason,
+    }: {
+      handle: string
+      status: UserStatus
+      reason?: string
+    }) => setStatus(handle, status, reason),
+    onSuccess: () => queryClient.invalidateQueries(),
   })
 }
 

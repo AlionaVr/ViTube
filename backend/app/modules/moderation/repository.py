@@ -7,7 +7,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.comments.models import Comment
-from app.modules.users.models import User
+from app.modules.users.models import User, UserStatus
 from app.modules.videos.models import Video
 from app.modules.videos.repository import VideoRow
 
@@ -95,3 +95,15 @@ async def remove_comments(db: AsyncSession, video_id: UUID, count: int) -> None:
     await db.execute(
         update(Video).where(Video.id == video_id).values(comment_count=Video.comment_count - count)
     )
+
+
+async def list_restricted(
+    db: AsyncSession, *, status: UserStatus | None, before: UUID | None, limit: int
+) -> Sequence[User]:
+    """Banned and terminated accounts (or one of the two), newest accounts first."""
+    query = select(User).where(User.status != UserStatus.ACTIVE)
+    if status is not None:
+        query = query.where(User.status == status)
+    if before is not None:
+        query = query.where(User.id < before)
+    return (await db.scalars(query.order_by(User.id.desc()).limit(limit))).all()

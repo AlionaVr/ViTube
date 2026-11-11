@@ -2450,6 +2450,123 @@
         }
       }
     },
+    "/api/moderation/users": {
+      "get": {
+        "tags": [
+          "moderation"
+        ],
+        "summary": "Banned and terminated accounts (admins)",
+        "operationId": "list_restricted_api_moderation_users_get",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/UserStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "next_cursor of the last page",
+              "title": "Cursor"
+            },
+            "description": "next_cursor of the last page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_RestrictedAccount_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/moderation/users/{handle}/status": {
+      "put": {
+        "tags": [
+          "moderation"
+        ],
+        "summary": "Ban, terminate or reinstate an account (admins)",
+        "description": "banned: no sign-in, its sessions end, its content stays. terminated: the same, and its videos are unavailable to all but moderators. active: reinstated.",
+        "operationId": "set_status_api_moderation_users__handle__status_put",
+        "parameters": [
+          {
+            "name": "handle",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._-]{3,30}$",
+              "description": "Without the @",
+              "title": "Handle"
+            },
+            "description": "Without the @"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatusIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/health": {
       "get": {
         "tags": [
@@ -3138,6 +3255,34 @@
         ],
         "title": "Page[ReportCase]"
       },
+      "Page_RestrictedAccount_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RestrictedAccount"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "Page[RestrictedAccount]"
+      },
       "Page_SearchResult_": {
         "properties": {
           "items": {
@@ -3550,6 +3695,23 @@
         "title": "ReportReason",
         "description": "YouTube's reasons, for videos and comments alike. Also why a moderator hid a video."
       },
+      "RestrictedAccount": {
+        "properties": {
+          "channel": {
+            "$ref": "#/components/schemas/ChannelSummary"
+          },
+          "status": {
+            "$ref": "#/components/schemas/UserStatus"
+          }
+        },
+        "type": "object",
+        "required": [
+          "channel",
+          "status"
+        ],
+        "title": "RestrictedAccount",
+        "description": "A banned or terminated account."
+      },
       "Role": {
         "type": "string",
         "enum": [
@@ -3623,6 +3785,26 @@
         ],
         "title": "SearchResult",
         "description": "A result row also shows the start of the description."
+      },
+      "StatusIn": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/UserStatus"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "pattern": "^[^\\x00-\\x08\\x0b\\x0c\\x0e-\\x1f\\x7f]*$",
+            "title": "Reason",
+            "description": "Why, for the audit log",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "StatusIn"
       },
       "SubscribedChannel": {
         "properties": {
@@ -3717,6 +3899,16 @@
           "role"
         ],
         "title": "UserOut"
+      },
+      "UserStatus": {
+        "type": "string",
+        "enum": [
+          "active",
+          "banned",
+          "terminated"
+        ],
+        "title": "UserStatus",
+        "description": "What an admin allowed the account (ADR 0009). A user is also a channel, so it is both."
       },
       "ValidationError": {
         "properties": {

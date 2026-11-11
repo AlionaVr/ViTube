@@ -803,6 +803,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/moderation/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Banned and terminated accounts (admins) */
+        get: operations["list_restricted_api_moderation_users_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/moderation/users/{handle}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Ban, terminate or reinstate an account (admins)
+         * @description banned: no sign-in, its sessions end, its content stays. terminated: the same, and its videos are unavailable to all but moderators. active: reinstated.
+         */
+        put: operations["set_status_api_moderation_users__handle__status_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -1098,6 +1135,13 @@ export interface components {
             /** Next Cursor */
             next_cursor: string | null;
         };
+        /** Page[RestrictedAccount] */
+        Page_RestrictedAccount_: {
+            /** Items */
+            items: components["schemas"]["RestrictedAccount"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
         /** Page[SearchResult] */
         Page_SearchResult_: {
             /** Items */
@@ -1254,6 +1298,14 @@ export interface components {
          */
         ReportReason: "sexual" | "violent" | "hateful" | "harassment" | "harmful" | "misinformation" | "child_abuse" | "terrorism" | "spam" | "legal";
         /**
+         * RestrictedAccount
+         * @description A banned or terminated account.
+         */
+        RestrictedAccount: {
+            channel: components["schemas"]["ChannelSummary"];
+            status: components["schemas"]["UserStatus"];
+        };
+        /**
          * Role
          * @description Nested roles (ADR 0009): each one has all rights of the ones before it.
          *
@@ -1296,6 +1348,16 @@ export interface components {
             /** Description */
             description: string;
         };
+        /** StatusIn */
+        StatusIn: {
+            status: components["schemas"]["UserStatus"];
+            /**
+             * Reason
+             * @description Why, for the audit log
+             * @default
+             */
+            reason: string;
+        };
         /**
          * SubscribedChannel
          * @description A row of the viewer's subscriptions.
@@ -1332,6 +1394,12 @@ export interface components {
             email: string;
             role: components["schemas"]["Role"];
         };
+        /**
+         * UserStatus
+         * @description What an admin allowed the account (ADR 0009). A user is also a channel, so it is both.
+         * @enum {string}
+         */
+        UserStatus: "active" | "banned" | "terminated";
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -3122,6 +3190,73 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_restricted_api_moderation_users_get: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["UserStatus"] | null;
+                /** @description next_cursor of the last page */
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_RestrictedAccount_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_status_api_moderation_users__handle__status_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Without the @ */
+                handle: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StatusIn"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             204: {

@@ -7,7 +7,8 @@ from sqlalchemy import ColumnElement, and_, exists, or_, true
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import NotFound
-from app.modules.users.models import Role, User
+from app.modules.users import repository as users
+from app.modules.users.models import Role, User, UserStatus
 from app.modules.videos import repository as videos
 from app.modules.videos.models import Video, VideoAccess, VideoStatus, Visibility
 
@@ -18,12 +19,21 @@ MEDIA_PATH = re.compile(
 )
 
 
+async def is_restricted(db: AsyncSession, video: Video) -> bool:
+    """Hidden by a moderator, or its channel terminated (ADR 0009). The SQL twin for lists is
+    repository.NOT_RESTRICTED."""
+    if video.is_hidden:
+        return True
+    owner = await users.get_by_id(db, video.owner_id)  # the identity map has it after one read
+    return owner is not None and owner.status is UserStatus.TERMINATED
+
+
 async def can_view(db: AsyncSession, user: User | None, video: Video) -> bool:
-    """Owner and moderators: always, hidden videos too (to review them). Others: ready videos
-    not hidden by a moderator (ADR 0009); private ones need a grant."""
+    """Owner and moderators: always, restricted videos too (to review them). Others: ready
+    videos that are not restricted (ADR 0009); private ones need a grant."""
     if user is not None and (user.id == video.owner_id or user.role.at_least(Role.MODERATOR)):
         return True
-    if video.status is not VideoStatus.READY or video.is_hidden:
+    if video.status is not VideoStatus.READY or await is_restricted(db, video):
         return False
     if video.visibility is not Visibility.PRIVATE:
         return True

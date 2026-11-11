@@ -13,6 +13,7 @@ import { ANNA, json, mockApi } from '../../test/api'
 import { renderApp } from '../../test/render'
 
 const MODERATOR = { ...ANNA, role: 'moderator' } as const
+const ADMIN = { ...ANNA, role: 'admin' } as const
 
 function moderated(id: string, changes: Partial<ModeratedVideo> = {}): ModeratedVideo {
   return {
@@ -295,5 +296,101 @@ describe('moderation page', () => {
 
     expect(await screen.findByText('Your comment: another moderator decides')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Delete|Dismiss/ })).not.toBeInTheDocument()
+  })
+
+  it('shows the accounts tab to admins only', async () => {
+    mockApi({
+      'GET /api/auth/me': () => json(200, MODERATOR),
+      'GET /api/moderation/reports': () => json(200, page([])),
+    })
+    renderApp('/moderation')
+
+    expect(await screen.findByRole('link', { name: 'Hidden videos' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Accounts' })).not.toBeInTheDocument()
+  })
+
+  it('lets an admin terminate the channel behind a reported video', async () => {
+    const fetch = mockApi({
+      'GET /api/auth/me': () => json(200, ADMIN),
+      'GET /api/moderation/reports': () => json(200, page([reportCase('aaaaaaaaaaa')])),
+      'PUT /api/moderation/users/user-owner123/status': () => noContent(),
+    })
+    renderApp('/moderation')
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'More actions for @user-owner123' }),
+    )
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Restrict @user-owner123' }))
+    const dialog = within(screen.getByRole('dialog', { name: 'Restrict account' }))
+    expect(dialog.getByRole('radio', { name: /^Ban/ })).toBeChecked()
+    await userEvent.click(dialog.getByRole('radio', { name: /^Terminate channel/ }))
+    await userEvent.type(dialog.getByRole('textbox'), 'Scam channel')
+    await userEvent.click(dialog.getByRole('button', { name: 'Terminate' }))
+
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: 'Restrict account' })).not.toBeInTheDocument(),
+    )
+    const call = fetch.mock.calls.find(([request]) => request.method === 'PUT')
+    expect(await call?.[0].json()).toEqual({ status: 'terminated', reason: 'Scam channel' })
+  })
+
+  it('offers moderators no account menu', async () => {
+    mockApi({
+      'GET /api/auth/me': () => json(200, MODERATOR),
+      'GET /api/moderation/reports': () => json(200, page([reportCase('aaaaaaaaaaa')])),
+    })
+    renderApp('/moderation')
+
+    expect(await screen.findByRole('button', { name: /^Hide/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /More actions/ })).not.toBeInTheDocument()
+  })
+
+  it('lists restricted accounts and reinstates one', async () => {
+    let accounts = [
+      {
+        channel: { handle: 'user-spammer1', name: 'user-spammer1', avatar_url: null },
+        status: 'terminated' as const,
+      },
+    ]
+    const fetch = mockApi({
+      'GET /api/auth/me': () => json(200, ADMIN),
+      'GET /api/moderation/users': () => json(200, { items: accounts, next_cursor: null }),
+      'PUT /api/moderation/users/user-spammer1/status': () => {
+        accounts = []
+        return noContent()
+      },
+    })
+    renderApp('/moderation/accounts')
+
+    const list = within(await screen.findByRole('list', { name: 'Restricted accounts' }))
+    expect(list.getByText('Channel terminated')).toBeInTheDocument()
+    await userEvent.click(list.getByRole('button', { name: 'Reinstate @user-spammer1' }))
+
+    expect(await screen.findByText('No restricted accounts')).toBeInTheDocument()
+    const call = fetch.mock.calls.find(([request]) => request.method === 'PUT')
+    expect(await call?.[0].json()).toEqual({ status: 'active', reason: '' })
+  })
+
+  it('filters accounts by status', async () => {
+    const fetch = mockApi({
+      'GET /api/auth/me': () => json(200, ADMIN),
+      'GET /api/moderation/users': () => json(200, { items: [], next_cursor: null }),
+    })
+    renderApp('/moderation/accounts')
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Banned' }))
+
+    await waitFor(() =>
+      expect(
+        fetch.mock.calls.some(([request]) => new URL(request.url).search === '?status=banned'),
+      ).toBe(true),
+    )
+  })
+
+  it('keeps the accounts tab from moderators', async () => {
+    mockApi({ 'GET /api/auth/me': () => json(200, MODERATOR) })
+    renderApp('/moderation/accounts')
+
+    expect(await screen.findByText("This page isn't available")).toBeInTheDocument()
   })
 })

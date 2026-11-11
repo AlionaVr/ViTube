@@ -3,19 +3,30 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Path, status
 
+from app.core.errors import NotFound
 from app.core.pagination import Cursor, Page
 from app.db.session import DbSession
-from app.modules.auth.deps import require_role
+from app.modules.audit.repository import Actor
+from app.modules.auth.deps import Sessions, require_role
 from app.modules.moderation import service
-from app.modules.moderation.schemas import HideIn, ModeratedVideo, ReportCase
-from app.modules.users.models import Role, User
-from app.modules.videos.schemas import PublicId
+from app.modules.moderation.schemas import (
+    HideIn,
+    ModeratedVideo,
+    ReportCase,
+    RestrictedAccount,
+    StatusIn,
+)
+from app.modules.users import repository as users
+from app.modules.users.models import Role, User, UserStatus
+from app.modules.videos.schemas import HANDLE_PATTERN, PublicId
 
 router = APIRouter(prefix="/api/moderation", tags=["moderation"])
 
 Moderator = Annotated[User, Depends(require_role(Role.MODERATOR))]
+Admin = Annotated[User, Depends(require_role(Role.ADMIN))]
+Handle = Annotated[str, Path(pattern=HANDLE_PATTERN, description="Without the @")]
 
 
 @router.get(
@@ -83,3 +94,32 @@ async def delete_comment(comment_id: UUID, moderator: Moderator, db: DbSession) 
 )
 async def dismiss_comment(comment_id: UUID, moderator: Moderator, db: DbSession) -> None:
     await service.dismiss_comment(db, moderator, comment_id)
+
+
+@router.get(
+    "/users",
+    response_model=Page[RestrictedAccount],
+    summary="Banned and terminated accounts (admins)",
+)
+async def list_restricted(
+    _: Admin, db: DbSession, status: UserStatus | None = None, cursor: Cursor = None
+) -> Page[RestrictedAccount]:
+    return await service.list_restricted(db, status, cursor)
+
+
+@router.put(
+    "/users/{handle}/status",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Ban, terminate or reinstate an account (admins)",
+    description=(
+        "banned: no sign-in, its sessions end, its content stays. terminated: the same, and"
+        " its videos are unavailable to all but moderators. active: reinstated."
+    ),
+)
+async def set_status(
+    handle: Handle, body: StatusIn, admin: Admin, db: DbSession, sessions: Sessions
+) -> None:
+    user = await users.get_by_handle(db, handle)
+    if user is None:
+        raise NotFound("No such user")
+    await service.set_status(db, sessions, Actor.of(admin), user.id, body.status, body.reason)

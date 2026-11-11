@@ -10,6 +10,7 @@ from httpx2 import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import register_error_handlers
+from app.modules.audit.repository import Actor
 from app.modules.auth import service
 from app.modules.auth.deps import require_role
 from app.modules.users.models import Role
@@ -67,7 +68,7 @@ async def test_require_role_lets_in_only_that_role_and_above(
     assert await status(session_id) == 403
 
     for role in (Role.MODERATOR, Role.ADMIN):
-        await service.set_role(db, EMAIL, role)
+        await service.set_role(db, Actor.cli(None), EMAIL, role)
         assert await status(session_id) == 200
 
 

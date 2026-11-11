@@ -28,7 +28,13 @@
   all of it happens or none of it. A repeated action that changes nothing writes no entry.
 - `audit_log` records every moderator and admin action: who, what, target, when, details (jsonb). It is
   append-only: the app's DB role may not update or delete it (ADR 0010).
-- Roles and bans are managed via CLI and API, with no UI. The seed creates demo admin and moderator accounts.
+- Account status, set by admins (API and moderation page) and the CLI: `banned` (no sign-in, sessions end, content
+  stays), `terminated` (the same, and the channel's videos are restricted like hidden ones, by status, with no
+  change to each video), `active` (reinstated). Admins can't restrict themselves or another admin. How a ban holds:
+  ADR 0005. *(Amended 2026-11-11: bans had no UI and channels no termination.)*
+- Roles are managed via the CLI, with no UI. The seed creates demo admin and moderator accounts. The CLI logs its
+  changes with source `cli`, the shell user and the admin named by `--by` (claimed, not proven: shell access is
+  the boundary).
 
 **Consequences.**
 

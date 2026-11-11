@@ -120,3 +120,11 @@ async def hide_directly(db: AsyncSession, video: Video) -> None:
     """Hide as a moderator would, without the audit entry: for tests of the effects."""
     await db.execute(update(Video).where(Video.id == video.id).values(is_hidden=True))
     await db.commit()
+
+
+async def set_status(client: AsyncClient, handle: str, status: str, reason: str = "") -> Response:
+    return await client.put(
+        f"/api/moderation/users/{handle}/status",
+        json={"status": status, "reason": reason},
+        headers=csrf(client),
+    )

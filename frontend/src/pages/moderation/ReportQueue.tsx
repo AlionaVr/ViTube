@@ -5,14 +5,17 @@ import ErrorState from '../../components/ErrorState'
 import Spinner from '../../components/Spinner'
 import { useInfiniteScroll } from '../../hooks/useInfiniteScroll'
 import { formatTimeAgo } from '../../lib/format'
-import type { ModeratedComment, ModeratedVideo, ReportCase } from '../../moderation/api'
+import type { Account, ModeratedComment, ModeratedVideo, ReportCase } from '../../moderation/api'
 import { useDismissComment, useDismissVideo, useReportQueue } from '../../moderation/hooks'
 import { REASON_LABELS } from '../../moderation/reasons'
+import { isAdmin } from '../../moderation/roles'
 import buttons from '../../styles/buttons.module.css'
 import CommentCell from './CommentCell'
 import DeleteCommentDialog from './DeleteCommentDialog'
 import HideDialog, { type HideTarget } from './HideDialog'
 import styles from './ModerationPage.module.css'
+import RestrictDialog from './RestrictDialog'
+import RowMenu from './RowMenu'
 import { useModerator } from './useModerator'
 import VideoCell, { OwnNote } from './VideoCell'
 
@@ -21,6 +24,7 @@ export default function ReportQueue() {
   const queue = useReportQueue()
   const [hiding, setHiding] = useState<HideTarget | null>(null)
   const [deleting, setDeleting] = useState<ModeratedComment | null>(null)
+  const [restricting, setRestricting] = useState<Account | null>(null)
   const sentinel = useInfiniteScroll<HTMLDivElement>(
     () => queue.fetchNextPage(),
     queue.hasNextPage && !queue.isFetchingNextPage,
@@ -51,6 +55,7 @@ export default function ReportQueue() {
               video={reportCase.video}
               reportCase={reportCase}
               onHide={setHiding}
+              onRestrict={setRestricting}
             />
           ) : (
             reportCase.comment && (
@@ -59,6 +64,7 @@ export default function ReportQueue() {
                 comment={reportCase.comment}
                 reportCase={reportCase}
                 onDelete={setDeleting}
+                onRestrict={setRestricting}
               />
             )
           ),
@@ -72,6 +78,7 @@ export default function ReportQueue() {
       )}
       <HideDialog target={hiding} onClose={() => setHiding(null)} />
       <DeleteCommentDialog target={deleting} onClose={() => setDeleting(null)} />
+      <RestrictDialog target={restricting} onClose={() => setRestricting(null)} />
     </>
   )
 }
@@ -80,12 +87,15 @@ function VideoCaseRow({
   video,
   reportCase,
   onHide,
+  onRestrict,
 }: {
   video: ModeratedVideo
   reportCase: ReportCase
   onHide: (target: HideTarget) => void
+  onRestrict: (account: Account) => void
 }) {
-  const own = video.channel.handle === useModerator().handle
+  const moderator = useModerator()
+  const own = video.channel.handle === moderator.handle
   const dismiss = useDismissVideo()
   return (
     <li className={`${styles.row} ${styles.withReports}`}>
@@ -114,6 +124,9 @@ function VideoCaseRow({
             >
               Dismiss
             </button>
+            {isAdmin(moderator) && (
+              <RowMenu account={video.channel} onRestrict={() => onRestrict(video.channel)} />
+            )}
           </>
         )}
         {dismiss.isError && (
@@ -130,12 +143,15 @@ function CommentCaseRow({
   comment,
   reportCase,
   onDelete,
+  onRestrict,
 }: {
   comment: ModeratedComment
   reportCase: ReportCase
   onDelete: (target: ModeratedComment) => void
+  onRestrict: (account: Account) => void
 }) {
-  const own = comment.author.handle === useModerator().handle
+  const moderator = useModerator()
+  const own = comment.author.handle === moderator.handle
   const dismiss = useDismissComment()
   const label = `comment by @${comment.author.handle}`
   return (
@@ -165,6 +181,9 @@ function CommentCaseRow({
             >
               Dismiss
             </button>
+            {isAdmin(moderator) && (
+              <RowMenu account={comment.author} onRestrict={() => onRestrict(comment.author)} />
+            )}
           </>
         )}
         {dismiss.isError && (

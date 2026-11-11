@@ -24,7 +24,8 @@ up app workers, so nginx streams and the app only decides.
     - `public`: everyone.
     - `unlisted`: anyone with the link, not in feed or search.
     - `private`: owner, users in `video_access`, moderators and admins.
-    - hidden by a moderator, whatever the visibility: owner, moderators and admins (ADR 0009).
+    - hidden by a moderator, or its channel terminated, whatever the visibility: owner, moderators and admins
+      (ADR 0009).
 - Others get **404**, not 403, so they don't learn the video exists.
 
 **Alternatives.** MinIO presigned URLs: simpler, but a forwarded link works without login until it expires, revocation

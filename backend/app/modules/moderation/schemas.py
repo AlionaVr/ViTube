@@ -1,12 +1,14 @@
 from datetime import datetime
+from typing import Annotated
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StringConstraints
 
+from app.core.text import MULTILINE
 from app.modules.comments.models import Comment
-from app.modules.reports.models import ReportReason
+from app.modules.reports.models import DETAILS_MAX, ReportReason
 from app.modules.reports.repository import OpenCase
-from app.modules.users.models import User
+from app.modules.users.models import User, UserStatus
 from app.modules.users.schemas import ChannelSummary
 from app.modules.videos.models import Video, VideoStatus, Visibility
 from app.modules.videos.schemas import MEDIA_PREFIX
@@ -95,3 +97,21 @@ class ReportCase(BaseModel):
 
 class HideIn(BaseModel):
     reason: ReportReason = Field(description="The rule the video breaks")
+
+
+class StatusIn(BaseModel):
+    status: UserStatus
+    reason: Annotated[
+        str, StringConstraints(strip_whitespace=True, max_length=DETAILS_MAX, pattern=MULTILINE)
+    ] = Field(default="", description="Why, for the audit log")
+
+
+class RestrictedAccount(BaseModel):
+    """A banned or terminated account."""
+
+    channel: ChannelSummary
+    status: UserStatus
+
+    @classmethod
+    def of(cls, user: User) -> "RestrictedAccount":
+        return cls(channel=ChannelSummary.of(user), status=user.status)
