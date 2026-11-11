@@ -71,6 +71,17 @@ async def get_video(public_id: PublicId, user: OptionalUser, db: DbSession) -> V
     return await service.get_video(db, user, public_id)
 
 
+@router.get(
+    "/{public_id}/related",
+    response_model=Page[VideoSummary],
+    summary="Up next: the channel's other videos first, then the newest",
+)
+async def list_up_next(
+    public_id: PublicId, user: OptionalUser, db: DbSession, cursor: Cursor = None
+) -> Page[VideoSummary]:
+    return await service.list_up_next(db, user, public_id, cursor)
+
+
 @router.patch("/{public_id}", response_model=VideoOut, summary="Edit your video's details")
 async def update_video(
     public_id: PublicId, body: VideoUpdate, user: CurrentUser, db: DbSession

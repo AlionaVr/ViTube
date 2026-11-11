@@ -348,6 +348,70 @@
         }
       }
     },
+    "/api/videos/{public_id}/related": {
+      "get": {
+        "tags": [
+          "videos"
+        ],
+        "summary": "Up next: the channel's other videos first, then the newest",
+        "operationId": "list_up_next_api_videos__public_id__related_get",
+        "parameters": [
+          {
+            "name": "public_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{11}$",
+              "description": "Public video id",
+              "title": "Public Id"
+            },
+            "description": "Public video id"
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "next_cursor of the last page",
+              "title": "Cursor"
+            },
+            "description": "next_cursor of the last page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_VideoSummary_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/videos/{public_id}/file": {
       "put": {
         "tags": [

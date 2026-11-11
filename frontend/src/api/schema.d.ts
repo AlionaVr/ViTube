@@ -125,6 +125,23 @@ export interface paths {
         patch: operations["update_video_api_videos__public_id__patch"];
         trace?: never;
     };
+    "/api/videos/{public_id}/related": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Up next: the channel's other videos first, then the newest */
+        get: operations["list_up_next_api_videos__public_id__related_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/videos/{public_id}/file": {
         parameters: {
             query?: never;
@@ -903,6 +920,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VideoOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_up_next_api_videos__public_id__related_get: {
+        parameters: {
+            query?: {
+                /** @description next_cursor of the last page */
+                cursor?: string | null;
+            };
+            header?: never;
+            path: {
+                /** @description Public video id */
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_VideoSummary_"];
                 };
             };
             /** @description Validation Error */

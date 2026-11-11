@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from datetime import timedelta
 from uuid import UUID
 
-from sqlalchemy import Row, delete, exists, func, select, update
+from sqlalchemy import Row, Select, delete, exists, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -33,16 +33,32 @@ async def get_owner(db: AsyncSession, video: Video) -> User:
     return await db.get_one(User, video.owner_id)
 
 
-async def list_newest(
-    db: AsyncSession, *, category: Category | None, before: UUID | None, limit: int
+async def _newest(
+    db: AsyncSession, query: Select[Video, User], before: UUID | None, limit: int
 ) -> Sequence[VideoRow]:
-    """Listed videos, newest first (ids are uuidv7: ordered by time), after the cursor."""
-    query = _WITH_OWNER.where(*LISTED)
-    if category is not None:
-        query = query.where(Video.category == category)
+    """Newest first (ids are uuidv7: ordered by time), after the cursor."""
     if before is not None:
         query = query.where(Video.id < before)
     return (await db.execute(query.order_by(Video.id.desc()).limit(limit))).all()
+
+
+async def list_newest(
+    db: AsyncSession, *, category: Category | None, before: UUID | None, limit: int
+) -> Sequence[VideoRow]:
+    query = _WITH_OWNER.where(*LISTED)
+    if category is not None:
+        query = query.where(Video.category == category)
+    return await _newest(db, query, before, limit)
+
+
+async def list_up_next(
+    db: AsyncSession, video: Video, *, same_channel: bool, before: UUID | None, limit: int
+) -> Sequence[VideoRow]:
+    """Listed videos but this one: from its channel, or from all the others."""
+    channel = Video.owner_id == video.owner_id if same_channel else Video.owner_id != video.owner_id
+    return await _newest(
+        db, _WITH_OWNER.where(*LISTED, channel, Video.id != video.id), before, limit
+    )
 
 
 async def listed_categories(db: AsyncSession) -> set[Category]:
