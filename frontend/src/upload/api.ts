@@ -1,12 +1,10 @@
 // Upload API: a draft first, then the file as the raw request body (ADR 0006).
 import { ApiError, api, messageOf, readCookie, unwrap } from '../api/client'
 import type { components } from '../api/schema'
+import type { OwnVideo } from '../videos/types'
 
-export type OwnVideo = components['schemas']['VideoOut']
 export type UploadLimits = components['schemas']['UploadLimits']
 export type VideoChanges = components['schemas']['VideoUpdate']
-export type Visibility = components['schemas']['Visibility']
-export type VideoStatus = components['schemas']['VideoStatus']
 
 export function getUploadLimits(): Promise<UploadLimits> {
   return unwrap(api.GET('/api/videos/upload-limits'))

@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { getVideo, listCategories, listRelated, listVideos, rateVideo } from './api'
+import { getVideo, listCategories, listMyVideos, listRelated, listVideos, rateVideo } from './api'
 import type { Category, Rating, Video } from './types'
 
 export const videoKeys = {
@@ -9,6 +9,7 @@ export const videoKeys = {
   detail: (id: string) => ['videos', 'detail', id] as const,
   details: ['videos', 'detail'] as const,
   related: (id: string) => ['videos', 'related', id] as const,
+  mine: ['videos', 'mine'] as const,
 }
 
 const firstPage = null as string | null
@@ -47,6 +48,17 @@ export function useRelatedVideos(id: string) {
     queryFn: ({ pageParam }) => listRelated(id, pageParam),
     initialPageParam: firstPage,
     getNextPageParam: (page) => page.next_cursor,
+  })
+}
+
+/** Studio's list. Only for a signed-in viewer: a guest would get 401. */
+export function useMyVideos(enabled: boolean) {
+  return useInfiniteQuery({
+    queryKey: videoKeys.mine,
+    queryFn: ({ pageParam }) => listMyVideos(pageParam),
+    initialPageParam: firstPage,
+    getNextPageParam: (page) => page.next_cursor,
+    enabled,
   })
 }
 

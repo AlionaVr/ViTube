@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ANNA, json, mockApi } from '../test/api'
 import { renderApp } from '../test/render'
-import type { OwnVideo } from './api'
+import type { OwnVideo } from '../videos/types'
 
 const GIB = 1024 ** 3
 

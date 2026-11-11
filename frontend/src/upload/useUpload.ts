@@ -3,14 +3,8 @@ import { useEffect, useRef, useState } from 'react'
 
 import { ApiError } from '../api/client'
 import { pollWhileProcessing } from '../videos/hooks'
-import {
-  createDraft,
-  getUploadLimits,
-  getVideo,
-  type OwnVideo,
-  type UploadLimits,
-  uploadFile,
-} from './api'
+import type { OwnVideo } from '../videos/types'
+import { createDraft, getUploadLimits, getVideo, type UploadLimits, uploadFile } from './api'
 import { formatSize } from './format'
 
 /** The file's trip to the server. After `stored`, the video's status tells the rest. */

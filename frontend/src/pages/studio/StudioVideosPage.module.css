@@ -1,0 +1,155 @@
+/* YouTube Studio's Content page: a heading over a full-width table. */
+.page {
+  padding: 24px 32px;
+}
+
+@media (max-width: 600px) {
+  .page {
+    padding: 16px;
+  }
+}
+
+.heading {
+  margin: 0 0 16px;
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 32px;
+}
+
+.scroller {
+  overflow-x: auto;
+}
+
+/* Fixed layout: a long title or description can't push the other columns aside. */
+.table {
+  width: 100%;
+  min-width: 960px;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.videoColumn {
+  width: 40%;
+}
+
+.visibilityColumn {
+  width: 10%;
+}
+
+.statusColumn {
+  width: 14%;
+}
+
+.dateColumn {
+  width: 11%;
+}
+
+.countColumn {
+  width: 8%;
+}
+
+.commentsColumn {
+  width: 9%;
+}
+
+.table th {
+  height: 48px;
+  padding: 0 12px;
+  border-top: 1px solid var(--color-divider);
+  border-bottom: 1px solid var(--color-divider);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--color-divider);
+  vertical-align: top;
+}
+
+.table .number {
+  text-align: right;
+}
+
+.row:hover td {
+  background: var(--color-surface);
+}
+
+.video {
+  display: flex;
+  gap: 16px;
+}
+
+.thumbnail {
+  flex: none;
+  width: 120px;
+}
+
+.placeholder {
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  background: var(--color-placeholder);
+}
+
+.details {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  color: var(--color-text);
+}
+
+.title:hover {
+  text-decoration: underline;
+}
+
+.secondary,
+.description {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+/* One line under the title, as in Studio. */
+.description {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.failed {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-error);
+}
+
+.bar {
+  height: 16px;
+  margin-bottom: 8px;
+  border-radius: 4px;
+  background: var(--color-placeholder);
+}
+
+.short {
+  width: 40%;
+}
+
+.more {
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+}

@@ -8,8 +8,9 @@ import { useModalDialog } from '../hooks/useModalDialog'
 import buttons from '../styles/buttons.module.css'
 import { CATEGORIES, CATEGORY_LABELS } from '../videos/categories'
 import { watchUrl } from '../videos/paths'
-import type { Category } from '../videos/types'
-import { type OwnVideo, updateVideo, type Visibility } from './api'
+import type { Category, OwnVideo, Visibility } from '../videos/types'
+import { VISIBILITY_LABELS } from '../videos/visibility'
+import { updateVideo } from './api'
 import { formatLimits } from './format'
 import styles from './UploadDialog.module.css'
 import { type Transfer, useUpload } from './useUpload'
@@ -20,11 +21,15 @@ const DESCRIPTION_MAX = 5000
 const VISIBILITY: { value: Visibility; label: string; hint: string }[] = [
   {
     value: 'private',
-    label: 'Private',
+    label: VISIBILITY_LABELS.private,
     hint: 'Only you and people you choose can watch your video',
   },
-  { value: 'unlisted', label: 'Unlisted', hint: 'Anyone with the video link can watch your video' },
-  { value: 'public', label: 'Public', hint: 'Everyone can watch your video' },
+  {
+    value: 'unlisted',
+    label: VISIBILITY_LABELS.unlisted,
+    hint: 'Anyone with the video link can watch your video',
+  },
+  { value: 'public', label: VISIBILITY_LABELS.public, hint: 'Everyone can watch your video' },
 ]
 
 /** YouTube Studio's "Upload videos" modal. Mounted while open; closing unmounts it. */

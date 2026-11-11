@@ -1,5 +1,5 @@
 import type { Comment } from '../comments/types'
-import type { Page, Video, VideoSummary } from '../videos/types'
+import type { OwnVideo, Page, Video, VideoSummary } from '../videos/types'
 
 const DAY_MS = 24 * 3600 * 1000
 const daysAgo = (days: number) => new Date(Date.now() - days * DAY_MS).toISOString()
@@ -33,6 +33,11 @@ export function detail(n: number, overrides: Partial<Video> = {}): Video {
     my_rating: 'none',
     ...overrides,
   }
+}
+
+/** The owner's view of a video, as Studio lists it. */
+export function own(n: number, overrides: Partial<OwnVideo> = {}): OwnVideo {
+  return { ...detail(n), ...overrides }
 }
 
 export function comment(n: number, overrides: Partial<Comment> = {}): Comment {
