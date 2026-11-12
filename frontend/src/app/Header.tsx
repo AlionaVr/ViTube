@@ -11,6 +11,7 @@ import { useViewer } from '../viewer/useViewer'
 import AccountMenu from './AccountMenu'
 import styles from './Header.module.css'
 import SearchBox from './SearchBox'
+import SettingsMenu from './SettingsMenu'
 
 interface HeaderProps {
   sidebarExpanded: boolean
@@ -53,7 +54,12 @@ export default function Header({ sidebarExpanded, onMenuClick }: HeaderProps) {
             <AccountMenu user={viewer.user} />
           </>
         ) : (
-          viewer.status === 'guest' && <SignInButton />
+          viewer.status === 'guest' && (
+            <>
+              <SettingsMenu />
+              <SignInButton />
+            </>
+          )
         )}
       </div>
       {uploading && <UploadDialog onClose={() => setUploading(false)} />}

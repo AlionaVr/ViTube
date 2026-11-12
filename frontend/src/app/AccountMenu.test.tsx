@@ -140,6 +140,27 @@ describe('header account area', () => {
     expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument()
   })
 
+  it('lets a guest switch the theme from Settings', async () => {
+    mockApi({ 'GET /api/auth/me': () => json(401, { detail: 'Sign in required' }) })
+    renderApp('/')
+
+    await userEvent.click(await header().findByRole('button', { name: 'Settings' }))
+    // The menu takes the focus, so the keyboard goes on from there.
+    expect(screen.getByRole('button', { name: 'Appearance: Device theme' })).toHaveFocus()
+    await userEvent.keyboard('{Enter}')
+    await userEvent.click(screen.getByRole('button', { name: 'Light theme' }))
+
+    expect(document.documentElement.dataset.theme).toBe('light')
+    expect(screen.getByRole('button', { name: 'Light theme' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+
+    await userEvent.keyboard('{Escape}')
+
+    expect(header().getByRole('button', { name: 'Settings' })).toHaveFocus()
+  })
+
   it('opens on its first page again', async () => {
     signedIn()
     renderApp('/')
