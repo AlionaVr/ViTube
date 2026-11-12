@@ -11,11 +11,12 @@ FastAPI + PostgreSQL + MinIO + Celery + React. Deployed with `./install.sh` (Doc
 - Backend (`backend/`): `uv run ruff check .`, `uv run pyright`, `uv run pytest` (needs Docker: tests start Postgres, Redis and MinIO via testcontainers; and ffmpeg for the worker tests).
 - E2E on a running stack (`backend/`): `E2E_BASE_URL=http://localhost uv run pytest tests/e2e -v` (needs ffmpeg).
   Without ffmpeg, CI runs it on the PR: a new e2e test may be committed after ruff and pyright.
-- A worktree's stack builds under its own image tags: a `compose.override.yaml` in the worktree (listed in
-  `.git/info/exclude`) sets `image: vitube-<worktree>-backend` for migrate, api and seed, `-worker` and `-nginx`.
-  Compose loads it by itself, so `up --build` leaves the other checkouts' `vitube-*` images alone. Without it a
-  build moves their next `up` or `run` onto this code and its migrations: rebuild then only with the user's OK.
-  Check frontend work with `API_PROXY=http://localhost:<stack port> npm run dev -- --port <free port>`.
+- A worktree runs its own stack: a `compose.override.yaml` in the worktree (listed in `.git/info/exclude`) sets
+  `name: vitube-<worktree>` and `image: vitube-<worktree>-backend` for migrate, api and seed, `-worker` and `-nginx`.
+  Compose loads it by itself. Without the name, `compose.yaml`'s `name: vitube` makes `up` replace the main
+  checkout's containers; without the tags, a build moves the other checkouts' next `up` or `run` onto this code and
+  its migrations: rebuild then only with the user's OK. The worktree's `.env` is the user's copy with a free
+  `HTTP_PORT`. Check frontend work with `API_PROXY=http://localhost:<stack port> npm run dev -- --port <free port>`.
 - Migrations: `docker compose run --rm migrate alembic <cmd>`. See the `add-migration` skill.
 - Frontend (`frontend/`): `npm run dev` (proxies `/api` to the stack, or to `API_PROXY`), `npm run lint`, `npm run format:check`, `npm test`, `npm run build`.
 - API types: after changing the API, run `npm run gen:api` in `frontend/` and commit `src/api/openapi.json` + `schema.d.ts` (CI checks).
@@ -25,6 +26,8 @@ FastAPI + PostgreSQL + MinIO + Celery + React. Deployed with `./install.sh` (Doc
 ## Workflow
 
 - **Plan first.**
+    - A new stage starts in its own worktree (`.claude/worktrees/<name>`, branch `feat/<name>` from `main`) before
+      planning, even read-only exploring: other sessions work in the main checkout and other worktrees.
     - Use plan mode for any task with 3+ steps or an architectural choice.
     - Write the plan to `tasks/todo.md` as checkboxes; check in before building; tick items as you go.
     - If something goes sideways, stop and re-plan. Don't push on.
