@@ -16,6 +16,7 @@ import { useInfiniteScroll } from '../../hooks/useInfiniteScroll'
 import { useToast } from '../../hooks/useToast'
 import { formatTimeAgo, formatUpdated, formatVideoCount, formatViews } from '../../lib/format'
 import { useLiked, useLikedItems } from '../../liked/hooks'
+import { LIKED_VIDEOS } from '../../liked/paths'
 import {
   useMoveInPlaylist,
   usePlaylist,
@@ -279,8 +280,6 @@ function WatchLater() {
   return <Spinner label="Loading Watch later" />
 }
 
-const LIKED_VIDEOS = 'Liked videos'
-
 /** ⋮ on a liked video: removing it takes the like back, as on YouTube. */
 function LikedMenu({ videoId }: { videoId: string }) {
   const rate = useRateVideo(videoId)
@@ -288,10 +287,10 @@ function LikedMenu({ videoId }: { videoId: string }) {
   // The promise waits for the list to refetch, so the row leaves as the toast shows.
   const remove = () =>
     void rate.mutateAsync('none').then(
-      () => toast(`Removed from ${LIKED_VIDEOS}`),
+      () => toast(`Removed from ${LIKED_VIDEOS.title}`),
       () => toast(NOT_CHANGED),
     )
-  return <ItemMenu title={LIKED_VIDEOS} actions={{ remove }} />
+  return <ItemMenu title={LIKED_VIDEOS.title} actions={{ remove }} />
 }
 
 function LikedView() {
@@ -304,11 +303,16 @@ function LikedView() {
   const videos = videosOf(items)
   return (
     <div className={styles.page}>
-      <title>{`${LIKED_VIDEOS} - ViTube`}</title>
+      <title>{`${LIKED_VIDEOS.title} - ViTube`}</title>
       {liked.data ? (
         <Header
           // Private and without a description, as YouTube's.
-          playlist={{ ...liked.data, title: LIKED_VIDEOS, description: '', visibility: 'private' }}
+          playlist={{
+            ...liked.data,
+            title: LIKED_VIDEOS.title,
+            description: '',
+            visibility: 'private',
+          }}
           first={videos[0]}
         />
       ) : (

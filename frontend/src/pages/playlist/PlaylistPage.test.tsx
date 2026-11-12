@@ -80,7 +80,9 @@ function mockOwn(fail: Partial<Record<'PATCH' | 'DELETE', boolean>> = {}) {
         ]
       }),
     ),
+    // The Playlists page, where deleting leads.
     'GET /api/me/playlists': () => json(200, page([playlist(9, { kind: 'watch_later' })])),
+    'GET /api/me/liked': () => json(200, liked()),
   })
   return { fetch, sent }
 }
