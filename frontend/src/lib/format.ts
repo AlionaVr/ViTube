@@ -4,6 +4,8 @@
 const compact = new Intl.NumberFormat('en', { notation: 'compact', roundingMode: 'trunc' })
 const exact = new Intl.NumberFormat('en')
 const date = new Intl.DateTimeFormat('en', { dateStyle: 'medium' })
+const weekday = new Intl.DateTimeFormat('en', { weekday: 'long' })
+const monthDay = new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' })
 
 /** 1234 → "1.2K", 12345 → "12K", 1234567 → "1.2M". */
 export function formatCompact(n: number): string {
@@ -68,16 +70,32 @@ export function formatTimeAgo(iso: string, now = Date.now()): string {
 
 const DAY_MS = 86_400_000
 
+/** Calendar days on the viewer's clock from `iso` to `now`: 0 today, 1 yesterday. */
+function daysBefore(iso: string, now: number): number {
+  const midnight = (time: number) => new Date(time).setHours(0, 0, 0, 0)
+  // Rounded: a day with a clock change is 23 or 25 hours long.
+  return Math.round((midnight(now) - midnight(Date.parse(iso))) / DAY_MS)
+}
+
 /** A playlist's change, in calendar days as YouTube counts them: "Updated today", "Updated
  * yesterday", "Updated 3 days ago"; from a week on, "Updated 2 weeks ago" and so on. */
 export function formatUpdated(iso: string, now = Date.now()): string {
-  const midnight = (time: number) => new Date(time).setHours(0, 0, 0, 0)
-  // Rounded: a day with a clock change is 23 or 25 hours long.
-  const days = Math.round((midnight(now) - midnight(Date.parse(iso))) / DAY_MS)
+  const days = daysBefore(iso, now)
   if (days <= 0) return 'Updated today'
   if (days === 1) return 'Updated yesterday'
   if (days < 7) return `Updated ${days} days ago`
   return `Updated ${formatTimeAgo(iso, now)}`
+}
+
+/** A day of the watch history, as YouTube heads it: "Today", "Yesterday", "Monday" within a
+ * week, then "Nov 3", with the year if it isn't this one. */
+export function formatHistoryDay(iso: string, now = Date.now()): string {
+  const days = daysBefore(iso, now)
+  if (days <= 0) return 'Today'
+  if (days === 1) return 'Yesterday'
+  const day = new Date(iso)
+  if (days < 7) return weekday.format(day)
+  return day.getFullYear() === new Date(now).getFullYear() ? monthDay.format(day) : date.format(day)
 }
 
 /** "Nov 7, 2026". */

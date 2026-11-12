@@ -4,7 +4,8 @@ from typing import Annotated
 from fastapi import Query
 from pydantic import BaseModel, Field, StringConstraints
 
-from app.modules.videos.schemas import PUBLIC_ID_PATTERN, VideoSummary
+from app.modules.search.schemas import SearchResult
+from app.modules.videos.schemas import PUBLIC_ID_PATTERN
 
 MAX_PROGRESS_IDS = 100  # a page of the longest list, a playlist
 
@@ -21,5 +22,5 @@ class PositionIn(BaseModel):
 
 
 class HistoryItem(BaseModel):
-    video: VideoSummary
+    video: SearchResult = Field(description="With its description, as a search result row")
     watched_at: datetime = Field(description="When this viewer last watched it")

@@ -2747,6 +2747,19 @@
             }
           }
         }
+      },
+      "delete": {
+        "tags": [
+          "history"
+        ],
+        "summary": "Clear your watch history",
+        "description": "The progress bars go too.",
+        "operationId": "clear_history_api_me_history_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        }
       }
     },
     "/api/me/history/progress": {
@@ -2836,6 +2849,43 @@
             }
           }
         },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "history"
+        ],
+        "summary": "Remove a video from your watch history",
+        "description": "Its progress bar goes too. Removing it again, or a video that isn't there, changes nothing.",
+        "operationId": "remove_from_history_api_me_history__public_id__delete",
+        "parameters": [
+          {
+            "name": "public_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{11}$",
+              "description": "Public video id",
+              "title": "Public Id"
+            },
+            "description": "Public video id"
+          }
+        ],
         "responses": {
           "204": {
             "description": "Successful Response"
@@ -3276,7 +3326,8 @@
       "HistoryItem": {
         "properties": {
           "video": {
-            "$ref": "#/components/schemas/VideoSummary"
+            "$ref": "#/components/schemas/SearchResult",
+            "description": "With its description, as a search result row"
           },
           "watched_at": {
             "type": "string",
@@ -4297,7 +4348,7 @@
           "description"
         ],
         "title": "SearchResult",
-        "description": "A result row also shows the start of the description."
+        "description": "A row that also shows the start of the description: search results, watch history."
       },
       "StatusIn": {
         "properties": {

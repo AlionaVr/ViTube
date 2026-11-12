@@ -21,7 +21,7 @@ SearchQuery = Annotated[
 
 
 class SearchResult(VideoSummary):
-    """A result row also shows the start of the description."""
+    """A row that also shows the start of the description: search results, watch history."""
 
     description: str
 

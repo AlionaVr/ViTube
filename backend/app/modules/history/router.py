@@ -25,6 +25,16 @@ async def list_history(
     return await service.list_history(db, user, cursor)
 
 
+@router.delete(
+    "",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Clear your watch history",
+    description="The progress bars go too.",
+)
+async def clear_history(user: CurrentUser, db: DbSession, redis: RedisClient) -> None:
+    await service.clear(db, redis, user)
+
+
 @router.get(
     "/progress",
     response_model=dict[str, int],
@@ -47,3 +57,16 @@ async def save_position(
     public_id: PublicId, body: PositionIn, user: CurrentUser, db: DbSession, redis: RedisClient
 ) -> None:
     await service.save_position(db, redis, user, public_id, body.position_sec)
+
+
+@router.delete(
+    "/{public_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Remove a video from your watch history",
+    description="Its progress bar goes too. Removing it again, or a video that isn't there,"
+    " changes nothing.",
+)
+async def remove_from_history(
+    public_id: PublicId, user: CurrentUser, db: DbSession, redis: RedisClient
+) -> None:
+    await service.remove(db, redis, user, public_id)

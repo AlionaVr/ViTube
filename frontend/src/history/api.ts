@@ -25,3 +25,12 @@ export function getProgress(ids: string[]): Promise<Record<string, number>> {
 export function listHistory(cursor: string | null): Promise<Page<HistoryItem>> {
   return unwrap(api.GET('/api/me/history', { params: { query: { cursor } } }))
 }
+
+/** Its progress bar goes too. */
+export async function removeFromHistory(id: string): Promise<void> {
+  await unwrap(api.DELETE('/api/me/history/{public_id}', { params: { path: { public_id: id } } }))
+}
+
+export async function clearHistory(): Promise<void> {
+  await unwrap(api.DELETE('/api/me/history'))
+}

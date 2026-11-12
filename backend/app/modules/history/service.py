@@ -11,9 +11,10 @@ from app.core.pagination import Page, decode_cursor, split_page
 from app.core.rate_limit import RateLimit
 from app.modules.history import repository as history
 from app.modules.history.schemas import HistoryItem
+from app.modules.search.schemas import SearchResult
 from app.modules.users.models import User
+from app.modules.videos import repository as videos
 from app.modules.videos.interactions import get_ready
-from app.modules.videos.schemas import VideoSummary
 
 # The player saves every 10 s while playing and on start, pause and end: far below this.
 HISTORY_WRITES = RateLimit("history_write", limit=120, window=60)
@@ -44,7 +45,22 @@ async def list_history(db: AsyncSession, user: User, cursor: str | None) -> Page
         rows, PAGE_SIZE, lambda row: (row[0].watched_at, row[0].video_id)
     )
     items = [
-        HistoryItem(video=VideoSummary.of(video, owner), watched_at=entry.watched_at)
+        HistoryItem(video=SearchResult.of(video, owner), watched_at=entry.watched_at)
         for entry, video, owner in page
     ]
     return Page(items=items, next_cursor=next_cursor)
+
+
+async def remove(db: AsyncSession, redis: Redis, user: User, public_id: str) -> None:
+    """Idempotent. No access check: a video that turned private must still go."""
+    await HISTORY_WRITES.hit(redis, str(user.id))
+    video = await videos.get_by_public_id(db, public_id)
+    if video is not None:
+        await history.delete_entry(db, user.id, video.id)
+        await db.commit()
+
+
+async def clear(db: AsyncSession, redis: Redis, user: User) -> None:
+    await HISTORY_WRITES.hit(redis, str(user.id))
+    await history.delete_all(db, user.id)
+    await db.commit()

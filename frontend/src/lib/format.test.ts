@@ -5,6 +5,7 @@ import {
   formatCompact,
   formatDuration,
   formatTimeAgo,
+  formatHistoryDay,
   formatUpdated,
   formatVideoCount,
   formatViews,
@@ -86,5 +87,24 @@ describe('formatUpdated', () => {
     [at(1, 12), 'Updated 1 week ago'],
   ])('%s → %s', (iso, text) => {
     expect(formatUpdated(iso, now)).toBe(text)
+  })
+})
+
+describe('formatHistoryDay', () => {
+  // Thursday, Nov 12, 2026, local time.
+  const now = new Date(2026, 10, 12, 9, 0).getTime()
+  const at = (month: number, day: number, hour = 12, year = 2026) =>
+    new Date(year, month, day, hour).toISOString()
+
+  it.each([
+    [at(10, 12, 0), 'Today'],
+    [at(10, 11, 23), 'Yesterday'],
+    [at(10, 9), 'Monday'],
+    [at(10, 6), 'Friday'],
+    [at(10, 5), 'Nov 5'],
+    [at(0, 3), 'Jan 3'],
+    [at(11, 30, 12, 2025), 'Dec 30, 2025'],
+  ])('%s → %s', (iso, text) => {
+    expect(formatHistoryDay(iso, now)).toBe(text)
   })
 })

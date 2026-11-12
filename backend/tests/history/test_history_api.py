@@ -312,3 +312,63 @@ async def test_progress_needs_a_signed_in_user(guest: AsyncClient, video: Video)
 async def test_progress_refuses_no_bad_or_too_many_ids(owner: AsyncClient, ids: list[str]) -> None:
     response = await owner.get("/api/me/history/progress", params={"v": ids})
     assert response.status_code == 422
+
+
+# --- Removing ---
+
+
+async def remove(client: AsyncClient, public_id: str) -> int:
+    response = await client.delete(f"/api/me/history/{public_id}", headers=csrf(client))
+    return response.status_code
+
+
+async def test_removing_a_video_drops_it_and_its_progress(
+    viewer: AsyncClient, video: Video, db: AsyncSession
+) -> None:
+    other = await make_video(db, await make_user(db, "anna"))
+    await save(viewer, video, 4)
+    await save(viewer, other, 2)
+
+    assert await remove(viewer, video.public_id) == 204
+
+    assert await listed(viewer) == [other.public_id]
+    assert await progress(viewer, video.public_id, other.public_id) == {other.public_id: 2}
+    # Again, or a video never watched or unknown: nothing to do.
+    assert await remove(viewer, video.public_id) == 204
+    assert await remove(viewer, "unknown0001") == 204
+
+
+async def test_removing_works_for_a_video_that_turned_private(
+    viewer: AsyncClient, video: Video, db: AsyncSession
+) -> None:
+    await save(viewer, video)
+    await make_private(db, video)
+
+    assert await remove(viewer, video.public_id) == 204
+    assert await position(db, VIEWER_EMAIL, video) is None
+
+
+async def test_clearing_empties_only_the_users_history(
+    owner: AsyncClient, viewer: AsyncClient, video: Video
+) -> None:
+    await save(owner, video, 3)
+    await save(viewer, video, 4)
+
+    response = await viewer.delete("/api/me/history", headers=csrf(viewer))
+
+    assert response.status_code == 204
+    assert await listed(viewer) == []
+    assert await progress(viewer, video.public_id) == {}
+    assert await progress(owner, video.public_id) == {video.public_id: 3}
+
+
+async def test_removing_needs_a_signed_in_user(guest: AsyncClient, video: Video) -> None:
+    assert await remove(guest, video.public_id) == 401
+    response = await guest.delete("/api/me/history", headers=csrf(guest))
+    assert response.status_code == 401
+
+
+async def test_history_rows_carry_the_description(viewer: AsyncClient, video: Video) -> None:
+    await save(viewer, video)
+    [item] = (await viewer.get("/api/me/history")).json()["items"]
+    assert item["video"]["description"] == video.description

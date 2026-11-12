@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import Row, func, select, tuple_
+from sqlalchemy import Row, delete, func, select, tuple_
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -55,3 +55,15 @@ async def list_entries(
         )
     order = (HistoryEntry.watched_at.desc(), HistoryEntry.video_id.desc())
     return (await db.execute(query.order_by(*order).limit(limit))).all()
+
+
+async def delete_entry(db: AsyncSession, user_id: UUID, video_id: UUID) -> None:
+    await db.execute(
+        delete(HistoryEntry).where(
+            HistoryEntry.user_id == user_id, HistoryEntry.video_id == video_id
+        )
+    )
+
+
+async def delete_all(db: AsyncSession, user_id: UUID) -> None:
+    await db.execute(delete(HistoryEntry).where(HistoryEntry.user_id == user_id))

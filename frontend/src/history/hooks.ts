@@ -1,12 +1,21 @@
-import { useInfiniteQuery } from '@tanstack/react-query'
+import {
+  type InfiniteData,
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query'
 
-import { listHistory } from './api'
+import type { Page } from '../videos/types'
+import { clearHistory, type HistoryItem, listHistory, removeFromHistory } from './api'
 
 export const historyKeys = {
   all: ['history'] as const,
   list: ['history', 'list'] as const,
   progress: (videoId: string) => ['history', 'progress', videoId] as const,
+  allProgress: ['history', 'progress'] as const,
 }
+
+type Items = InfiniteData<Page<HistoryItem>>
 
 const firstPage = null as string | null
 
@@ -16,5 +25,40 @@ export function useHistory() {
     queryFn: ({ pageParam }) => listHistory(pageParam),
     initialPageParam: firstPage,
     getNextPageParam: (page) => page.next_cursor,
+  })
+}
+
+/** The row goes once the server agrees, and every thumbnail of the video loses its bar. */
+export function useRemoveFromHistory() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: removeFromHistory,
+    onSuccess: (_data, videoId) => {
+      queryClient.setQueryData<Items>(historyKeys.list, (data) =>
+        data
+          ? {
+              ...data,
+              pages: data.pages.map((page) => ({
+                ...page,
+                items: page.items.filter((item) => item.video.id !== videoId),
+              })),
+            }
+          : data,
+      )
+      queryClient.setQueryData(historyKeys.progress(videoId), null)
+    },
+  })
+}
+
+export function useClearHistory() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: clearHistory,
+    onSuccess: () => {
+      queryClient.setQueryData<Items>(historyKeys.list, (data) =>
+        data ? { pages: [{ items: [], next_cursor: null }], pageParams: [firstPage] } : data,
+      )
+      queryClient.setQueriesData({ queryKey: historyKeys.allProgress }, null)
+    },
   })
 }

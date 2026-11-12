@@ -871,7 +871,11 @@ export interface paths {
         get: operations["list_history_api_me_history_get"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Clear your watch history
+         * @description The progress bars go too.
+         */
+        delete: operations["clear_history_api_me_history_delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -911,7 +915,11 @@ export interface paths {
          */
         put: operations["save_position_api_me_history__public_id__put"];
         post?: never;
-        delete?: never;
+        /**
+         * Remove a video from your watch history
+         * @description Its progress bar goes too. Removing it again, or a video that isn't there, changes nothing.
+         */
+        delete: operations["remove_from_history_api_me_history__public_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1126,7 +1134,8 @@ export interface components {
         };
         /** HistoryItem */
         HistoryItem: {
-            video: components["schemas"]["VideoSummary"];
+            /** @description With its description, as a search result row */
+            video: components["schemas"]["SearchResult"];
             /**
              * Watched At
              * Format: date-time
@@ -1499,7 +1508,7 @@ export interface components {
         };
         /**
          * SearchResult
-         * @description A result row also shows the start of the description.
+         * @description A row that also shows the start of the description: search results, watch history.
          */
         SearchResult: {
             /**
@@ -3534,6 +3543,24 @@ export interface operations {
             };
         };
     };
+    clear_history_api_me_history_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     get_progress_api_me_history_progress_get: {
         parameters: {
             query: {
@@ -3583,6 +3610,36 @@ export interface operations {
                 "application/json": components["schemas"]["PositionIn"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_from_history_api_me_history__public_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Public video id */
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             204: {
