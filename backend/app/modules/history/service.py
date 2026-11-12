@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.pagination import Page, decode_cursor, split_page
 from app.core.rate_limit import RateLimit
 from app.modules.history import repository as history
-from app.modules.history.schemas import HistoryItem
+from app.modules.history.schemas import HistoryItem, HistorySettings
 from app.modules.search.schemas import SearchResult
 from app.modules.users.models import User
 from app.modules.videos import repository as videos
@@ -24,7 +24,9 @@ PAGE_SIZE = 20
 async def save_position(
     db: AsyncSession, redis: Redis, user: User, public_id: str, position_sec: int
 ) -> None:
-    """Puts the video on top of the user's history, at this position."""
+    """Puts the video on top of the user's history, at this position. Paused: no change."""
+    if user.history_paused:
+        return
     await HISTORY_WRITES.hit(redis, str(user.id))
     video = await get_ready(db, user, public_id)
     if video.duration_sec is not None:  # always set once ready (CHECK ready_has_duration)
@@ -64,3 +66,15 @@ async def clear(db: AsyncSession, redis: Redis, user: User) -> None:
     await HISTORY_WRITES.hit(redis, str(user.id))
     await history.delete_all(db, user.id)
     await db.commit()
+
+
+def get_settings(user: User) -> HistorySettings:
+    return HistorySettings(paused=user.history_paused)
+
+
+async def set_paused(db: AsyncSession, redis: Redis, user: User, paused: bool) -> HistorySettings:
+    """The history stays as it is either way; only new saves stop or start."""
+    await HISTORY_WRITES.hit(redis, str(user.id))
+    await history.set_paused(db, user.id, paused)
+    await db.commit()
+    return HistorySettings(paused=paused)

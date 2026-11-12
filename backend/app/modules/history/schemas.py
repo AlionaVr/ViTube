@@ -24,3 +24,7 @@ class PositionIn(BaseModel):
 class HistoryItem(BaseModel):
     video: SearchResult = Field(description="With its description, as a search result row")
     watched_at: datetime = Field(description="When this viewer last watched it")
+
+
+class HistorySettings(BaseModel):
+    paused: bool = Field(description="Videos you watch don't go to your history meanwhile")

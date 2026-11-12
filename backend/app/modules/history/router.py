@@ -7,7 +7,7 @@ from app.core.redis import RedisClient
 from app.db.session import DbSession
 from app.modules.auth.deps import CurrentUser
 from app.modules.history import service
-from app.modules.history.schemas import HistoryItem, PositionIn, VideoIds
+from app.modules.history.schemas import HistoryItem, HistorySettings, PositionIn, VideoIds
 from app.modules.videos.schemas import PublicId
 
 router = APIRouter(prefix="/api/me/history", tags=["history"])
@@ -44,6 +44,25 @@ async def clear_history(user: CurrentUser, db: DbSession, redis: RedisClient) ->
 )
 async def get_progress(user: CurrentUser, db: DbSession, v: VideoIds) -> dict[str, int]:
     return await service.progress(db, user, v)
+
+
+# Before /{public_id}: paths match in order, and that one would take "settings".
+@router.get("/settings", response_model=HistorySettings, summary="Whether your history is paused")
+async def get_settings(user: CurrentUser) -> HistorySettings:
+    return service.get_settings(user)
+
+
+@router.put(
+    "/settings",
+    response_model=HistorySettings,
+    summary="Pause or turn on your watch history",
+    description="While paused, videos you watch don't go to your history and their progress isn't"
+    " saved. What is there stays.",
+)
+async def set_settings(
+    body: HistorySettings, user: CurrentUser, db: DbSession, redis: RedisClient
+) -> HistorySettings:
+    return await service.set_paused(db, redis, user, body.paused)
 
 
 @router.put(

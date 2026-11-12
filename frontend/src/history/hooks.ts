@@ -2,17 +2,26 @@ import {
   type InfiniteData,
   useInfiniteQuery,
   useMutation,
+  useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
 
 import type { Page } from '../videos/types'
-import { clearHistory, type HistoryItem, listHistory, removeFromHistory } from './api'
+import {
+  clearHistory,
+  getHistorySettings,
+  type HistoryItem,
+  listHistory,
+  removeFromHistory,
+  setHistoryPaused,
+} from './api'
 
 export const historyKeys = {
   all: ['history'] as const,
   list: ['history', 'list'] as const,
   progress: (videoId: string) => ['history', 'progress', videoId] as const,
   allProgress: ['history', 'progress'] as const,
+  settings: ['history', 'settings'] as const,
 }
 
 type Items = InfiniteData<Page<HistoryItem>>
@@ -60,5 +69,18 @@ export function useClearHistory() {
       )
       queryClient.setQueriesData({ queryKey: historyKeys.allProgress }, null)
     },
+  })
+}
+
+/** Only for a signed-in viewer. */
+export function useHistorySettings(enabled: boolean) {
+  return useQuery({ queryKey: historyKeys.settings, queryFn: getHistorySettings, enabled })
+}
+
+export function useSetHistoryPaused() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: setHistoryPaused,
+    onSuccess: (settings) => queryClient.setQueryData(historyKeys.settings, settings),
   })
 }

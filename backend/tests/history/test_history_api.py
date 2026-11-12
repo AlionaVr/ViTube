@@ -372,3 +372,56 @@ async def test_history_rows_carry_the_description(viewer: AsyncClient, video: Vi
     await save(viewer, video)
     [item] = (await viewer.get("/api/me/history")).json()["items"]
     assert item["video"]["description"] == video.description
+
+
+# --- Pausing ---
+
+
+async def set_paused(client: AsyncClient, paused: bool) -> int:
+    response = await client.put(
+        "/api/me/history/settings", json={"paused": paused}, headers=csrf(client)
+    )
+    if response.status_code == 200:
+        assert response.json() == {"paused": paused}
+    return response.status_code
+
+
+async def test_history_starts_on(viewer: AsyncClient) -> None:
+    response = await viewer.get("/api/me/history/settings")
+    assert (response.status_code, response.json()) == (200, {"paused": False})
+
+
+async def test_paused_history_keeps_what_it_has_and_saves_nothing_new(
+    viewer: AsyncClient, video: Video, db: AsyncSession
+) -> None:
+    other = await make_video(db, await make_user(db, "anna"))
+    await save(viewer, video, 3)
+
+    assert await set_paused(viewer, True) == 200
+    assert (await viewer.get("/api/me/history/settings")).json() == {"paused": True}
+    assert (await save(viewer, video, 8)).status_code == 204
+    assert (await save(viewer, other, 2)).status_code == 204
+
+    assert await listed(viewer) == [video.public_id]
+    assert await position(db, VIEWER_EMAIL, video) == 3
+
+    assert await set_paused(viewer, False) == 200
+    await save(viewer, other, 2)
+    assert await listed(viewer) == [other.public_id, video.public_id]
+
+
+async def test_pausing_is_per_user(owner: AsyncClient, viewer: AsyncClient, video: Video) -> None:
+    await set_paused(viewer, True)
+    await save(owner, video, 5)
+    assert await listed(owner) == [video.public_id]
+
+
+async def test_settings_need_a_signed_in_user(guest: AsyncClient) -> None:
+    assert (await guest.get("/api/me/history/settings")).status_code == 401
+    assert await set_paused(guest, True) == 401
+
+
+@pytest.mark.parametrize("body", [{}, {"paused": None}, {"paused": "maybe"}])
+async def test_bad_settings_get_422(viewer: AsyncClient, body: dict[str, object]) -> None:
+    response = await viewer.put("/api/me/history/settings", json=body, headers=csrf(viewer))
+    assert response.status_code == 422

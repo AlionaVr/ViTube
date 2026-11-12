@@ -4,12 +4,18 @@ import { Link } from 'react-router'
 import Dialog from '../../components/Dialog'
 import EmptyState from '../../components/EmptyState'
 import ErrorState from '../../components/ErrorState'
-import Icon from '../../components/Icon'
+import Icon, { type IconName } from '../../components/Icon'
 import IconButton from '../../components/IconButton'
 import Spinner from '../../components/Spinner'
 import Thumbnail from '../../components/Thumbnail'
 import type { HistoryItem } from '../../history/api'
-import { useClearHistory, useHistory, useRemoveFromHistory } from '../../history/hooks'
+import {
+  useClearHistory,
+  useHistory,
+  useHistorySettings,
+  useRemoveFromHistory,
+  useSetHistoryPaused,
+} from '../../history/hooks'
 import { useInfiniteScroll } from '../../hooks/useInfiniteScroll'
 import { useToast } from '../../hooks/useToast'
 import { formatHistoryDay, formatViews } from '../../lib/format'
@@ -132,17 +138,25 @@ function History() {
   )
 }
 
-function ClearHistory() {
+interface ConfirmedActionProps {
+  icon: IconName
+  label: string
+  title: string
+  text: string
+  confirm: string
+  /** Runs after the viewer confirms; resolves to the toast to show. */
+  run: () => Promise<string>
+  failed: string
+}
+
+/** A side-panel button that asks first, as YouTube's history actions do. */
+function ConfirmedAction({ icon, label, title, text, confirm, run, failed }: ConfirmedActionProps) {
   const [confirming, setConfirming] = useState(false)
-  const clear = useClearHistory()
   const toast = useToast()
 
-  function confirm() {
+  function proceed() {
     setConfirming(false)
-    clear.mutateAsync().then(
-      () => toast('Watch history cleared'),
-      () => toast('Couldn’t clear watch history. Try again.'),
-    )
+    run().then(toast, () => toast(failed))
   }
 
   return (
@@ -152,15 +166,12 @@ function ClearHistory() {
         className={`${buttons.pill} ${buttons.text} ${buttons.iconLeading} ${styles.action}`}
         onClick={() => setConfirming(true)}
       >
-        <Icon name="delete" />
-        Clear all watch history
+        <Icon name={icon} />
+        {label}
       </button>
-      <Dialog open={confirming} onClose={() => setConfirming(false)} label="Clear watch history?">
-        <h2 className={styles.confirmTitle}>Clear watch history?</h2>
-        <p className={styles.confirmText}>
-          Your ViTube watch history will be cleared on all devices, and videos will play from the
-          start again.
-        </p>
+      <Dialog open={confirming} onClose={() => setConfirming(false)} label={title}>
+        <h2 className={styles.confirmTitle}>{title}</h2>
+        <p className={styles.confirmText}>{text}</p>
         <div className={styles.confirmActions}>
           <button
             type="button"
@@ -169,12 +180,55 @@ function ClearHistory() {
           >
             Cancel
           </button>
-          <button type="button" className={`${buttons.pill} ${buttons.link}`} onClick={confirm}>
-            Clear watch history
+          <button type="button" className={`${buttons.pill} ${buttons.link}`} onClick={proceed}>
+            {confirm}
           </button>
         </div>
       </Dialog>
     </>
+  )
+}
+
+function Actions() {
+  const clear = useClearHistory()
+  const settings = useHistorySettings(true)
+  const setPaused = useSetHistoryPaused()
+  const paused = settings.data?.paused
+
+  return (
+    <div className={styles.side}>
+      <ConfirmedAction
+        icon="delete"
+        label="Clear all watch history"
+        title="Clear watch history?"
+        text="Your ViTube watch history will be cleared on all devices, and videos will play from the start again."
+        confirm="Clear watch history"
+        run={() => clear.mutateAsync().then(() => 'Watch history cleared')}
+        failed="Couldn’t clear watch history. Try again."
+      />
+      {paused === false && (
+        <ConfirmedAction
+          icon="pause"
+          label="Pause watch history"
+          title="Pause watch history?"
+          text="While it’s paused, the videos you watch don’t go to your history, and they won’t remember where you stopped. What’s there now stays."
+          confirm="Pause"
+          run={() => setPaused.mutateAsync(true).then(() => 'Watch history paused')}
+          failed="Couldn’t pause watch history. Try again."
+        />
+      )}
+      {paused === true && (
+        <ConfirmedAction
+          icon="play"
+          label="Turn on watch history"
+          title="Turn on watch history?"
+          text="The videos you watch will go to your history again."
+          confirm="Turn on"
+          run={() => setPaused.mutateAsync(false).then(() => 'Watch history turned on')}
+          failed="Couldn’t turn on watch history. Try again."
+        />
+      )}
+    </div>
   )
 }
 
@@ -198,9 +252,7 @@ export default function HistoryPage() {
               <div className={styles.main}>
                 <History />
               </div>
-              <div className={styles.side}>
-                <ClearHistory />
-              </div>
+              <Actions />
             </div>
           </>
         )

@@ -28,11 +28,17 @@ function entry(n: number, days = 0): HistoryItem {
   }
 }
 
-/** A history the server keeps: removals and clearing show on the next read. */
-function mockHistory(items: HistoryItem[], fail = false) {
+/** A history the server keeps: removals, clearing and pausing show on the next read. */
+function mockHistory(items: HistoryItem[], fail = false, paused = false) {
   let current = items
+  let settings = { paused }
   return mockApi({
     ...SIGNED_IN,
+    'GET /api/me/history/settings': () => json(200, settings),
+    'PUT /api/me/history/settings': async (request) => {
+      settings = (await request.json()) as { paused: boolean }
+      return json(200, settings)
+    },
     'GET /api/me/history': () => json(200, page(current)),
     'DELETE /api/me/history': () => {
       if (fail) return json(500, { detail: 'Internal error' })
@@ -162,5 +168,24 @@ describe('HistoryPage', () => {
 
     expect(screen.getByRole('link', { name: 'Video 1' })).toBeInTheDocument()
     expect(fetch.mock.calls.some(([request]) => request.method === 'DELETE')).toBe(false)
+  })
+
+  it('pauses the history after a confirmation, and turns it back on', async () => {
+    mockHistory([entry(1)])
+    await openHistory()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Pause watch history' }))
+    const dialog = screen.getByRole('dialog', { name: 'Pause watch history?' })
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Pause' }))
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Watch history paused')
+    await userEvent.click(screen.getByRole('button', { name: 'Turn on watch history' }))
+    const again = screen.getByRole('dialog', { name: 'Turn on watch history?' })
+    await userEvent.click(within(again).getByRole('button', { name: 'Turn on' }))
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Watch history turned on')
+    expect(screen.getByRole('button', { name: 'Pause watch history' })).toBeInTheDocument()
+    // What was there stays.
+    expect(screen.getByRole('link', { name: 'Video 1' })).toBeInTheDocument()
   })
 })

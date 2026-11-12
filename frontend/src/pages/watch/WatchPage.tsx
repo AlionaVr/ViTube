@@ -6,6 +6,7 @@ import { useNavigate, useSearchParams } from 'react-router'
 import { ApiError } from '../../api/client'
 import ErrorState from '../../components/ErrorState'
 import Icon from '../../components/Icon'
+import { useHistorySettings } from '../../history/hooks'
 import { resumePosition, useWatchProgress } from '../../history/progress'
 import { useHistoryRecorder } from '../../history/useHistoryRecorder'
 import ModerationNotice from '../../components/ModerationNotice'
@@ -87,11 +88,13 @@ export default function WatchPage() {
   const [theater, toggleTheater] = useStoredFlag('vitube:theater', false)
   const reportPlayed = useViewReport(id, video.data?.duration_sec ?? 0)
   const viewer = useViewer()
-  const recordPosition = useHistoryRecorder(id, viewer.status === 'authenticated')
+  const signedIn = viewer.status === 'authenticated'
+  const historySettings = useHistorySettings(signedIn)
+  // Unknown counts as paused: a save the viewer turned off can't be taken back.
+  const recordPosition = useHistoryRecorder(id, historySettings.data?.paused === false)
   const progress = useWatchProgress(id)
   // The player starts where the viewer stopped, so it waits for that; a guest has nothing saved.
-  const startKnown =
-    viewer.status === 'guest' || (viewer.status === 'authenticated' && !progress.isPending)
+  const startKnown = viewer.status === 'guest' || (signedIn && !progress.isPending)
 
   const next = related.data?.pages[0]?.items[0]
   const notFound = video.error instanceof ApiError && video.error.status === 404

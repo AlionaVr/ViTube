@@ -901,6 +901,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/me/history/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Whether your history is paused */
+        get: operations["get_settings_api_me_history_settings_get"];
+        /**
+         * Pause or turn on your watch history
+         * @description While paused, videos you watch don't go to your history and their progress isn't saved. What is there stays.
+         */
+        put: operations["set_settings_api_me_history_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/me/history/{public_id}": {
         parameters: {
             query?: never;
@@ -1142,6 +1163,14 @@ export interface components {
              * @description When this viewer last watched it
              */
             watched_at: string;
+        };
+        /** HistorySettings */
+        HistorySettings: {
+            /**
+             * Paused
+             * @description Videos you watch don't go to your history meanwhile
+             */
+            paused: boolean;
         };
         /** ItemMove */
         ItemMove: {
@@ -3582,6 +3611,59 @@ export interface operations {
                     "application/json": {
                         [key: string]: number;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_settings_api_me_history_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HistorySettings"];
+                };
+            };
+        };
+    };
+    set_settings_api_me_history_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HistorySettings"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HistorySettings"];
                 };
             };
             /** @description Validation Error */

@@ -2817,6 +2817,67 @@
         }
       }
     },
+    "/api/me/history/settings": {
+      "get": {
+        "tags": [
+          "history"
+        ],
+        "summary": "Whether your history is paused",
+        "operationId": "get_settings_api_me_history_settings_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistorySettings"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "history"
+        ],
+        "summary": "Pause or turn on your watch history",
+        "description": "While paused, videos you watch don't go to your history and their progress isn't saved. What is there stays.",
+        "operationId": "set_settings_api_me_history_settings_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HistorySettings"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistorySettings"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/me/history/{public_id}": {
       "put": {
         "tags": [
@@ -3342,6 +3403,20 @@
           "watched_at"
         ],
         "title": "HistoryItem"
+      },
+      "HistorySettings": {
+        "properties": {
+          "paused": {
+            "type": "boolean",
+            "title": "Paused",
+            "description": "Videos you watch don't go to your history meanwhile"
+          }
+        },
+        "type": "object",
+        "required": [
+          "paused"
+        ],
+        "title": "HistorySettings"
       },
       "ItemMove": {
         "properties": {

@@ -4,6 +4,7 @@ import type { components } from '../api/schema'
 import type { Page } from '../videos/types'
 
 export type HistoryItem = components['schemas']['HistoryItem']
+export type HistorySettings = components['schemas']['HistorySettings']
 
 /** Puts the video on top of the history. `keepalive`: the request outlives a closing tab. */
 export async function savePosition(id: string, seconds: number, keepalive = false): Promise<void> {
@@ -33,4 +34,13 @@ export async function removeFromHistory(id: string): Promise<void> {
 
 export async function clearHistory(): Promise<void> {
   await unwrap(api.DELETE('/api/me/history'))
+}
+
+export function getHistorySettings(): Promise<HistorySettings> {
+  return unwrap(api.GET('/api/me/history/settings'))
+}
+
+/** While paused, new videos don't go to the history; what is there stays. */
+export function setHistoryPaused(paused: boolean): Promise<HistorySettings> {
+  return unwrap(api.PUT('/api/me/history/settings', { body: { paused } }))
 }

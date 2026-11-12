@@ -14,11 +14,12 @@ const SIGNED_IN = { 'GET /api/auth/me': () => json(200, ANNA) }
 const GUEST = { 'GET /api/auth/me': () => json(401, { detail: 'Sign in required' }) }
 
 /** The API of one watch page; the rating and new comments behave like the server's. */
-function mockWatch(
-  video: Video = VIDEO,
-  viewer = SIGNED_IN,
-  progress: Record<string, number> = {},
-) {
+interface HistoryState {
+  progress?: Record<string, number>
+  paused?: boolean
+}
+
+function mockWatch(video: Video = VIDEO, viewer = SIGNED_IN, history: HistoryState = {}) {
   const base = `/api/videos/${video.id}`
   const owner = `/api/channels/${video.channel.handle}`
   const subscribed = (is_subscribed: boolean) => () =>
@@ -40,7 +41,8 @@ function mockWatch(
     [`POST ${base}/views/start`]: () => json(204),
     [`POST ${base}/views`]: () => json(204),
     [`PUT /api/me/history/${video.id}`]: () => json(204),
-    'GET /api/me/history/progress': () => json(200, progress),
+    'GET /api/me/history/progress': () => json(200, history.progress ?? {}),
+    'GET /api/me/history/settings': () => json(200, { paused: history.paused ?? false }),
     [`PUT ${base}/rating`]: async (request) => {
       const { rating } = (await request.json()) as { rating: Rating }
       return json(200, {
@@ -150,7 +152,7 @@ describe('WatchPage', () => {
   })
 
   it('starts where the viewer stopped', async () => {
-    mockWatch(VIDEO, SIGNED_IN, { [VIDEO.id]: 20 })
+    mockWatch(VIDEO, SIGNED_IN, { progress: { [VIDEO.id]: 20 } })
     await openWatch()
     await screen.findByRole('region', { name: 'Video player' })
     expect(document.querySelector('video')!.getAttribute('src')).toBe(`${VIDEO.media_url}#t=20`)
@@ -158,10 +160,22 @@ describe('WatchPage', () => {
 
   it('starts over a video the viewer saw to the end', async () => {
     // 33 s long: the last 5 s count as the end.
-    mockWatch(VIDEO, SIGNED_IN, { [VIDEO.id]: 28 })
+    mockWatch(VIDEO, SIGNED_IN, { progress: { [VIDEO.id]: 28 } })
     await openWatch()
     await screen.findByRole('region', { name: 'Video player' })
     expect(document.querySelector('video')!.getAttribute('src')).toBe(VIDEO.media_url)
+  })
+
+  it('saves nothing while the viewer has paused the history', async () => {
+    const fetch = mockWatch(VIDEO, SIGNED_IN, { paused: true })
+    await openWatch()
+    const calls = () => fetch.mock.calls.map(([request]) => new URL(request.url).pathname)
+    await waitFor(() => expect(calls()).toContain('/api/me/history/settings'))
+    const video = document.querySelector('video')!
+    video.currentTime = 12
+    video.pause()
+    window.dispatchEvent(new Event('pagehide'))
+    expect(await savedPositions(fetch)).toEqual([])
   })
 
   it('keeps no history for a guest', async () => {
