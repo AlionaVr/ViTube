@@ -33,7 +33,8 @@ YouTube layout: header with logo, search and avatar; collapsible sidebar.
    private ones.
 4. **Search** `/results?search_query=` — YouTube-style list, suggestions while typing.
 5. **Upload** — drag & drop, progress bar, metadata form, processing status, clear limit errors.
-6. **Sign in / Sign up** — email and password; the server gives a random @handle (editable later). A channel is
+6. **Sign in / Sign up** — email and password, or Google when it is set up
+   ([ADR 0014](adr/0014-google-sign-in.md)); the server gives a random @handle (editable later). A channel is
    created on sign-up.
 7. **Moderation** `/moderation` — report queue, hidden videos; for admins, restricted accounts and the audit log
    with filters.

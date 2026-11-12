@@ -10,6 +10,7 @@ A YouTube clone built with AI: FastAPI, PostgreSQL, React, MinIO, Celery.
   reports.
 - Public, unlisted and private videos; a private video can be shared with chosen people.
 - Moderation: reports, hidden videos, banned and terminated accounts, an audit log.
+- Sign in with an email and password, or [with Google](#sign-in-with-google) once it is set up.
 
 ## Quick start
 
@@ -87,6 +88,8 @@ Updating a deployment made before the seed: add `DEMO_PASSWORD=<random, 16+ char
 | `REDIS_PASSWORD` | random | sessions, rate limits, the task queue |
 | `SESSION_SECRET` | random | 32+ chars |
 | `COOKIE_SECURE` | false | true when served over HTTPS: cookies then go over HTTPS only |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | empty | [sign-in with Google](#sign-in-with-google); off while empty |
+| `GOOGLE_REDIRECT_URI` | `http://localhost/auth/google/callback` | the site's callback page, as set in the Google client |
 | `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD` | `vitube`, random | storage admin: only the setup job uses it |
 | `MINIO_APP_PASSWORD` | random | storage user of the app: objects in the bucket only |
 | `S3_BUCKET` | `vitube` | |
@@ -97,18 +100,34 @@ Updating a deployment made before the seed: add `DEMO_PASSWORD=<random, 16+ char
 
 After a change, run `./install.sh` again.
 
+### Sign-in with Google
+
+Off by default: while `GOOGLE_CLIENT_ID` is empty, the sign-in page has no Google button. To turn it on:
+
+1. In [Google Cloud Console](https://console.cloud.google.com/apis/credentials), create an OAuth client ID of type
+   "Web application" (set up the consent screen first if asked).
+2. Under "Authorized redirect URIs", add the site's callback page, e.g. `http://localhost/auth/google/callback`
+   (with another `HTTP_PORT`, put it in: `http://localhost:8080/...`). Google allows `http` only for `localhost`:
+   a server needs a domain and HTTPS (`https://<domain>/auth/google/callback`, and `COOKIE_SECURE=true`).
+3. Put the client's ID and secret into `.env` as `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, and the URI from
+   step 2 as `GOOGLE_REDIRECT_URI`. Run `./install.sh` again.
+
+A Google sign-in creates an account without a password. If the email already has a ViTube account, it is refused:
+accounts are never joined by email ([ADR 0014](docs/adr/0014-google-sign-in.md)).
+
 ## Architecture
 
 ```
 Browser ──:80──► nginx ─┬─ /             → React static files
                         ├─ /api/*, /docs → api (FastAPI)
                         └─ /media/*      → auth_request → minio
-api    ──► postgres, redis, minio
+api    ──► postgres, redis, minio; Google (sign-in only)
 worker (Celery + ffmpeg) ◄── redis; ──► minio, postgres
 one-shot jobs: migrate, minio-init, seed
 ```
 
-Only nginx is published; the backend and the data services have no internet. Each backend module is layered
+Only nginx is published. The worker and the data services have no internet; the api reaches it for Google sign-in
+([ADR 0008](docs/adr/0008-deployment.md)). Each backend module is layered
 `router → service → repository → models`, and one access policy decides who may watch a video. The plan, the DB
 schema and the reasons for each decision: [docs/plan.md](docs/plan.md), [docs/adr/](docs/adr/README.md).
 
