@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import NotFound
-from app.modules.users.models import Role, User
+from app.modules.users.models import Role, User, UserStatus
 from app.modules.users.schemas import ChannelSummary
 from app.modules.videos.access import can_view, get_viewable
 from app.modules.videos.models import VideoAccess, VideoStatus, Visibility
@@ -22,11 +22,17 @@ class Viewer(Enum):
     ADMIN = "admin"
 
 
-def expected(viewer: Viewer, visibility: Visibility, status: VideoStatus) -> bool:
+def expected(
+    viewer: Viewer,
+    visibility: Visibility,
+    status: VideoStatus,
+    hidden: bool = False,
+    owner_status: UserStatus = UserStatus.ACTIVE,
+) -> bool:
     if viewer in (Viewer.OWNER, Viewer.MODERATOR, Viewer.ADMIN):
         return True
-    if status is not VideoStatus.READY:
-        return False
+    if status is not VideoStatus.READY or hidden or owner_status is UserStatus.TERMINATED:
+        return False  # restricted by moderation (ADR 0009); a ban keeps content
     return visibility is not Visibility.PRIVATE or viewer is Viewer.GRANTED
 
 
@@ -58,6 +64,24 @@ async def test_can_view(
         await db.commit()
 
     assert await can_view(db, user, video) is expected(viewer, visibility, status)
+
+
+@pytest.mark.parametrize("owner_status", list(UserStatus))
+@pytest.mark.parametrize("hidden", [False, True])
+@pytest.mark.parametrize("viewer", list(Viewer))
+async def test_can_view_under_moderation(
+    db: AsyncSession, viewer: Viewer, hidden: bool, owner_status: UserStatus
+) -> None:
+    """A public, ready video: what moderation takes away. Every state: test_visibility_rules."""
+    owner = await make_user(db, "anna")
+    video = await make_video(db, owner)
+    video.is_hidden, owner.status = hidden, owner_status
+    await db.commit()
+    user = await viewer_user(db, viewer, owner)
+
+    assert await can_view(db, user, video) is expected(
+        viewer, Visibility.PUBLIC, VideoStatus.READY, hidden, owner_status
+    )
 
 
 async def test_a_grant_on_another_video_gives_no_access(db: AsyncSession) -> None:

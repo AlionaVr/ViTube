@@ -25,7 +25,8 @@
     - A report locks its target `FOR SHARE` (a comment, then its video), in the order a hide or delete locks, so the
       action waits for the report and closes it, or the report sees the target gone.
     - Two windows stay open, to keep locks off hot paths: a comment's rating doesn't touch the video row, and a
-      write on a channel's video doesn't lock the owner, so either can land just after a hide or a termination.
+      write on a channel or its video doesn't re-check the owner, so either can land just after a hide or a
+      termination.
       What lands is a rating, comment, view or report on content only its owner and staff see until it is back.
 - Moderators don't act on their own videos or comments: another moderator decides.
 - Deleting a comment is soft: the row stays as evidence, lists and counters leave it out, and a thread's first comment
@@ -40,7 +41,8 @@
   so the filter works after the video or comment is gone. Each filter has an index.
 - Account status, set by admins (API and moderation page) and the CLI: `banned` (no sign-in, sessions end, content
   stays), `terminated` (the same, and the channel's videos are restricted like hidden ones, by status, with no
-  change to each video), `active` (reinstated). Admins can't restrict themselves or another admin, and a
+  change to each video; its page and playlists open only for moderators; subscriptions to it are kept, left out of
+  lists and frozen), `active` (reinstated). Admins can't restrict themselves or another admin, and a
   restricted account can't become an admin (a DB check). How a ban holds: ADR 0005. A ban keeps content, so
   comments are rate-limited per user. *(Amended 2026-11-11: bans had no UI and channels no termination.)*
 - Roles are managed via the CLI, with no UI. The seed creates demo admin and moderator accounts. The CLI logs its

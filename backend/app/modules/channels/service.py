@@ -18,7 +18,7 @@ from app.modules.channels.schemas import (
     VideoSort,
 )
 from app.modules.users import repository as users
-from app.modules.users.models import User
+from app.modules.users.models import Role, User, UserStatus
 from app.modules.videos.models import Video
 from app.modules.videos.schemas import HANDLE_PATTERN, VideoSummary
 from app.modules.videos.service import FEED_PAGE_SIZE
@@ -33,7 +33,7 @@ SUBSCRIPTIONS_PAGE_SIZE = 50
 
 
 async def get_channel(db: AsyncSession, viewer: User | None, handle: str) -> ChannelOut:
-    channel = await get_by_handle(db, handle)
+    channel = await get_by_handle(db, handle, viewer)
     subscribed = viewer is not None and await channels.is_subscribed(db, viewer.id, channel.id)
     return ChannelOut.build(
         channel,
@@ -43,10 +43,10 @@ async def get_channel(db: AsyncSession, viewer: User | None, handle: str) -> Cha
 
 
 async def list_videos(
-    db: AsyncSession, handle: str, sort: VideoSort, cursor: str | None
+    db: AsyncSession, viewer: User | None, handle: str, sort: VideoSort, cursor: str | None
 ) -> Page[VideoSummary]:
     """The Videos tab: the same for every viewer, the owner too (public, ready videos only)."""
-    channel = await get_by_handle(db, handle)
+    channel = await get_by_handle(db, handle, viewer)
     shape = _PopularKey if sort is VideoSort.POPULAR else tuple[UUID]
     after = decode_cursor(cursor, shape) if cursor else None
     rows = await channels.list_videos(db, channel.id, sort, after=after, limit=FEED_PAGE_SIZE + 1)
@@ -101,11 +101,18 @@ async def unsubscribe(db: AsyncSession, redis: Redis, user: User, handle: str) -
     return SubscriptionOut(subscriber_count=count, is_subscribed=False)
 
 
-async def get_by_handle(db: AsyncSession, handle: str) -> User:
+async def get_by_handle(db: AsyncSession, handle: str, viewer: User | None) -> User:
     channel = await users.get_by_handle(db, handle)
-    if channel is None:
+    if channel is None or not can_open(viewer, channel):
         raise NotFound("Channel not found")
     return channel
+
+
+def can_open(viewer: User | None, channel: User) -> bool:
+    """A terminated channel, its page and playlists, opens only for moderators, to review it
+    (ADR 0009): to everyone else it doesn't exist."""
+    staff = viewer is not None and viewer.role.at_least(Role.MODERATOR)
+    return channel.status is not UserStatus.TERMINATED or staff
 
 
 def _sort_key(video: Video, sort: VideoSort) -> tuple[object, ...]:
@@ -113,7 +120,9 @@ def _sort_key(video: Video, sort: VideoSort) -> tuple[object, ...]:
 
 
 async def _other_channel(db: AsyncSession, user: User, handle: str) -> User:
-    channel = await get_by_handle(db, handle)
+    channel = await get_by_handle(db, handle, user)
+    if channel.status is UserStatus.TERMINATED:  # frozen for moderators too, as its videos
+        raise NotFound("Channel not found")
     # Checked here: the not_self CHECK would turn it into a 500.
     if channel.id == user.id:
         raise DomainError("You can't subscribe to your own channel")

@@ -31,9 +31,13 @@ async def get_channel(handle: Handle, user: OptionalUser, db: DbSession) -> Chan
     description="Only public, ready videos: the same for every viewer, the owner too.",
 )
 async def list_videos(
-    handle: Handle, db: DbSession, sort: VideoSort = VideoSort.LATEST, cursor: Cursor = None
+    handle: Handle,
+    user: OptionalUser,
+    db: DbSession,
+    sort: VideoSort = VideoSort.LATEST,
+    cursor: Cursor = None,
 ) -> Page[VideoSummary]:
-    return await service.list_videos(db, handle, sort, cursor)
+    return await service.list_videos(db, user, handle, sort, cursor)
 
 
 @router.put(

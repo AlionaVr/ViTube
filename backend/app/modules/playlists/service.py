@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import Conflict, DomainError, NotFound
 from app.core.pagination import Page, decode_cursor, split_page
 from app.core.rate_limit import RateLimit
-from app.modules.channels.service import get_by_handle
+from app.modules.channels.service import can_open, get_by_handle
 from app.modules.playlists import repository as playlists
 from app.modules.playlists.models import MAX_VIDEOS, Playlist, PlaylistKind
 from app.modules.playlists.schemas import (
@@ -185,7 +185,7 @@ async def list_channel_playlists(
     db: AsyncSession, viewer: User | None, handle: str, cursor: str | None
 ) -> Page[PlaylistOut]:
     """The channel's Playlists tab: public ones only, the same list for every viewer."""
-    channel = await get_by_handle(db, handle)
+    channel = await get_by_handle(db, handle, viewer)
     after = decode_cursor(cursor, tuple[UUID])[0] if cursor else None
     rows = await playlists.list_public(db, channel.id, after=after, limit=FEED_PAGE_SIZE + 1)
     page, next_cursor = split_page(rows, FEED_PAGE_SIZE, lambda playlist: (playlist.id,))
@@ -216,6 +216,9 @@ async def _get_visible(db: AsyncSession, viewer: User | None, playlist_id: UUID)
     playlist = await playlists.get(db, playlist_id)
     own = playlist is not None and viewer is not None and playlist.owner_id == viewer.id
     if playlist is None or (playlist.visibility is Visibility.PRIVATE and not own):
+        raise NotFound("Playlist not found")
+    owner = await db.get_one(User, playlist.owner_id)  # get_playlist reuses it from the session
+    if not can_open(viewer, owner):
         raise NotFound("Playlist not found")
     return playlist
 

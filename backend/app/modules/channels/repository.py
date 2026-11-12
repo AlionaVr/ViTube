@@ -10,7 +10,7 @@ from sqlalchemy.orm import aliased
 
 from app.modules.channels.models import Subscription
 from app.modules.channels.schemas import VideoSort
-from app.modules.users.models import User
+from app.modules.users.models import User, UserStatus
 from app.modules.videos.models import Video
 from app.modules.videos.repository import LISTED, VideoRow
 
@@ -73,14 +73,15 @@ async def list_feed(
 async def list_subscribed(
     db: AsyncSession, subscriber_id: UUID, *, after: str | None, limit: int
 ) -> Sequence[User]:
-    """The channels the user subscribed to, A to Z by handle, after the cursor.
+    """The channels the user subscribed to, A to Z by handle, after the cursor. A terminated
+    one is left out but kept: a reinstate brings it back (ADR 0009).
 
     No index gives this order across the two tables: it sorts one user's subscriptions.
     """
     query = (
         select(User)
         .join(Subscription, Subscription.channel_id == User.id)
-        .where(Subscription.subscriber_id == subscriber_id)
+        .where(Subscription.subscriber_id == subscriber_id, User.status != UserStatus.TERMINATED)
     )
     if after is not None:
         query = query.where(User.handle > after)

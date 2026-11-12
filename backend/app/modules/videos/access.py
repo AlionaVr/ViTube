@@ -62,12 +62,12 @@ def viewable(user: User | None) -> ColumnElement[bool]:
     """
     if user is not None and user.role.at_least(Role.MODERATOR):
         return true()
-    ready = Video.status == VideoStatus.READY
-    open_to_all = and_(ready, Video.visibility != Visibility.PRIVATE)
+    allowed = and_(Video.status == VideoStatus.READY, *videos.NOT_RESTRICTED)
+    open_to_all = and_(allowed, Video.visibility != Visibility.PRIVATE)
     if user is None:
         return open_to_all
     granted = exists().where(VideoAccess.video_id == Video.id, VideoAccess.user_id == user.id)
-    return or_(Video.owner_id == user.id, open_to_all, and_(ready, granted))
+    return or_(Video.owner_id == user.id, open_to_all, and_(allowed, granted))
 
 
 async def get_viewable(db: AsyncSession, user: User | None, public_id: str) -> Video:
