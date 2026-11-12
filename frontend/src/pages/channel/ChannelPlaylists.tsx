@@ -4,18 +4,22 @@ import EmptyState from '../../components/EmptyState'
 import ErrorState from '../../components/ErrorState'
 import Spinner from '../../components/Spinner'
 import { useInfiniteScroll } from '../../hooks/useInfiniteScroll'
-import { useChannelPlaylists } from '../../playlists/hooks'
+import { useChannelPlaylists, useMyChannelPlaylists } from '../../playlists/hooks'
+import { playlistLines } from '../../playlists/lines'
 import PlaylistCard, { PlaylistCardSkeleton } from '../../playlists/PlaylistCard'
 import { playlistUrl } from '../../playlists/paths'
 import grid from '../../styles/grid.module.css'
+import type { ChannelTab } from './ChannelPage'
 import styles from './ChannelPlaylists.module.css'
 
 const SKELETON_CARDS = 8
 
-/** The Playlists tab: the channel's public playlists, newest first. */
+/** The Playlists tab, newest first: public playlists, or all of them for the owner. */
 export default function ChannelPlaylists() {
-  const handle = useOutletContext<string>()
-  const playlists = useChannelPlaylists(handle)
+  const { handle, view } = useOutletContext<ChannelTab>()
+  const shared = useChannelPlaylists(handle, view === 'public')
+  const mine = useMyChannelPlaylists(view === 'own')
+  const playlists = view === 'own' ? mine : shared
   const sentinel = useInfiniteScroll<HTMLDivElement>(
     () => void playlists.fetchNextPage(),
     playlists.hasNextPage && !playlists.isFetchingNextPage && !playlists.isFetchNextPageError,
@@ -39,7 +43,17 @@ export default function ChannelPlaylists() {
         <>
           <div className={grid.grid}>
             {items.map((playlist) => (
-              <PlaylistCard key={playlist.id} playlist={playlist} url={playlistUrl(playlist)} />
+              <PlaylistCard
+                key={playlist.id}
+                playlist={playlist}
+                url={playlistUrl(playlist)}
+                // The owner's tab lists every visibility: each card says which, as /feed/playlists.
+                lines={
+                  view === 'own'
+                    ? playlistLines(playlist.visibility, playlist.updated_at)
+                    : undefined
+                }
+              />
             ))}
           </div>
           <div ref={sentinel} />

@@ -1,7 +1,7 @@
 """Video queries. No commits: the service decides when a transaction ends."""
 
 from collections.abc import Sequence
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -195,6 +195,29 @@ async def count_open_drafts(db: AsyncSession, owner_id: UUID, *, within: timedel
         Video.created_at > func.now() - within,
     )
     return await db.scalar(query) or 0
+
+
+async def lock(db: AsyncSession, video_id: UUID) -> None:
+    """FOR NO KEY UPDATE until the commit: shares of one video run one at a time, so a count of
+    its grants holds until the insert. Only FK checks (KEY SHARE) pass; counter updates (views,
+    ratings, comments) and reports wait the few queries of a share."""
+    await db.execute(select(Video.id).where(Video.id == video_id).with_for_update(key_share=True))
+
+
+async def count_access(db: AsyncSession, video_id: UUID) -> int:
+    return await db.scalar(select(func.count()).where(VideoAccess.video_id == video_id)) or 0
+
+
+async def list_access(db: AsyncSession, video_id: UUID) -> Sequence[Row[User, datetime]]:
+    """Who may watch the video, in the order they got access. pk_video_access finds the rows;
+    sorting them is cheap, a video has at most SHARED_MAX."""
+    query = (
+        select(User, VideoAccess.created_at)
+        .join(VideoAccess, VideoAccess.user_id == User.id)
+        .where(VideoAccess.video_id == video_id)
+        .order_by(VideoAccess.created_at, User.id)
+    )
+    return (await db.execute(query)).all()
 
 
 async def grant_access(db: AsyncSession, video_id: UUID, user_id: UUID) -> None:

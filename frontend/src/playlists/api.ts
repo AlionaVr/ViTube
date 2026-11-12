@@ -71,6 +71,11 @@ export function listChannelPlaylists(
   )
 }
 
+/** Your own channel's Playlists tab: every playlist you made. Throws ApiError 401 for a guest. */
+export function listMyChannelPlaylists(cursor: string | null): Promise<Page<Playlist>> {
+  return unwrap(api.GET('/api/me/channel/playlists', { params: { query: { cursor } } }))
+}
+
 /** The viewer's playlists, newest first; with a video, each says whether it holds it. */
 export function listMyPlaylists(
   videoId: string | null,

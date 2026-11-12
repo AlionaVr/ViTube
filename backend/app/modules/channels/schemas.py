@@ -7,7 +7,8 @@ from pydantic import BaseModel, Field
 
 from app.modules.users.models import User, UserStatus
 from app.modules.users.schemas import ChannelSummary
-from app.modules.videos.schemas import HANDLE_PATTERN
+from app.modules.videos.models import Video, Visibility
+from app.modules.videos.schemas import HANDLE_PATTERN, VideoSummary
 
 Handle = Annotated[str, Path(pattern=HANDLE_PATTERN, description="Channel handle, without the @")]
 
@@ -16,6 +17,16 @@ class VideoSort(enum.StrEnum):
     LATEST = "latest"
     POPULAR = "popular"  # most viewed first
     OLDEST = "oldest"
+
+
+class MyChannelVideo(VideoSummary):
+    """A video on your own channel's tab, which shows every visibility: it says which."""
+
+    visibility: Visibility
+
+    @classmethod
+    def build(cls, video: Video, owner: User) -> "MyChannelVideo":
+        return cls(**VideoSummary.of(video, owner).model_dump(), visibility=video.visibility)
 
 
 class SubscribedChannel(ChannelSummary):

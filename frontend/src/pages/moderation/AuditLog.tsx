@@ -1,6 +1,7 @@
 import { type FormEvent, type ReactNode, useId, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 
+import { HANDLE } from '../../channels/handle'
 import Avatar from '../../components/Avatar'
 import ChipBar, { type Chip } from '../../components/ChipBar'
 import EmptyState from '../../components/EmptyState'
@@ -35,8 +36,6 @@ const CHIPS: Chip<Group>[] = [
   { id: null, label: 'All' },
   ...(Object.keys(GROUPS) as Group[]).map((id) => ({ id, label: GROUPS[id].label })),
 ]
-
-const HANDLE = /^[A-Za-z0-9._-]{3,30}$/ // the users.handle rule
 
 const isGroup = (value: string | null): value is Group => value !== null && value in GROUPS
 

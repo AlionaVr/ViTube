@@ -10,6 +10,7 @@ from app.modules.channels import service
 from app.modules.channels.schemas import (
     ChannelOut,
     Handle,
+    MyChannelVideo,
     SubscribedChannel,
     SubscriptionOut,
     VideoSort,
@@ -28,7 +29,10 @@ async def get_channel(handle: Handle, user: OptionalUser, db: DbSession) -> Chan
     "/channels/{handle}/videos",
     response_model=Page[VideoSummary],
     summary="A channel's public videos",
-    description="Only public, ready videos: the same for every viewer, the owner too.",
+    description=(
+        "Only public, ready videos: the same for every viewer, the owner too. "
+        "The owner's view is `/api/me/channel/videos`."
+    ),
 )
 async def list_videos(
     handle: Handle,
@@ -38,6 +42,21 @@ async def list_videos(
     cursor: Cursor = None,
 ) -> Page[VideoSummary]:
     return await service.list_videos(db, user, handle, sort, cursor)
+
+
+@router.get(
+    "/me/channel/videos",
+    response_model=Page[MyChannelVideo],
+    summary="Your channel's videos, whatever their visibility",
+    description=(
+        "Your ready videos, private and unlisted too: your own channel's Videos tab. Hidden ones "
+        "are left out, as of every list; `/api/me/videos` has them all."
+    ),
+)
+async def list_my_videos(
+    user: CurrentUser, db: DbSession, sort: VideoSort = VideoSort.LATEST, cursor: Cursor = None
+) -> Page[MyChannelVideo]:
+    return await service.list_my_videos(db, user, sort, cursor)
 
 
 @router.put(

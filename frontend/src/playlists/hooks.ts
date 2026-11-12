@@ -15,6 +15,7 @@ import {
   getSaved,
   getWatchLater,
   listChannelPlaylists,
+  listMyChannelPlaylists,
   listItems,
   listMyPlaylists,
   moveInPlaylist,
@@ -32,6 +33,7 @@ export const playlistKeys = {
   watchLater: ['playlists', 'watch-later'] as const,
   saved: (videoId: string) => ['playlists', 'saved', videoId] as const,
   channel: (handle: string) => ['playlists', 'channel', handle] as const,
+  myChannel: ['playlists', 'my-channel'] as const,
 }
 
 const firstPage = null as string | null
@@ -69,12 +71,24 @@ export function usePlaylistItems(id: string, enabled = true) {
   })
 }
 
-export function useChannelPlaylists(handle: string) {
+export function useChannelPlaylists(handle: string, enabled = true) {
   return useInfiniteQuery({
     queryKey: playlistKeys.channel(handle),
     queryFn: ({ pageParam }) => listChannelPlaylists(handle, pageParam),
     initialPageParam: firstPage,
     getNextPageParam: (page) => page.next_cursor,
+    enabled,
+  })
+}
+
+/** Your own channel's Playlists tab: every visibility (the public tab is the same for everyone). */
+export function useMyChannelPlaylists(enabled: boolean) {
+  return useInfiniteQuery({
+    queryKey: playlistKeys.myChannel,
+    queryFn: ({ pageParam }) => listMyChannelPlaylists(pageParam),
+    initialPageParam: firstPage,
+    getNextPageParam: (page) => page.next_cursor,
+    enabled,
   })
 }
 

@@ -153,18 +153,88 @@ describe('ChannelPage', () => {
     expect(within(card).getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/login')
   })
 
-  it('shows no Subscribe on your own channel', async () => {
+  it('shows Manage videos instead of Subscribe on your own channel', async () => {
     const own = channel({ handle: ANNA.handle, name: ANNA.handle })
     mockApi({
       ...SIGNED_IN,
       [`GET /api/channels/${ANNA.handle}`]: () => json(200, own),
-      [`GET /api/channels/${ANNA.handle}/videos`]: () => json(200, page([])),
+      'GET /api/me/channel/videos': () => json(200, page([])),
     })
     renderApp(`/@${ANNA.handle}`)
     await screen.findByRole('heading', { level: 1, name: ANNA.handle })
 
     await screen.findByRole('button', { name: 'Account menu' }) // the viewer is known
     expect(screen.queryByRole('button', { name: /Subscribe/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Manage videos' })).toHaveAttribute(
+      'href',
+      '/studio/videos',
+    )
+  })
+
+  it('shows the owner every video of theirs, marking what is not public', async () => {
+    const own = channel({ handle: ANNA.handle, name: ANNA.handle })
+    const fetch = mockApi({
+      ...SIGNED_IN,
+      [`GET /api/channels/${ANNA.handle.toUpperCase()}`]: () => json(200, own),
+      'GET /api/me/channel/videos': () =>
+        json(
+          200,
+          page([
+            { ...summary(1), visibility: 'private' },
+            { ...summary(2), visibility: 'unlisted' },
+            { ...summary(3), visibility: 'public' },
+          ]),
+        ),
+    })
+    renderApp(`/@${ANNA.handle.toUpperCase()}/videos`)
+
+    const card = (n: number) => screen.getByText(summary(n).title).closest('article')!
+    await screen.findByText(summary(1).title)
+    expect(within(card(1)).getByText('Private')).toBeInTheDocument()
+    expect(within(card(2)).getByText('Unlisted')).toBeInTheDocument()
+    expect(within(card(3)).queryByText('Public')).not.toBeInTheDocument()
+    const paths = fetch.mock.calls.map(([request]) => new URL(request.url).pathname)
+    expect(paths).not.toContain(`/api/channels/${ANNA.handle.toUpperCase()}/videos`)
+  })
+
+  it('shows the owner every playlist of theirs with its visibility', async () => {
+    const own = channel({ handle: ANNA.handle, name: ANNA.handle })
+    mockApi({
+      ...SIGNED_IN,
+      [`GET /api/channels/${ANNA.handle}`]: () => json(200, own),
+      'GET /api/me/channel/playlists': () =>
+        json(200, page([playlist(1), { ...playlist(2), visibility: 'public' }])),
+    })
+    renderApp(`/@${ANNA.handle}/playlists`)
+
+    const card = (n: number) => screen.getByText(playlist(n).title).closest('article')!
+    await screen.findByText(playlist(1).title)
+    expect(within(card(1)).getByText('Private • Playlist')).toBeInTheDocument()
+    expect(within(card(2)).getByText('Public • Playlist')).toBeInTheDocument()
+  })
+
+  it('invites the owner of an empty channel to upload', async () => {
+    const own = channel({ handle: ANNA.handle, name: ANNA.handle })
+    mockApi({
+      ...SIGNED_IN,
+      [`GET /api/channels/${ANNA.handle}`]: () => json(200, own),
+      'GET /api/me/channel/videos': () => json(200, page([])),
+      'GET /api/videos/upload-limits': () =>
+        json(200, { max_size_bytes: 1024 ** 3, max_duration_sec: 1800 }),
+    })
+    renderApp(`/@${ANNA.handle}`)
+
+    expect(await screen.findByText('Create content on any device')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Upload videos' }))
+    expect(screen.getByRole('dialog', { name: 'Upload videos' })).toBeInTheDocument()
+  })
+
+  it('shows Manage videos to no one but the owner', async () => {
+    mockChannel()
+    await openChannel()
+
+    expect(await screen.findByRole('button', { name: 'Subscribe' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Manage videos' })).not.toBeInTheDocument()
   })
 
   it('shows "not available" for an unknown channel', async () => {

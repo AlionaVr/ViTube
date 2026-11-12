@@ -61,3 +61,24 @@ export function uploadFile(
     xhr.send(file)
   })
 }
+
+export type SharedWith = components['schemas']['SharedWith']
+
+/** Who may watch the owner's video, first shared first. */
+export function listSharedWith(id: string): Promise<SharedWith[]> {
+  return unwrap(api.GET('/api/videos/{public_id}/access', { params: { path: { public_id: id } } }))
+}
+
+/** Throws ApiError 404 for an unknown handle, 400 for yourself or past the limit. */
+export function setShared(id: string, handle: string, shared: boolean): Promise<void> {
+  return unwrap(
+    shared
+      ? api.POST('/api/videos/{public_id}/access', {
+          params: { path: { public_id: id } },
+          body: { handle },
+        })
+      : api.DELETE('/api/videos/{public_id}/access/{handle}', {
+          params: { path: { public_id: id, handle } },
+        }),
+  )
+}

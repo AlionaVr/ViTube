@@ -134,12 +134,27 @@ async def move_video(
     "/channels/{handle}/playlists",
     response_model=Page[PlaylistOut],
     summary="A channel's public playlists, newest first",
-    description="The same list for every viewer, the owner too; covers are per viewer.",
+    description=(
+        "The same list for every viewer, the owner too; covers are per viewer. "
+        "The owner's view is `/api/me/channel/playlists`."
+    ),
 )
 async def list_channel_playlists(
     handle: Handle, user: OptionalUser, db: DbSession, cursor: Cursor = None
 ) -> Page[PlaylistOut]:
     return await service.list_channel_playlists(db, user, handle, cursor)
+
+
+@router.get(
+    "/me/channel/playlists",
+    response_model=Page[PlaylistOut],
+    summary="Your channel's playlists, whatever their visibility",
+    description="Every playlist you made, newest first: your own channel's Playlists tab.",
+)
+async def list_my_channel_playlists(
+    user: CurrentUser, db: DbSession, cursor: Cursor = None
+) -> Page[PlaylistOut]:
+    return await service.list_my_channel_playlists(db, user, cursor)
 
 
 @router.get(

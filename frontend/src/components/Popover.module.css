@@ -3,19 +3,17 @@
   display: inline-flex;
 }
 
+/* In the top layer, placed by the script at its button. */
 .panel {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  z-index: 20;
+  position: fixed;
+  inset: auto; /* the browser centers a popover: undo */
+  margin: 0;
+  padding: 0;
+  border: none;
+  overflow: visible;
   min-width: max-content;
   border-radius: 12px;
   background: var(--color-menu);
   color: var(--color-text);
   box-shadow: var(--shadow-popup);
-}
-
-.end {
-  left: auto;
-  right: 0;
 }

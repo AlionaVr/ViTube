@@ -79,3 +79,23 @@
 .ghostShort {
   width: 60%;
 }
+
+/* A shelf's narrow card: no avatar, YouTube's smaller type, no room kept for a menu. */
+.compact .details {
+  margin-top: 8px;
+}
+
+.compact .meta {
+  padding-right: 0;
+}
+
+.compact .title {
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.compact .channel,
+.compact .stats {
+  font-size: 12px;
+  line-height: 18px;
+}

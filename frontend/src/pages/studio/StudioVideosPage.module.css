@@ -11,9 +11,17 @@
   }
 }
 
-.heading {
+.top {
   margin: 0 0 16px;
   padding: 0 var(--side);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.heading {
+  margin: 0;
   font-size: 24px;
   font-weight: 500;
   line-height: 32px;
@@ -124,6 +132,12 @@
   min-width: 0;
 }
 
+/* The ⋮ sits at the top right of the video cell, level with the title. */
+.menu {
+  flex: none;
+  margin: -8px -8px 0 0;
+}
+
 .title {
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -194,4 +208,11 @@
   display: flex;
   justify-content: center;
   padding: 16px;
+}
+
+/* Studio's visibility cell: its mark, then its name. */
+.withIcon {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }

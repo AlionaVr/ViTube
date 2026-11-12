@@ -226,9 +226,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Who may watch your video
+         * @description The people you shared it with, first shared first; up to 50.
+         */
+        get: operations["list_access_api_videos__public_id__access_get"];
         put?: never;
-        /** Let a user watch your private video */
+        /**
+         * Let a user watch your private video
+         * @description Sharing again changes nothing; up to 50 people per video.
+         */
         post: operations["grant_access_api_videos__public_id__access_post"];
         delete?: never;
         options?: never;
@@ -462,9 +469,29 @@ export interface paths {
         };
         /**
          * A channel's public videos
-         * @description Only public, ready videos: the same for every viewer, the owner too.
+         * @description Only public, ready videos: the same for every viewer, the owner too. The owner's view is `/api/me/channel/videos`.
          */
         get: operations["list_videos_api_channels__handle__videos_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/me/channel/videos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Your channel's videos, whatever their visibility
+         * @description Your ready videos, private and unlisted too: your own channel's Videos tab. Hidden ones are left out, as of every list; `/api/me/videos` has them all.
+         */
+        get: operations["list_my_videos_api_me_channel_videos_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -630,9 +657,29 @@ export interface paths {
         };
         /**
          * A channel's public playlists, newest first
-         * @description The same list for every viewer, the owner too; covers are per viewer.
+         * @description The same list for every viewer, the owner too; covers are per viewer. The owner's view is `/api/me/channel/playlists`.
          */
         get: operations["list_channel_playlists_api_channels__handle__playlists_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/me/channel/playlists": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Your channel's playlists, whatever their visibility
+         * @description Every playlist you made, newest first: your own channel's Playlists tab.
+         */
+        get: operations["list_my_channel_playlists_api_me_channel_playlists_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1369,6 +1416,32 @@ export interface components {
             created_at: string;
             channel: components["schemas"]["ChannelSummary"];
         };
+        /**
+         * MyChannelVideo
+         * @description A video on your own channel's tab, which shows every visibility: it says which.
+         */
+        MyChannelVideo: {
+            /**
+             * Id
+             * @description Public id, as in /watch?v=<id>
+             */
+            id: string;
+            /** Title */
+            title: string;
+            /** Thumbnail Url */
+            thumbnail_url: string;
+            /** Duration Sec */
+            duration_sec: number;
+            /** View Count */
+            view_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            channel: components["schemas"]["ChannelSummary"];
+            visibility: components["schemas"]["Visibility"];
+        };
         /** MyPlaylist */
         MyPlaylist: {
             /**
@@ -1452,6 +1525,13 @@ export interface components {
         Page_ModeratedVideo_: {
             /** Items */
             items: components["schemas"]["ModeratedVideo"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
+        /** Page[MyChannelVideo] */
+        Page_MyChannelVideo_: {
+            /** Items */
+            items: components["schemas"]["MyChannelVideo"][];
             /** Next Cursor */
             next_cursor: string | null;
         };
@@ -1711,6 +1791,23 @@ export interface components {
             channel: components["schemas"]["ChannelSummary"];
             /** Description */
             description: string;
+        };
+        /**
+         * SharedWith
+         * @description Someone the owner shared a video with.
+         */
+        SharedWith: {
+            /** Handle */
+            handle: string;
+            /** Name */
+            name: string;
+            /** Avatar Url */
+            avatar_url: string | null;
+            /**
+             * Shared At
+             * Format: date-time
+             */
+            shared_at: string;
         };
         /** StatusIn */
         StatusIn: {
@@ -2368,6 +2465,38 @@ export interface operations {
             };
         };
     };
+    list_access_api_videos__public_id__access_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Public video id */
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SharedWith"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     grant_access_api_videos__public_id__access_post: {
         parameters: {
             query?: never;
@@ -2856,6 +2985,39 @@ export interface operations {
             };
         };
     };
+    list_my_videos_api_me_channel_videos_get: {
+        parameters: {
+            query?: {
+                sort?: components["schemas"]["VideoSort"];
+                /** @description next_cursor of the last page */
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_MyChannelVideo_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     subscribe_api_channels__handle__subscription_put: {
         parameters: {
             query?: never;
@@ -3261,6 +3423,38 @@ export interface operations {
                 /** @description Channel handle, without the @ */
                 handle: string;
             };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_PlaylistOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_my_channel_playlists_api_me_channel_playlists_get: {
+        parameters: {
+            query?: {
+                /** @description next_cursor of the last page */
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;

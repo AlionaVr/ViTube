@@ -76,7 +76,14 @@ describe('Layout', () => {
     })
     renderApp('/')
     expect(await screen.findByRole('button', { name: 'Account menu' })).toBeInTheDocument()
-    const library = ['History', 'Playlists', 'Watch later', 'Liked videos', 'Your videos']
+    const library = [
+      'My channel',
+      'History',
+      'Playlists',
+      'Watch later',
+      'Liked videos',
+      'Your videos',
+    ]
     const links = screen.getAllByRole('link').map((link) => link.textContent)
     expect(links.filter((name) => library.includes(name ?? ''))).toEqual(library)
     const heading = await screen.findByRole('heading', { name: 'Subscriptions' })
@@ -123,11 +130,28 @@ describe('Layout', () => {
     expect(await guide.findByRole('link', { name: 'Anna' })).toHaveAttribute('aria-current', 'page')
   })
 
+  it('marks my channel on any of its tabs, whatever the case of its URL', async () => {
+    const own = ANNA.handle.toUpperCase()
+    mockApi({
+      'GET /api/auth/me': () => json(200, ANNA),
+      'GET /api/me/subscriptions': () => json(200, { items: [], next_cursor: null }),
+      [`GET /api/channels/${own}`]: () => json(200, channel({ handle: ANNA.handle })),
+      'GET /api/me/channel/playlists': () => json(200, { items: [], next_cursor: null }),
+    })
+    renderApp(`/@${own}/playlists`)
+    const guide = within(await screen.findByRole('navigation', { name: 'Main' }))
+
+    const link = await guide.findByRole('link', { name: 'My channel' })
+    expect(link).toHaveAttribute('href', `/@${ANNA.handle}`)
+    expect(link).toHaveAttribute('aria-current', 'page')
+  })
+
   it('shows the sign-in prompt and button to a guest', async () => {
     renderApp('/')
     expect(await screen.findByText(/Sign in to like videos/)).toBeInTheDocument()
     expect(screen.getAllByRole('link', { name: 'Sign in' })).toHaveLength(2)
     expect(screen.queryByRole('link', { name: 'Liked videos' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'My channel' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Account menu' })).not.toBeInTheDocument()
   })
 

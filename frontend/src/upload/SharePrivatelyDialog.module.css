@@ -1,0 +1,73 @@
+.header {
+  margin: -8px -8px 16px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 28px;
+}
+
+/* The field takes the row; Share sits level with its box, not with the note under it. */
+.form {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.form > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.form button {
+  margin-top: 10px;
+}
+
+.section {
+  margin: 24px 0 8px;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 22px;
+}
+
+.note {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.people {
+  max-height: 280px;
+  margin: 0 -8px 0 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.person {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.handle {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+}

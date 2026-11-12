@@ -36,6 +36,7 @@ from app.modules.videos.config import get_video_settings
 from app.modules.videos.models import Category, Video, VideoStatus
 from app.modules.videos.repository import VideoRow
 from app.modules.videos.schemas import (
+    SharedWith,
     UploadLimits,
     VideoCreate,
     VideoDetail,
@@ -52,6 +53,8 @@ DRAFTS_PER_USER = RateLimit("video_draft", limit=20, window=60 * 60)
 # Drafts still waiting for a file. Counted over a day: abandoned ones stop counting by themselves.
 OPEN_DRAFTS_MAX = 10
 OPEN_DRAFTS_WINDOW = timedelta(days=1)
+# People one private video is shared with: the owner's dialog lists them all, without pages.
+SHARED_MAX = 50
 # Held for the whole upload; renewed while bytes keep coming, so a crashed upload frees it soon.
 UPLOAD_LOCK_SECONDS = 5 * 60
 UPLOAD_LOCK_RENEW_SECONDS = 60
@@ -229,6 +232,13 @@ async def upload_file(
     return VideoOut.of(video, user)
 
 
+async def list_access(db: AsyncSession, user: User, public_id: str) -> list[SharedWith]:
+    """Who the owner shared the video with, first shared first. At most SHARED_MAX: no pages."""
+    video = await get_owned(db, user, public_id)
+    rows = await videos.list_access(db, video.id)
+    return [SharedWith.build(grantee, shared_at) for grantee, shared_at in rows]
+
+
 async def grant_access(db: AsyncSession, user: User, public_id: str, handle: str) -> None:
     """Let a user watch the owner's private video. Takes effect on their next request."""
     video = await get_owned(db, user, public_id)
@@ -237,6 +247,12 @@ async def grant_access(db: AsyncSession, user: User, public_id: str, handle: str
         raise NotFound("No user with this handle")
     if grantee.id == user.id:
         raise DomainError("You can always watch your own video")
+    await videos.lock(db, video.id)  # parallel shares count one after another
+    if (
+        not await videos.has_access(db, video.id, grantee.id)
+        and await videos.count_access(db, video.id) >= SHARED_MAX
+    ):
+        raise DomainError(f"A video can be shared with up to {SHARED_MAX} people")
     await videos.grant_access(db, video.id, grantee.id)
     await db.commit()
 

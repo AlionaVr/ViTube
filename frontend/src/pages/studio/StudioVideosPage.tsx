@@ -1,17 +1,24 @@
-import type { ReactNode } from 'react'
+import { type ReactNode, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router'
 
 import EmptyState from '../../components/EmptyState'
 import ErrorState from '../../components/ErrorState'
 import Icon from '../../components/Icon'
+import IconButton from '../../components/IconButton'
+import MenuChoices, { type MenuChoice } from '../../components/Menu'
+import Popover from '../../components/Popover'
 import Spinner from '../../components/Spinner'
 import Thumbnail from '../../components/Thumbnail'
 import { useInfiniteScroll } from '../../hooks/useInfiniteScroll'
 import { formatDate, formatExact } from '../../lib/format'
+import { VISIBILITY } from '../../playlists/visibility'
+import buttons from '../../styles/buttons.module.css'
+import EditDetailsDialog from '../../upload/EditDetailsDialog'
+import SharePrivatelyDialog from '../../upload/SharePrivatelyDialog'
+import UploadDialog from '../../upload/UploadDialog'
 import { useMyVideos } from '../../videos/hooks'
 import { watchUrl } from '../../videos/paths'
 import type { OwnVideo, VideoStatus } from '../../videos/types'
-import { VISIBILITY_LABELS } from '../../videos/visibility'
 import { useViewer } from '../../viewer/useViewer'
 import styles from './StudioVideosPage.module.css'
 
@@ -28,6 +35,9 @@ export default function StudioVideosPage() {
   const viewer = useViewer()
   const location = useLocation()
   const videos = useMyVideos(viewer.status === 'authenticated')
+  const [editing, setEditing] = useState<OwnVideo | null>(null)
+  const [sharing, setSharing] = useState<OwnVideo | null>(null)
+  const [uploading, setUploading] = useState(false)
   const sentinel = useInfiniteScroll<HTMLDivElement>(
     () => void videos.fetchNextPage(),
     videos.hasNextPage && !videos.isFetchingNextPage && !videos.isFetchNextPageError,
@@ -42,7 +52,17 @@ export default function StudioVideosPage() {
   return (
     <div className={styles.page}>
       <title>Channel content - ViTube</title>
-      <h1 className={styles.heading}>Channel content</h1>
+      <div className={styles.top}>
+        <h1 className={styles.heading}>Channel content</h1>
+        {/* The header's Create dialog: the new draft joins this list. */}
+        <button
+          type="button"
+          className={`${buttons.pill} ${buttons.primary}`}
+          onClick={() => setUploading(true)}
+        >
+          Upload videos
+        </button>
+      </div>
       {videos.isPending ? (
         <VideoTable label="Loading videos" busy>
           {Array.from({ length: SKELETON_ROWS }, (_, i) => (
@@ -57,7 +77,12 @@ export default function StudioVideosPage() {
         <>
           <VideoTable label="Videos">
             {items.map((video) => (
-              <VideoRow key={video.id} video={video} />
+              <VideoRow
+                key={video.id}
+                video={video}
+                onEdit={() => setEditing(video)}
+                onShare={() => setSharing(video)}
+              />
             ))}
           </VideoTable>
           <div ref={sentinel} />
@@ -74,6 +99,9 @@ export default function StudioVideosPage() {
           )}
         </>
       )}
+      {editing && <EditDetailsDialog video={editing} onClose={() => setEditing(null)} />}
+      {sharing && <SharePrivatelyDialog video={sharing} onClose={() => setSharing(null)} />}
+      {uploading && <UploadDialog onClose={() => setUploading(false)} />}
     </div>
   )
 }
@@ -125,7 +153,32 @@ function VideoTable({
   )
 }
 
-function VideoRow({ video }: { video: OwnVideo }) {
+interface RowActions {
+  onEdit: () => void
+  onShare: () => void
+}
+
+/** Studio's ⋮ on a row, always shown here (not only on hover). */
+function RowMenu({ video, onEdit, onShare }: { video: OwnVideo } & RowActions) {
+  const label = `Options for ${video.title}`
+  const choices: MenuChoice[] = [{ icon: 'edit', label: 'Edit details', onSelect: onEdit }]
+  // Grants count only while a video is private (ADR 0004).
+  if (video.visibility === 'private') {
+    choices.push({ icon: 'personAdd', label: 'Share privately', onSelect: onShare })
+  }
+  return (
+    <Popover
+      label={label}
+      role="menu"
+      align="end"
+      trigger={(props) => <IconButton icon="moreVert" label={label} {...props} />}
+    >
+      {(close) => <MenuChoices choices={choices} close={close} />}
+    </Popover>
+  )
+}
+
+function VideoRow({ video, ...actions }: { video: OwnVideo } & RowActions) {
   const url = watchUrl(video.id)
   return (
     <tr className={styles.row}>
@@ -145,10 +198,22 @@ function VideoRow({ video }: { video: OwnVideo }) {
             </Link>
             {video.description && <p className={styles.description}>{video.description}</p>}
           </div>
+          <div className={styles.menu}>
+            <RowMenu video={video} {...actions} />
+          </div>
         </div>
       </td>
       {/* As in Studio: a draft (no file yet, or its upload was cut off) shows as such here. */}
-      <td>{video.status === 'uploading' ? 'Draft' : VISIBILITY_LABELS[video.visibility]}</td>
+      <td>
+        {video.status === 'uploading' ? (
+          'Draft'
+        ) : (
+          <span className={styles.withIcon}>
+            <Icon name={VISIBILITY[video.visibility].icon} size={18} />
+            {VISIBILITY[video.visibility].label}
+          </span>
+        )}
+      </td>
       {/* Studio's column; the one restriction here is a moderator's (ADR 0009). */}
       <td>{video.is_hidden ? 'Hidden by a moderator' : 'None'}</td>
       <td>

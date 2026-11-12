@@ -141,7 +141,12 @@ export default function WatchPage() {
   const frozen = !!video.data && (video.data.is_hidden || video.data.channel_terminated)
 
   return (
-    <div ref={page} className={theater ? `${styles.watch} ${styles.theater}` : styles.watch}>
+    <div
+      ref={page}
+      className={[styles.watch, theater && styles.theater, notFound && styles.gone]
+        .filter(Boolean)
+        .join(' ')}
+    >
       <title>{video.data ? `${video.data.title} - ViTube` : 'ViTube'}</title>
 
       {/* One place in the tree for the player, so theater mode doesn't restart the video. */}

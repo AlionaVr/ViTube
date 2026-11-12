@@ -30,6 +30,7 @@ describe('StudioVideosPage', () => {
   })
 
   it('sends a guest to sign in and back here', async () => {
+    mockApi({ 'GET /api/auth/me': () => json(401, { detail: 'Sign in required' }) })
     const router = renderApp('/studio/videos')
 
     await screen.findByRole('heading', { name: 'Sign in' })
@@ -180,11 +181,34 @@ describe('StudioVideosPage', () => {
     expect(listRequests(fetch)).toHaveLength(asked)
   })
 
-  it('says so when the user has no videos', async () => {
-    mockApi({ ...SIGNED_IN, 'GET /api/me/videos': () => json(200, page([])) })
+  it('says so when the user has no videos, with a way to upload one', async () => {
+    mockApi({
+      ...SIGNED_IN,
+      'GET /api/me/videos': () => json(200, page([])),
+      'GET /api/videos/upload-limits': () =>
+        json(200, { max_size_bytes: 1024 ** 3, max_duration_sec: 1800 }),
+    })
     renderApp('/studio/videos')
 
     expect(await screen.findByText('No content available')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Upload videos' })) // by the heading only
+    expect(screen.getByRole('dialog', { name: 'Upload videos' })).toBeInTheDocument()
+  })
+
+  it('opens the upload dialog from the heading', async () => {
+    mockApi({
+      ...SIGNED_IN,
+      'GET /api/me/videos': () => json(200, page([own(1)])),
+      'GET /api/videos/upload-limits': () =>
+        json(200, { max_size_bytes: 1024 ** 3, max_duration_sec: 1800 }),
+    })
+    renderApp('/studio/videos')
+    await screen.findByRole('link', { name: 'Video 1' })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Upload videos' }))
+
+    expect(screen.getByRole('dialog', { name: 'Upload videos' })).toBeInTheDocument()
+    expect(screen.getByText('Drag and drop a video file to upload')).toBeInTheDocument()
   })
 
   it('offers a retry when the list fails to load', async () => {
@@ -199,6 +223,214 @@ describe('StudioVideosPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Can’t load your videos')
     await userEvent.click(screen.getByRole('button', { name: 'Retry' }))
     expect(await screen.findByRole('link', { name: 'Video 1' })).toBeInTheDocument()
+  })
+
+  describe('Edit details', () => {
+    /** The list answers with the video as it is now: an edit shows once it is saved. */
+    function mockEdit(patch: (request: Request) => Response) {
+      let video = own(1, { visibility: 'private' })
+      const fetch = mockApi({
+        ...SIGNED_IN,
+        'GET /api/me/videos': () => json(200, page([video])),
+        [`PATCH /api/videos/${video.id}`]: async (request) => {
+          const changes = (await request.clone().json()) as object
+          const response = await patch(request)
+          if (response.ok) video = { ...video, ...changes }
+          return response
+        },
+      })
+      return fetch
+    }
+
+    async function openEdit() {
+      renderApp('/studio/videos')
+      await screen.findByRole('link', { name: 'Video 1' })
+      await userEvent.click(rowOf('Video 1').getByRole('button', { name: 'Options for Video 1' }))
+      await userEvent.click(screen.getByRole('menuitem', { name: 'Edit details' }))
+      return within(screen.getByRole('dialog', { name: 'Video details' }))
+    }
+
+    it('saves only what changed, says so and shows it in the row', async () => {
+      const fetch = mockEdit(() => json(200, {}))
+      const dialog = await openEdit()
+
+      const save = dialog.getByRole('button', { name: 'Save' })
+      expect(save).toBeDisabled() // nothing changed yet
+      const title = dialog.getByRole('textbox', { name: 'Title (required)' })
+      await userEvent.clear(title)
+      await userEvent.type(title, 'Sintel')
+      await userEvent.click(dialog.getByRole('radio', { name: /Public/ }))
+      await userEvent.click(save)
+
+      expect(await screen.findByRole('status')).toHaveTextContent('Changes saved')
+      expect(screen.queryByRole('dialog', { name: 'Video details' })).not.toBeInTheDocument()
+      const patch = fetch.mock.calls.find(([request]) => request.method === 'PATCH')![0]
+      expect(await patch.json()).toEqual({ title: 'Sintel', visibility: 'public' })
+      expect(await screen.findByRole('link', { name: 'Sintel' })).toBeInTheDocument()
+      expect(rowOf('Sintel').getByText('Public')).toBeInTheDocument()
+    })
+
+    it('needs a title', async () => {
+      mockEdit(() => json(200, {}))
+      const dialog = await openEdit()
+
+      await userEvent.clear(dialog.getByRole('textbox', { name: 'Title (required)' }))
+
+      expect(dialog.getByRole('button', { name: 'Save' })).toBeDisabled()
+    })
+
+    it('stays open with the reason when saving fails', async () => {
+      mockEdit(() => json(422, { detail: 'Title is too long' }))
+      const dialog = await openEdit()
+
+      await userEvent.type(dialog.getByRole('textbox', { name: 'Description' }), ' More.')
+      await userEvent.click(dialog.getByRole('button', { name: 'Save' }))
+
+      expect(await dialog.findByRole('alert')).toHaveTextContent('Title is too long')
+      expect(screen.getByRole('dialog', { name: 'Video details' })).toBeInTheDocument()
+    })
+
+    it('asks before dropping unsaved changes on Cancel', async () => {
+      const fetch = mockEdit(() => json(200, {}))
+      const confirm = vi
+        .spyOn(window, 'confirm')
+        .mockReturnValueOnce(false)
+        .mockReturnValueOnce(true)
+      const dialog = await openEdit()
+
+      await userEvent.type(dialog.getByRole('textbox', { name: 'Description' }), ' More.')
+      await userEvent.click(dialog.getByRole('button', { name: 'Cancel' }))
+      expect(confirm).toHaveBeenCalledWith('Discard unsaved changes?')
+      expect(screen.getByRole('dialog', { name: 'Video details' })).toBeInTheDocument()
+
+      await userEvent.click(dialog.getByRole('button', { name: 'Cancel' }))
+      expect(screen.queryByRole('dialog', { name: 'Video details' })).not.toBeInTheDocument()
+      expect(fetch.mock.calls.some(([request]) => request.method === 'PATCH')).toBe(false)
+    })
+
+    it('closes at once when nothing changed', async () => {
+      mockEdit(() => json(200, {}))
+      const confirm = vi.spyOn(window, 'confirm')
+      const dialog = await openEdit()
+
+      await userEvent.click(dialog.getByRole('button', { name: 'Close' }))
+
+      expect(screen.queryByRole('dialog', { name: 'Video details' })).not.toBeInTheDocument()
+      expect(confirm).not.toHaveBeenCalled()
+    })
+
+    it('copies the video link', async () => {
+      const user = userEvent.setup() // provides a clipboard, as a secure page has
+      mockEdit(() => json(200, {}))
+      const dialog = await openEdit()
+
+      await user.click(dialog.getByRole('button', { name: 'Copy video link' }))
+
+      expect(await navigator.clipboard.readText()).toBe(
+        `${window.location.origin}/watch?v=${own(1).id}`,
+      )
+      expect(dialog.getByText('Link copied')).toBeInTheDocument()
+    })
+  })
+
+  describe('Share privately', () => {
+    const VIDEO = own(1, { visibility: 'private' })
+    const ACCESS = `/api/videos/${VIDEO.id}/access`
+    const person = (handle: string) => ({
+      handle,
+      name: handle,
+      avatar_url: null,
+      shared_at: '2026-11-12T10:00:00Z',
+    })
+
+    /** The access list as the server keeps it; `refuse` answers a share instead. */
+    function mockSharing(refuse?: () => Response) {
+      let people = [person('ben')]
+      return mockApi({
+        ...SIGNED_IN,
+        'GET /api/me/videos': () => json(200, page([VIDEO])),
+        [`GET ${ACCESS}`]: () => json(200, people),
+        [`POST ${ACCESS}`]: async (request) => {
+          if (refuse) return refuse()
+          const { handle } = (await request.clone().json()) as { handle: string }
+          people = [...people, person(handle)]
+          return new Response(null, { status: 204 })
+        },
+        [`DELETE ${ACCESS}/ben`]: () => {
+          people = people.filter((p) => p.handle !== 'ben')
+          return new Response(null, { status: 204 })
+        },
+      })
+    }
+
+    async function openShare() {
+      renderApp('/studio/videos')
+      await screen.findByRole('link', { name: 'Video 1' })
+      await userEvent.click(rowOf('Video 1').getByRole('button', { name: 'Options for Video 1' }))
+      await userEvent.click(screen.getByRole('menuitem', { name: 'Share privately' }))
+      return within(screen.getByRole('dialog', { name: 'Share privately' }))
+    }
+
+    it('adds a person by handle and says so', async () => {
+      const fetch = mockSharing()
+      const dialog = await openShare()
+      expect(await dialog.findByText('@ben')).toBeInTheDocument()
+
+      await userEvent.type(dialog.getByRole('textbox', { name: 'Handle' }), '@anna{Enter}')
+
+      expect(await dialog.findByText('@anna')).toBeInTheDocument()
+      expect(screen.getByRole('status')).toHaveTextContent('Shared with @anna')
+      expect(dialog.getByRole('textbox', { name: 'Handle' })).toHaveValue('')
+      const post = fetch.mock.calls.find(([request]) => request.method === 'POST')![0]
+      expect(await post.json()).toEqual({ handle: 'anna' })
+    })
+
+    it('removes a person and says so', async () => {
+      mockSharing()
+      const dialog = await openShare()
+
+      await userEvent.click(await dialog.findByRole('button', { name: 'Remove @ben' }))
+
+      expect(await dialog.findByText('Only you can watch this video.')).toBeInTheDocument()
+      expect(screen.getByRole('status')).toHaveTextContent('Removed @ben')
+    })
+
+    it('shows why a share was refused under the field', async () => {
+      mockSharing(() => json(404, { detail: 'No user with this handle' }))
+      const dialog = await openShare()
+
+      await userEvent.type(dialog.getByRole('textbox', { name: 'Handle' }), 'nobody{Enter}')
+
+      expect(await dialog.findByText('No user with this handle')).toBeInTheDocument()
+      expect(dialog.getByRole('textbox', { name: 'Handle' })).toHaveAttribute(
+        'aria-invalid',
+        'true',
+      )
+    })
+
+    it('checks the handle before asking the server', async () => {
+      const fetch = mockSharing()
+      const dialog = await openShare()
+
+      await userEvent.type(dialog.getByRole('textbox', { name: 'Handle' }), 'a b{Enter}')
+
+      expect(dialog.getByText('Enter a handle such as @anna')).toBeInTheDocument()
+      expect(fetch.mock.calls.some(([request]) => request.method === 'POST')).toBe(false)
+    })
+
+    it('is offered for private videos only', async () => {
+      mockApi({
+        ...SIGNED_IN,
+        'GET /api/me/videos': () => json(200, page([own(1, { visibility: 'unlisted' })])),
+      })
+      renderApp('/studio/videos')
+      await screen.findByRole('link', { name: 'Video 1' })
+
+      await userEvent.click(rowOf('Video 1').getByRole('button', { name: 'Options for Video 1' }))
+
+      expect(screen.getByRole('menuitem', { name: 'Edit details' })).toBeInTheDocument()
+      expect(screen.queryByRole('menuitem', { name: 'Share privately' })).not.toBeInTheDocument()
+    })
   })
 
   it('is where Your videos in the guide leads', async () => {

@@ -1,37 +1,21 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { type CSSProperties, type FormEvent, useId, useRef, useState } from 'react'
+import { type FormEvent, useId, useRef, useState } from 'react'
 
 import Icon from '../components/Icon'
 import IconButton from '../components/IconButton'
 import Spinner from '../components/Spinner'
 import { useModalDialog } from '../hooks/useModalDialog'
 import buttons from '../styles/buttons.module.css'
-import { CATEGORIES, CATEGORY_LABELS } from '../videos/categories'
 import { videoKeys } from '../videos/hooks'
-import { watchUrl } from '../videos/paths'
-import type { Category, OwnVideo, Visibility } from '../videos/types'
-import { VISIBILITY_LABELS } from '../videos/visibility'
+import type { OwnVideo } from '../videos/types'
 import { updateVideo } from './api'
+import { detailsOf } from './details'
+import DetailsFields from './DetailsFields'
 import { formatLimits } from './format'
 import styles from './UploadDialog.module.css'
 import { type Transfer, useUpload } from './useUpload'
-
-const TITLE_MAX = 100
-const DESCRIPTION_MAX = 5000
-
-const VISIBILITY: { value: Visibility; label: string; hint: string }[] = [
-  {
-    value: 'private',
-    label: VISIBILITY_LABELS.private,
-    hint: 'Only you and people you choose can watch your video',
-  },
-  {
-    value: 'unlisted',
-    label: VISIBILITY_LABELS.unlisted,
-    hint: 'Anyone with the video link can watch your video',
-  },
-  { value: 'public', label: VISIBILITY_LABELS.public, hint: 'Everyone can watch your video' },
-]
+import VideoLink from './VideoLink'
+import VideoScreen from './VideoScreen'
 
 /** YouTube Studio's "Upload videos" modal. Mounted while open; closing unmounts it. */
 export default function UploadDialog({ onClose }: { onClose: () => void }) {
@@ -152,25 +136,13 @@ function Details({
   transfer: Transfer
   onRetry: () => void
 }) {
-  const [title, setTitle] = useState(video.title)
-  const [description, setDescription] = useState(video.description)
-  const [visibility, setVisibility] = useState<Visibility>(video.visibility)
-  const [category, setCategory] = useState<Category>(video.category)
+  const [details, setDetails] = useState(() => detailsOf(video))
   const queryClient = useQueryClient()
   const save = useMutation({
-    mutationFn: () => updateVideo(video.id, { title, description, visibility, category }),
+    mutationFn: () => updateVideo(video.id, details),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: videoKeys.mine }),
   })
-  const categoryId = useId()
-  const link = `${window.location.origin}${watchUrl(video.id)}`
   const [copied, setCopied] = useState(false)
-  // No clipboard API on plain-HTTP sites other than localhost: no button then.
-  const canCopy = typeof navigator.clipboard?.writeText === 'function'
-
-  async function copyLink() {
-    await navigator.clipboard.writeText(link)
-    setCopied(true)
-  }
 
   function submit(event: FormEvent) {
     event.preventDefault()
@@ -181,79 +153,13 @@ function Details({
     <form className={styles.details} onSubmit={submit}>
       <div className={styles.body}>
         <div className={styles.fields}>
-          <h3 className={styles.section}>Details</h3>
-          <TextArea
-            label="Title (required)"
-            value={title}
-            maxLength={TITLE_MAX}
-            rows={2}
-            required
-            onChange={setTitle}
-          />
-          <TextArea
-            label="Description"
-            value={description}
-            maxLength={DESCRIPTION_MAX}
-            rows={6}
-            placeholder="Tell viewers about your video"
-            onChange={setDescription}
-          />
-          <div>
-            <h3 className={styles.section}>Category</h3>
-            <p className={styles.sectionHint}>
-              Add your video to a category so viewers can find it more easily
-            </p>
-            <div className={`${styles.box} ${styles.selectBox}`}>
-              <label htmlFor={categoryId} className={styles.boxLabel}>
-                Category
-              </label>
-              <select
-                id={categoryId}
-                className={styles.select}
-                value={category}
-                onChange={(event) => setCategory(event.target.value as Category)}
-              >
-                {CATEGORIES.map((id) => (
-                  <option key={id} value={id}>
-                    {CATEGORY_LABELS[id]}
-                  </option>
-                ))}
-              </select>
-              <span className={styles.selectArrow}>
-                <Icon name="chevronDown" />
-              </span>
-            </div>
-          </div>
-          <fieldset className={styles.visibility}>
-            <legend className={styles.section}>Visibility</legend>
-            <p className={styles.sectionHint}>Choose who can watch your video</p>
-            {VISIBILITY.map((option) => (
-              <label key={option.value} className={styles.option}>
-                <input
-                  type="radio"
-                  name="visibility"
-                  value={option.value}
-                  checked={visibility === option.value}
-                  onChange={() => setVisibility(option.value)}
-                />
-                <span>
-                  <span className={styles.optionLabel}>{option.label}</span>
-                  <span className={styles.optionHint}>{option.hint}</span>
-                </span>
-              </label>
-            ))}
-          </fieldset>
+          <DetailsFields details={details} onChange={setDetails} />
         </div>
         <aside className={styles.side}>
           <Preview video={video} transfer={transfer} />
           <dl className={styles.facts}>
             <dt>Video link</dt>
-            <dd className={styles.linkRow}>
-              <a href={link} target="_blank" rel="noreferrer">
-                {link}
-              </a>
-              {canCopy && <IconButton icon="copy" label="Copy video link" onClick={copyLink} />}
-            </dd>
+            <VideoLink id={video.id} onCopied={() => setCopied(true)} />
             <dt>Filename</dt>
             <dd>{fileName}</dd>
           </dl>
@@ -269,7 +175,7 @@ function Details({
         <button
           type="submit"
           className={`${buttons.pill} ${buttons.primary}`}
-          disabled={!title.trim() || save.isPending}
+          disabled={!details.title.trim() || save.isPending}
         >
           Save
         </button>
@@ -278,56 +184,7 @@ function Details({
   )
 }
 
-function TextArea({
-  label,
-  value,
-  maxLength,
-  onChange,
-  ...rest
-}: {
-  label: string
-  value: string
-  maxLength: number
-  rows: number
-  required?: boolean
-  placeholder?: string
-  onChange: (value: string) => void
-}) {
-  const id = useId()
-  return (
-    <div className={styles.box}>
-      <label htmlFor={id} className={styles.boxLabel}>
-        {label}
-      </label>
-      <textarea
-        id={id}
-        className={styles.textarea}
-        value={value}
-        maxLength={maxLength}
-        onChange={(event) => onChange(event.target.value)}
-        style={{ '--rows': rest.rows } as CSSProperties}
-        {...rest}
-      />
-      <span className={styles.counter} aria-hidden="true">
-        {value.length}/{maxLength}
-      </span>
-    </div>
-  )
-}
-
 function Preview({ video, transfer }: { video: OwnVideo; transfer: Transfer }) {
-  if (video.status === 'ready' && video.media_url) {
-    return (
-      <video
-        className={styles.screen}
-        src={video.media_url}
-        poster={video.thumbnail_url ?? undefined}
-        controls
-        preload="metadata"
-        aria-label="Video preview"
-      />
-    )
-  }
   const text =
     video.status === 'failed'
       ? 'Processing failed'
@@ -335,12 +192,12 @@ function Preview({ video, transfer }: { video: OwnVideo; transfer: Transfer }) {
         ? 'Processing video…'
         : 'Uploading video…'
   return (
-    <div className={`${styles.screen} ${styles.placeholder}`}>
+    <VideoScreen video={video}>
       {transfer.phase === 'stored' && video.status !== 'failed' && (
         <Spinner label="Processing" size={28} />
       )}
       <span>{text}</span>
-    </div>
+    </VideoScreen>
   )
 }
 

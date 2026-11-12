@@ -31,8 +31,10 @@ YouTube layout: header with logo, search and avatar; collapsible sidebar.
     - "Up next" list;
     - in a list (`&list=`, from Play all, Shuffle or a playlist row): a playlist panel above Up next, Next and the
       end of a video go through the list; Shuffle mixes its first 100 (`&shuffle=<seed>&index=<n>`).
-3. **Channel** `/@handle` — banner, avatar, subscribers. Tabs: Videos, Playlists, About. Owner can edit videos and share
-   private ones.
+3. **Channel** `/@handle` — banner, avatar, subscribers. Tabs: Videos, Playlists, About. On their own channel (My
+   channel in the guide) the owner sees every ready video and playlist of theirs, marked Private or Unlisted, from
+   `/api/me/channel/…`: public lists stay the same for every viewer (ADR 0012). Manage videos leads to Studio, whose
+   ⋮ edits a video's details and shares a private one with up to 50 people.
 4. **Search** `/results?search_query=` — YouTube-style list, suggestions while typing.
 5. **Upload** — drag & drop, progress bar, metadata form, processing status, clear limit errors.
 6. **Sign in / Sign up** — email and password, or Google when it is set up

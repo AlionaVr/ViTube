@@ -1,5 +1,6 @@
 """Channel and subscription rules. The service commits, like @Transactional."""
 
+from collections.abc import Sequence
 from typing import Annotated
 from uuid import UUID
 
@@ -13,6 +14,7 @@ from app.core.rate_limit import RateLimit
 from app.modules.channels import repository as channels
 from app.modules.channels.schemas import (
     ChannelOut,
+    MyChannelVideo,
     SubscribedChannel,
     SubscriptionOut,
     VideoSort,
@@ -45,13 +47,32 @@ async def get_channel(db: AsyncSession, viewer: User | None, handle: str) -> Cha
 async def list_videos(
     db: AsyncSession, viewer: User | None, handle: str, sort: VideoSort, cursor: str | None
 ) -> Page[VideoSummary]:
-    """The Videos tab: the same for every viewer, the owner too (public, ready videos only)."""
+    """The Videos tab: the same for every viewer, the owner too (public, ready videos only).
+    Public lists don't depend on the session (ADR 0012): the owner's view is list_my_videos."""
     channel = await get_by_handle(db, handle, viewer)
+    page, next_cursor = await _videos(db, channel, sort, cursor, own=False)
+    return Page(items=[VideoSummary.of(video, channel) for video in page], next_cursor=next_cursor)
+
+
+async def list_my_videos(
+    db: AsyncSession, user: User, sort: VideoSort, cursor: str | None
+) -> Page[MyChannelVideo]:
+    """Your own channel's Videos tab: every ready video of yours, whatever its visibility."""
+    page, next_cursor = await _videos(db, user, sort, cursor, own=True)
+    return Page(
+        items=[MyChannelVideo.build(video, user) for video in page], next_cursor=next_cursor
+    )
+
+
+async def _videos(
+    db: AsyncSession, owner: User, sort: VideoSort, cursor: str | None, *, own: bool
+) -> tuple[Sequence[Video], str | None]:
     shape = _PopularKey if sort is VideoSort.POPULAR else tuple[UUID]
     after = decode_cursor(cursor, shape) if cursor else None
-    rows = await channels.list_videos(db, channel.id, sort, after=after, limit=FEED_PAGE_SIZE + 1)
-    page, next_cursor = split_page(rows, FEED_PAGE_SIZE, lambda video: _sort_key(video, sort))
-    return Page(items=[VideoSummary.of(video, channel) for video in page], next_cursor=next_cursor)
+    rows = await channels.list_videos(
+        db, owner.id, sort, own=own, after=after, limit=FEED_PAGE_SIZE + 1
+    )
+    return split_page(rows, FEED_PAGE_SIZE, lambda video: _sort_key(video, sort))
 
 
 async def list_subscriptions(

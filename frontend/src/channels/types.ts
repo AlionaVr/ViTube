@@ -12,5 +12,8 @@ export type Subscription = components['schemas']['SubscriptionOut']
 /** A row of the viewer's subscriptions. */
 export type SubscribedChannel = components['schemas']['SubscribedChannel']
 
+/** A card on your own channel's Videos tab, which lists every visibility. */
+export type MyChannelVideo = components['schemas']['MyChannelVideo']
+
 /** The Videos tab's chips. */
 export type VideoSort = components['schemas']['VideoSort']

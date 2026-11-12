@@ -6,6 +6,7 @@ import { useSignOut } from '../auth/hooks'
 import Avatar from '../components/Avatar'
 import Icon from '../components/Icon'
 import { canModerate } from '../moderation/roles'
+import { channelUrl } from '../videos/paths'
 import styles from './AccountMenu.module.css'
 import menu from './headerMenu.module.css'
 import MenuPages from './MenuPages'
@@ -59,6 +60,13 @@ export default function AccountMenu({ user }: { user: User }) {
               <div className={styles.names}>
                 <p className={styles.name}>{user.email}</p>
                 <p className={styles.handle}>@{user.handle}</p>
+                <Link
+                  to={channelUrl(user.handle)}
+                  className={styles.channelLink}
+                  onClick={() => setOpen(false)}
+                >
+                  View your channel
+                </Link>
               </div>
             </div>
             <hr className={menu.divider} />

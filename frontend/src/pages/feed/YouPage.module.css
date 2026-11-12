@@ -1,0 +1,133 @@
+.page {
+  max-width: 1284px;
+  margin: 0 auto;
+  padding: 24px 24px 48px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.names {
+  min-width: 0;
+}
+
+.name {
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 50px;
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  margin: 4px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.channelLink {
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.channelLink:hover {
+  text-decoration: underline;
+}
+
+.shelf {
+  padding: 24px 0;
+}
+
+.shelf + .shelf {
+  border-top: 1px solid var(--color-divider);
+}
+
+.shelfTop {
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.shelfTitle {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 28px;
+}
+
+.rowFrame {
+  position: relative;
+}
+
+/* One row of cards; the arrows page the rest (View all opens the whole list). */
+.row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 210px;
+  gap: 16px 8px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+/* YouTube's round arrows over the thumbnails' middle (210px wide: 118px tall). */
+.arrow {
+  position: absolute;
+  top: 59px;
+  z-index: 1;
+  translate: 0 -50%;
+  border-radius: 50%;
+  background: var(--color-menu);
+  box-shadow: var(--shadow-popup);
+}
+
+.left {
+  left: -20px;
+}
+
+.right {
+  right: -20px;
+}
+
+.row > * {
+  scroll-snap-align: start;
+}
+
+.shelfTitle a:focus-visible,
+.channelLink:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (max-width: 656px) {
+  .page {
+    padding: 16px 16px 32px;
+  }
+
+  .name {
+    font-size: 24px;
+    line-height: 32px;
+  }
+
+  .row {
+    grid-auto-columns: 160px;
+  }
+
+  .arrow {
+    top: 45px;
+  }
+
+  .left {
+    left: -8px;
+  }
+
+  .right {
+    right: -8px;
+  }
+}
