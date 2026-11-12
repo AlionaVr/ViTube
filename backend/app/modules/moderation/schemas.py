@@ -131,9 +131,10 @@ class AuditEntryOut(BaseModel):
     id: UUID
     created_at: datetime
     source: AuditSource
-    actor: ChannelSummary | None = Field(description="Who acted through the API; null for the CLI")
+    actor: ChannelSummary | None = Field(
+        description="Who acted through the API; null for the CLI or an account deleted since"
+    )
     by: str | None = Field(description="CLI: the admin named with --by (claimed, not proven)")
-    os_user: str | None = Field(description="CLI: the shell user")
     action: AuditAction
     target: AuditTarget
     details: dict[str, Any] = Field(description="reason, reports, replies, from, to")
@@ -141,14 +142,13 @@ class AuditEntryOut(BaseModel):
     @classmethod
     def of(cls, entry: AuditEntry, actor: User | None, target: AuditTarget) -> "AuditEntryOut":
         details = dict(entry.details)
-        by, os_user = details.pop("by", None), details.pop("os_user", None)
+        by = details.pop("by", None)
         return cls(
             id=entry.id,
             created_at=entry.created_at,
             source=entry.source,
             actor=ChannelSummary.of(actor) if actor else None,
             by=by,
-            os_user=os_user,
             action=entry.action,
             target=target,
             details=details,

@@ -2776,7 +2776,7 @@
                 "type": "null"
               }
             ],
-            "description": "Who acted through the API; null for the CLI"
+            "description": "Who acted through the API; null for the CLI or an account deleted since"
           },
           "by": {
             "anyOf": [
@@ -2789,18 +2789,6 @@
             ],
             "title": "By",
             "description": "CLI: the admin named with --by (claimed, not proven)"
-          },
-          "os_user": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Os User",
-            "description": "CLI: the shell user"
           },
           "action": {
             "$ref": "#/components/schemas/AuditAction"
@@ -2822,7 +2810,6 @@
           "source",
           "actor",
           "by",
-          "os_user",
           "action",
           "target",
           "details"

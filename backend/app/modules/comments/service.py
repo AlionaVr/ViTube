@@ -5,10 +5,12 @@ from typing import Annotated
 from uuid import UUID
 
 from pydantic import Field
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import NotFound
 from app.core.pagination import Page, decode_cursor, split_page
+from app.core.rate_limit import RateLimit
 from app.modules.comments import repository as comments
 from app.modules.comments.models import Comment
 from app.modules.comments.repository import CommentRow
@@ -23,6 +25,9 @@ from app.modules.videos.interactions import get_ready
 from app.modules.videos.models import Video
 
 PAGE_SIZE = 20
+# A person rarely writes more than one a minute; a spammer's loop stops at 180 an hour, and a
+# ban keeps what was posted (ADR 0009).
+COMMENTS_PER_USER = RateLimit("comment", limit=30, window=10 * 60)
 # A cursor is client input: a number the column can't hold must give 400, not a DB error.
 _TopKey = tuple[Annotated[int, Field(ge=0, le=2**31 - 1)], UUID]  # (like_count, id)
 
@@ -52,7 +57,10 @@ async def list_replies(
     return Page(items=await _items(db, user, page, video), next_cursor=next_cursor)
 
 
-async def add_comment(db: AsyncSession, user: User, public_id: str, data: CommentIn) -> CommentOut:
+async def add_comment(
+    db: AsyncSession, redis: Redis, user: User, public_id: str, data: CommentIn
+) -> CommentOut:
+    await COMMENTS_PER_USER.hit(redis, str(user.id))  # before any check: refusals count too
     video = await get_ready(db, user, public_id)
     root_id = None
     if data.parent_id is not None:
@@ -65,7 +73,10 @@ async def add_comment(db: AsyncSession, user: User, public_id: str, data: Commen
     # passes an id whose comment commits later.
     if root_id is not None and not await comments.add_reply(db, root_id):
         raise NotFound("Comment not found")  # deleted meanwhile: nothing written yet
-    await comments.add_comment(db, video.id)
+    if not await comments.add_comment(db, video.id):
+        raise NotFound(
+            "Video not found"
+        )  # hidden meanwhile: the request rolls back the reply count
     comment = await comments.insert_comment(
         db, video_id=video.id, author_id=user.id, parent_id=root_id, text=data.text
     )

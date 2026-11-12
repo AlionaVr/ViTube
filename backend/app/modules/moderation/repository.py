@@ -4,11 +4,10 @@ from collections.abc import Collection, Sequence
 from dataclasses import dataclass
 from uuid import UUID
 
-from sqlalchemy import Select, select, union_all, update
+from sqlalchemy import Select, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import aliased
 
-from app.modules.audit.models import AuditAction, AuditEntry, AuditSource, TargetType
+from app.modules.audit.models import AuditAction, AuditEntry, AuditSource
 from app.modules.comments.models import Comment
 from app.modules.users.models import User, UserStatus
 from app.modules.videos.models import Video
@@ -133,31 +132,9 @@ async def list_audit(
         query = query.where(AuditEntry.source == filters.source)
     if filters.actor_id is not None:
         query = query.where(AuditEntry.actor_id == filters.actor_id)
-    if (account := filters.account_id) is None:
-        return (await db.scalars(_newest(query, before, limit))).all()
-    # One branch per kind of target, each on ix_audit_log_target_type_target_id_id with its own
-    # LIMIT: the cost follows the account's entries, not the log's size (an OR would make the
-    # planner walk the whole log backwards).
-    targets = (
-        (TargetType.USER, AuditEntry.target_id == account),
-        (
-            TargetType.VIDEO,
-            AuditEntry.target_id.in_(select(Video.id).where(Video.owner_id == account)),
-        ),
-        (
-            TargetType.COMMENT,
-            AuditEntry.target_id.in_(select(Comment.id).where(Comment.author_id == account)),
-        ),
-    )
-    branches = union_all(
-        *(
-            _newest(query.where(AuditEntry.target_type == kind, target), before, limit)
-            for kind, target in targets
-        )
-    ).subquery()
-    entry = aliased(AuditEntry, branches)
-    merged = select(entry).order_by(entry.id.desc()).limit(limit)
-    return (await db.scalars(merged)).all()
+    if filters.account_id is not None:
+        query = query.where(AuditEntry.subject_user_id == filters.account_id)
+    return (await db.scalars(_newest(query, before, limit))).all()
 
 
 def _newest(query: Select[AuditEntry], before: UUID | None, limit: int) -> Select[AuditEntry]:

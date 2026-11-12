@@ -1,5 +1,6 @@
 """Accounts in every role, a ready video, and helpers to read reports and the audit log."""
 
+import asyncio
 from collections.abc import AsyncIterator
 from typing import Any
 
@@ -128,3 +129,20 @@ async def set_status(client: AsyncClient, handle: str, status: str, reason: str 
         json={"status": status, "reason": reason},
         headers=csrf(client),
     )
+
+
+def hold(
+    monkeypatch: pytest.MonkeyPatch, target: Any, name: str
+) -> tuple[asyncio.Event, asyncio.Event]:
+    """Pause calls to `target.name` until released. Returns (entered, release)."""
+    original = getattr(target, name)
+    entered, release = asyncio.Event(), asyncio.Event()
+
+    async def paused(*args: Any, **kwargs: Any) -> Any:
+        entered.set()
+        async with asyncio.timeout(10):
+            await release.wait()
+        return await original(*args, **kwargs)
+
+    monkeypatch.setattr(target, name, paused)
+    return entered, release

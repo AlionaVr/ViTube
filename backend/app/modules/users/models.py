@@ -41,6 +41,8 @@ class User(Base):
         # Cast to text: on citext, ~ ignores case.
         CheckConstraint(r"handle::text ~ '^[a-z0-9._-]{3,30}$'", name="handle_format"),
         CheckConstraint("subscriber_count >= 0", name="subscriber_count_not_negative"),
+        # Admins can't be restricted (ADR 0009), so a restricted account can't become one.
+        CheckConstraint("role <> 'admin' OR status = 'active'", name="admin_active"),
     )
 
     # uuidv7(): time-ordered (index-friendly) and not guessable like 1, 2, 3.
@@ -52,6 +54,9 @@ class User(Base):
     status: Mapped[UserStatus] = mapped_column(
         str_enum(UserStatus, "status"), server_default=UserStatus.ACTIVE.value
     )
+    # Set by a ban or termination: sessions started before it never work again, also after a
+    # reinstatement, whether or not the ban could delete them from Redis (ADR 0005).
+    sessions_valid_after: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # varchar + CHECK, not a Postgres enum: adding a role is a plain migration.
     role: Mapped[Role] = mapped_column(
         Enum(

@@ -9,7 +9,9 @@ from sqlalchemy import ColumnElement, func, select, update
 from sqlalchemy.dialects.postgresql import aggregate_order_by, array_agg, insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.comments.models import Comment
 from app.modules.reports.models import Report, ReportReason, ReportStatus
+from app.modules.videos.models import Video
 
 NOTES_PER_CASE = 3
 
@@ -25,6 +27,25 @@ class OpenCase:
     notes: list[str]  # the newest report texts
     first_id: UUID  # the oldest open report: the queue's order and cursor
     last_reported_at: datetime
+
+
+async def lock_open_video(db: AsyncSession, video_id: UUID) -> bool:
+    """FOR SHARE until the report commits: a hide or dismiss under way (FOR NO KEY UPDATE) goes
+    first and the check runs again on the row it left, or it waits for the report and closes it
+    too. The video, then reports: the order a hide takes them in. False: hidden meanwhile."""
+    query = (
+        select(Video.id).where(Video.id == video_id, ~Video.is_hidden).with_for_update(read=True)
+    )
+    return await db.scalar(query) is not None
+
+
+async def lock_open_comment(db: AsyncSession, comment_id: UUID, video_id: UUID) -> bool:
+    """As lock_open_video, for a comment and its video: a delete or a hide under way goes first.
+    The comment, then its video, then reports: a delete's order (root, comment, video)."""
+    comment = select(Comment.id).where(Comment.id == comment_id, ~Comment.is_deleted)
+    if await db.scalar(comment.with_for_update(read=True)) is None:
+        return False
+    return await lock_open_video(db, video_id)
 
 
 async def add(

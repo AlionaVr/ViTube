@@ -904,18 +904,13 @@ export interface components {
              */
             created_at: string;
             source: components["schemas"]["AuditSource"];
-            /** @description Who acted through the API; null for the CLI */
+            /** @description Who acted through the API; null for the CLI or an account deleted since */
             actor: components["schemas"]["ChannelSummary"] | null;
             /**
              * By
              * @description CLI: the admin named with --by (claimed, not proven)
              */
             by: string | null;
-            /**
-             * Os User
-             * @description CLI: the shell user
-             */
-            os_user: string | null;
             action: components["schemas"]["AuditAction"];
             target: components["schemas"]["AuditTarget"];
             /**

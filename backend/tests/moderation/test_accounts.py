@@ -5,10 +5,12 @@ import pytest
 from fastapi import FastAPI
 from httpx2 import AsyncClient
 from redis.exceptions import RedisError
+from sqlalchemy import update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.audit.models import AuditAction, AuditSource, TargetType
-from app.modules.users.models import Role, UserStatus
+from app.modules.users.models import Role, User, UserStatus
 from app.modules.videos.models import Video
 from tests.auth.test_roles import run_cli
 from tests.interactions.conftest import PASSWORD, browser, csrf, posted, signup, user_by_email
@@ -154,6 +156,44 @@ async def test_banning_again_logs_nothing_but_ends_sessions_again(
     assert len(await audit_entries(db)) == 1
 
 
+async def test_a_session_from_before_a_ban_stays_dead_after_reinstating(
+    app: FastAPI,
+    admin: AsyncClient,
+    viewer: AsyncClient,
+    db: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Redis kept the session (its revoke failed) and nobody used it during the ban.
+    async def redis_down(*args: object) -> None:
+        raise RedisError("connection refused")
+
+    monkeypatch.setattr(app.state.sessions, "revoke_all", redis_down)
+    handle = await handle_of(db, VIEWER_EMAIL)
+    assert (await set_status(admin, handle, "banned")).status_code == 204
+    assert (await set_status(admin, handle, "active")).status_code == 204
+
+    assert (await viewer.get("/api/auth/me")).status_code == 401
+    async with browser(app, "10.0.0.7") as fresh:
+        assert (await login(fresh, VIEWER_EMAIL)).status_code == 200
+        assert (await fresh.get("/api/auth/me")).status_code == 200  # a new session works
+
+
+async def test_a_restricted_account_cant_be_made_an_admin(
+    admin: AsyncClient, viewer: AsyncClient, db: AsyncSession
+) -> None:
+    # It couldn't be reinstated then: admins can't be restricted, nor unrestricted.
+    await set_status(admin, await handle_of(db, VIEWER_EMAIL), "banned")
+
+    code, output = await run_cli("set-role", VIEWER_EMAIL, "admin", "--by", ADMIN_EMAIL)
+
+    assert code == 1
+    assert "reinstate it first" in output
+    assert (await user_by_email(db, VIEWER_EMAIL)).role is Role.USER
+    with pytest.raises(IntegrityError, match="ck_users_admin_active"):  # the DB holds it too
+        await db.execute(update(User).where(User.email == VIEWER_EMAIL).values(role=Role.ADMIN))
+    await db.rollback()
+
+
 async def test_reinstating_lets_them_sign_in_again(
     app: FastAPI, admin: AsyncClient, viewer: AsyncClient, db: AsyncSession
 ) -> None:
@@ -251,9 +291,21 @@ async def test_the_cli_bans_and_logs_who_ran_it(
         None,
         AuditAction.SET_USER_STATUS,
     )
-    assert entry.details["by"] == ADMIN_EMAIL
-    assert entry.details["os_user"]
-    assert entry.details["reason"] == "Spam bot"
+    assert entry.details == {
+        "by": ADMIN_EMAIL,
+        "from": "active",
+        "to": "banned",
+        "reason": "Spam bot",
+    }
+    assert entry.subject_user_id == (await user_by_email(db, VIEWER_EMAIL)).id
+
+
+async def test_the_cli_needs_by_to_restrict(viewer: AsyncClient, db: AsyncSession) -> None:
+    code, output = await run_cli("set-status", VIEWER_EMAIL, "banned")
+
+    assert code == 2  # argparse: a required option is missing
+    assert "--by" in output
+    assert await status_of(db, VIEWER_EMAIL) is UserStatus.ACTIVE
 
 
 async def test_the_cli_refuses_a_by_that_is_no_admin(

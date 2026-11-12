@@ -131,6 +131,7 @@
 .comment {
   margin-bottom: 16px;
   display: flex;
+  align-items: flex-start; /* the ⋮ stays its own height: its menu opens right under it */
   gap: 16px;
 }
 

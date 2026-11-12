@@ -5,6 +5,7 @@ from uuid import UUID
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.errors import NotFound
 from app.core.rate_limit import RateLimit
 from app.modules.comments import service as comments
 from app.modules.reactions import repository as reactions
@@ -56,7 +57,11 @@ async def _rate(
         old = await reactions.put_value(db, table, target_id, user.id, value)
     # Counted from what the statement really replaced, so parallel requests add up exactly.
     delta = (value == LIKE) - (old == LIKE)
-    if delta:
-        like_count = await reactions.add_likes(db, table, target_id, delta)
+    # A video's row is touched even with no change of likes: a dislike must pass its hidden check.
+    if delta or table is VideoReaction:
+        counted = await reactions.add_likes(db, table, target_id, delta)
+        if counted is None:
+            raise NotFound("Video not found")  # hidden meanwhile: the rating rolls back with it
+        like_count = counted
     await db.commit()
     return RatingOut(like_count=like_count, my_rating=rating)

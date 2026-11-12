@@ -5,7 +5,7 @@ from uuid import UUID
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.errors import DomainError
+from app.core.errors import DomainError, NotFound
 from app.core.rate_limit import RateLimit
 from app.modules.comments import service as comments
 from app.modules.reports import repository as reports
@@ -25,6 +25,8 @@ async def report_video(
     video = await get_ready(db, user, public_id)
     if video.owner_id == user.id:
         raise DomainError("You can't report your own video")
+    if not await reports.lock_open_video(db, video.id):
+        raise NotFound("Video not found")  # hidden meanwhile
     await reports.add(
         db, reporter_id=user.id, video_id=video.id, reason=data.reason, details=data.details
     )
@@ -36,9 +38,11 @@ async def report_comment(
 ) -> None:
     """Report a comment the user may read. Reporting it again while open changes nothing."""
     await REPORTS_PER_USER.hit(redis, str(user.id))
-    comment, _ = await comments.get_readable(db, user, comment_id)
+    comment, video = await comments.get_readable(db, user, comment_id)
     if comment.author_id == user.id:
         raise DomainError("You can't report your own comment")
+    if not await reports.lock_open_comment(db, comment.id, video.id):
+        raise NotFound("Comment not found")  # deleted or its video hidden meanwhile
     await reports.add(
         db, reporter_id=user.id, comment_id=comment.id, reason=data.reason, details=data.details
     )

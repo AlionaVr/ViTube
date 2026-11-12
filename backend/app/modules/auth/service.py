@@ -76,6 +76,9 @@ async def set_role(db: AsyncSession, actor: Actor, email: str, role: Role) -> Us
     user = await users.lock_for_status(db, found.id) if found else None
     if user is None:
         raise NotFound("No user with this email")
+    if role is Role.ADMIN and user.status is not UserStatus.ACTIVE:
+        # Admins can't be restricted, so they couldn't be reinstated either (a DB check too).
+        raise Forbidden("A restricted account can't be made an admin: reinstate it first")
     previous = user.role
     if previous is not role:
         user.role = role
@@ -85,6 +88,7 @@ async def set_role(db: AsyncSession, actor: Actor, email: str, role: Role) -> Us
             AuditAction.SET_USER_ROLE,
             TargetType.USER,
             user.id,
+            subject=user.id,
             **{"from": previous.value, "to": role.value},
         )
     await db.commit()

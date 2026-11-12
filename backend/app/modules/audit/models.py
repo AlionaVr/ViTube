@@ -45,7 +45,7 @@ class AuditEntry(Base):
         # The admins' filters, each newest first (ids are uuidv7).
         Index("ix_audit_log_action_id", "action", "id"),
         Index("ix_audit_log_actor_id_id", "actor_id", "id"),
-        Index("ix_audit_log_target_type_target_id_id", "target_type", "target_id", "id"),
+        Index("ix_audit_log_subject_user_id_id", "subject_user_id", "id"),
         Index("ix_audit_log_cli_id", "id", postgresql_where=text("source = 'cli'")),
     )
 
@@ -57,5 +57,8 @@ class AuditEntry(Base):
     action: Mapped[AuditAction] = mapped_column(str_enum(AuditAction, "action"))
     target_type: Mapped[TargetType] = mapped_column(str_enum(TargetType, "target_type"))
     target_id: Mapped[UUID] = mapped_column(Uuid)
+    # The account acted on: the user itself, or the video's owner, or the comment's author. Kept
+    # here, so the "about an account" filter finds entries whose video or comment is gone.
+    subject_user_id: Mapped[UUID | None] = mapped_column(Uuid)
     details: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default=text("'{}'::jsonb"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

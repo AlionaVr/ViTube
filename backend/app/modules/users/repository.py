@@ -2,10 +2,11 @@
 
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db import locks
 from app.modules.users.models import User, UserStatus
 
 
@@ -46,30 +47,32 @@ async def insert_unless_taken(
 
 
 async def get_for_write(db: AsyncSession, user_id: UUID) -> User | None:
-    """The user, read FOR KEY SHARE and held until the transaction ends.
+    """The user, read after taking their write lock, shared, until the transaction ends.
 
-    A status change locks the user FOR UPDATE first (lock_for_status), which waits for this
-    lock: writes already under way finish first, and the ones after it see the new status.
+    A status change takes the same lock exclusively (lock_for_status): it waits for the writes
+    under way, and writes that come later queue behind it, then read the new status. An
+    advisory lock, not a row lock: new row share locks pass a waiting FOR UPDATE, so a stream
+    of writes could hold a ban off for good; advisory locks queue in order.
     """
-    query = (
-        select(User)
-        .where(User.id == user_id)
-        .with_for_update(read=True, key_share=True)
-        .execution_options(populate_existing=True)  # the row as locked, not as cached
-    )
-    return await db.scalar(query)
+    await _user_writes_lock(db, user_id, "pg_advisory_xact_lock_shared")
+    query = select(User).where(User.id == user_id)
+    return await db.scalar(query.execution_options(populate_existing=True))  # not the cached row
 
 
 async def lock_for_status(db: AsyncSession, user_id: UUID) -> User | None:
-    """The user, FOR UPDATE: waits for their writes under way (see get_for_write), and makes
-    role and status changes run one at a time."""
-    query = (
-        select(User)
-        .where(User.id == user_id)
-        .with_for_update()
-        .execution_options(populate_existing=True)
-    )
-    return await db.scalar(query)
+    """The user, with their write lock taken exclusively (see get_for_write) and the row
+    FOR NO KEY UPDATE: waits for their writes under way, and makes role and status changes run
+    one at a time. Not FOR UPDATE: that would wait for foreign key checks of rows that point at
+    the user."""
+    await _user_writes_lock(db, user_id, "pg_advisory_xact_lock")
+    query = select(User).where(User.id == user_id).with_for_update(key_share=True)
+    return await db.scalar(query.execution_options(populate_existing=True))
+
+
+async def _user_writes_lock(db: AsyncSession, user_id: UUID, function: str) -> None:
+    # A hash collision only makes two users' writes and bans wait for each other a moment.
+    statement = text(f"SELECT {function}(:namespace, hashtext(:user_id))")
+    await db.execute(statement, {"namespace": locks.USER_WRITES, "user_id": str(user_id)})
 
 
 async def get_status(db: AsyncSession, user_id: UUID) -> UserStatus | None:

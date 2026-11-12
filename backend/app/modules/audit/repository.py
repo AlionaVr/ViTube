@@ -1,7 +1,5 @@
 """Audit log writes. No commits: the entry joins the action's own transaction."""
 
-import getpass
-import os
 from dataclasses import dataclass, field
 from typing import Any
 from uuid import UUID
@@ -19,7 +17,7 @@ class Actor:
 
     source: AuditSource
     user_id: UUID | None = None
-    notes: dict[str, Any] = field(default_factory=dict)  # what the CLI knows about who ran it
+    notes: dict[str, Any] = field(default_factory=dict)  # the admin a CLI command names
 
     @classmethod
     def of(cls, user: User) -> "Actor":
@@ -27,14 +25,10 @@ class Actor:
 
     @classmethod
     def cli(cls, by: str | None) -> "Actor":
-        """The shell user, and the admin they named with --by: claimed, not checked by a login.
-        Shell access is the trust boundary here."""
-        try:
-            os_user = getpass.getuser()
-        except OSError:  # a container uid with no name
-            os_user = str(os.getuid())
-        notes = {"os_user": os_user} | ({"by": by} if by else {})
-        return cls(AuditSource.CLI, notes=notes)
+        """The admin named with --by: claimed, not checked by a login. Shell access is the trust
+        boundary; who ran `docker compose exec` is in the host's logs, not here (the container's
+        user is always the same)."""
+        return cls(AuditSource.CLI, notes={"by": by} if by else {})
 
 
 async def record(
@@ -43,8 +37,11 @@ async def record(
     action: AuditAction,
     target_type: TargetType,
     target_id: UUID,
+    *,
+    subject: UUID,
     **details: Any,
 ) -> None:
+    """`subject`: the account acted on (see AuditEntry.subject_user_id)."""
     await db.execute(
         insert(AuditEntry).values(
             source=actor.source,
@@ -52,6 +49,7 @@ async def record(
             action=action,
             target_type=target_type,
             target_id=target_id,
+            subject_user_id=subject,
             details=actor.notes | details,
         )
     )

@@ -43,8 +43,12 @@ describe('header account area', () => {
     mockApi({ 'GET /api/auth/me': () => json(200, { ...ANNA, role: 'moderator' }) })
     const router = renderApp('/')
     await openMenu()
+    const signOut = screen.getByRole('button', { name: 'Sign out' })
+    const moderation = screen.getByRole('link', { name: 'Moderation' })
+    // Its own group after Sign out, as YouTube Studio's link is.
+    expect(signOut.compareDocumentPosition(moderation)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
 
-    await userEvent.click(screen.getByRole('link', { name: 'Moderation' }))
+    await userEvent.click(moderation)
 
     expect(router.state.location.pathname).toBe('/moderation')
   })

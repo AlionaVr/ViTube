@@ -50,6 +50,10 @@ async def test_deleting_rows_keeps_their_audit_entries(
     ]
     assert items[1]["source"] == "api"
     assert items[1]["actor"] is None  # the moderator is gone; the entry and its actor id stay
+    # "About an account" still finds the hide: the entry keeps whose video it was.
+    owner_handle = (await owner.get("/api/auth/me")).json()["handle"]
+    about = await admin.get("/api/moderation/audit-log", params={"account": owner_handle})
+    assert [item["action"] for item in about.json()["items"]] == ["hide_video"]
 
 
 async def test_the_app_cant_delete_audit_entries_even_by_cascade(db: AsyncSession) -> None:

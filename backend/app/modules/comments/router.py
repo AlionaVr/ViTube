@@ -5,6 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter, status
 
 from app.core.pagination import Cursor, Page
+from app.core.redis import RedisClient
 from app.db.session import DbSession
 from app.modules.auth.deps import CurrentUser, OptionalUser
 from app.modules.comments import service
@@ -36,9 +37,9 @@ async def list_comments(
     summary="Comment on a video or reply to a comment",
 )
 async def add_comment(
-    public_id: PublicId, body: CommentIn, user: CurrentUser, db: DbSession
+    public_id: PublicId, body: CommentIn, user: CurrentUser, db: DbSession, redis: RedisClient
 ) -> CommentOut:
-    return await service.add_comment(db, user, public_id, body)
+    return await service.add_comment(db, redis, user, public_id, body)
 
 
 @router.get(

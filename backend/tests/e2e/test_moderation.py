@@ -27,6 +27,7 @@ pytestmark = pytest.mark.skipif(not BASE_URL, reason="needs a running stack: set
 
 REPO = Path(__file__).resolve().parents[3]
 OWNER, REPORTER = "e2e-owner@example.com", "e2e-stranger@example.com"  # the scenario's accounts
+ADMIN = "e2e-admin@example.com"
 
 
 def cli(*args: str) -> str:
@@ -64,7 +65,7 @@ def moderator() -> Iterator[Browser]:
 
 @pytest.fixture
 def admin() -> Iterator[Browser]:
-    yield from signed_in("e2e-admin@example.com", "admin")
+    yield from signed_in(ADMIN, "admin")
 
 
 @pytest.fixture
@@ -166,8 +167,9 @@ def test_report_hide_restore_ban_terminate_and_audit(
         assert ok(moderator.get(page), 200).json()["channel_terminated"] is True
     finally:
         # Reinstated, also when a step above failed: later runs need these accounts.
-        cli("set-status", REPORTER, "active", "--reason", "E2E done")
-        cli("set-status", OWNER, "active", "--reason", "E2E done")
+        done = ("--by", ADMIN, "--reason", "E2E done")
+        cli("set-status", REPORTER, "active", *done)
+        cli("set-status", OWNER, "active", *done)
     ok(guest.get(page), 200)
 
     # The audit log names who did what; filters find the account and the moderator's acts.

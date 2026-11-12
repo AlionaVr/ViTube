@@ -154,6 +154,7 @@ describe('a restricted video', () => {
       expect(screen.queryByRole('button', { name })).not.toBeInTheDocument()
     }
     // No comments, and playback makes no view.
+    expect(screen.getByText('Comments are turned off.')).toBeInTheDocument()
     await screen.findByRole('region', { name: 'Up next' })
     const paths = fetch.mock.calls.map(([request]) => new URL(request.url).pathname)
     expect(paths.filter((path) => path.includes('/comments') || path.includes('/views'))).toEqual(

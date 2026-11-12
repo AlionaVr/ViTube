@@ -59,12 +59,6 @@ export default function AccountMenu({ user }: { user: User }) {
             </div>
           </div>
           <hr className={styles.divider} />
-          {canModerate(user) && (
-            <Link to="/moderation" className={styles.item} onClick={() => setOpen(false)}>
-              <Icon name="shieldPerson" />
-              Moderation
-            </Link>
-          )}
           <button
             type="button"
             className={styles.item}
@@ -76,6 +70,16 @@ export default function AccountMenu({ user }: { user: User }) {
             <Icon name="signOut" />
             Sign out
           </button>
+          {/* A staff tool gets its own group after Sign out, as YouTube Studio does. */}
+          {canModerate(user) && (
+            <>
+              <hr className={styles.divider} />
+              <Link to="/moderation" className={styles.item} onClick={() => setOpen(false)}>
+                <Icon name="shieldPerson" />
+                Moderation
+              </Link>
+            </>
+          )}
         </div>
       )}
     </div>

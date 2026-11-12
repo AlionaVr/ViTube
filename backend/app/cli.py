@@ -1,7 +1,8 @@
 """Admin commands (ADR 0009): roles, and bans as in the moderation page.
 
 Run in the api container: docker compose exec api python -m app.cli <command> ...
-Each change goes to the audit log with source "cli", the shell user, and --by if given.
+Each change goes to the audit log with source "cli" and the admin named by --by: required to
+restrict an account; set-role takes it too, but makes the first admin without one.
 """
 
 import argparse
@@ -40,7 +41,7 @@ async def set_role(email: str, role: Role, by: str | None) -> None:
         await engine.dispose()
 
 
-async def set_status(email: str, status: UserStatus, by: str | None, reason: str) -> None:
+async def set_status(email: str, status: UserStatus, by: str, reason: str) -> None:
     settings = get_settings()
     engine = create_engine(settings)
     redis = create_redis(settings)
@@ -64,14 +65,14 @@ def main(argv: list[str] | None = None) -> None:
     set_role_parser = commands.add_parser("set-role", help="give a user a role")
     set_role_parser.add_argument("email")
     set_role_parser.add_argument("role", choices=[role.value for role in Role])
-    set_role_parser.add_argument("--by", metavar="EMAIL", help=by_help)
+    set_role_parser.add_argument("--by", metavar="EMAIL", help=f"{by_help} (none for the first)")
 
     set_status_parser = commands.add_parser(
         "set-status", help="ban, terminate or reinstate (active) an account"
     )
     set_status_parser.add_argument("email")
     set_status_parser.add_argument("status", choices=[status.value for status in UserStatus])
-    set_status_parser.add_argument("--by", metavar="EMAIL", help=by_help)
+    set_status_parser.add_argument("--by", metavar="EMAIL", required=True, help=by_help)
     set_status_parser.add_argument("--reason", default="", help="why, for the audit log")
     args = parser.parse_args(argv)
 

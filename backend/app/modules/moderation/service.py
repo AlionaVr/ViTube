@@ -6,6 +6,7 @@ audit entry, commit. So the log never lacks an action or holds one that didn't h
 
 import logging
 from collections.abc import Collection
+from datetime import UTC, datetime
 from uuid import UUID
 
 from redis.exceptions import RedisError
@@ -146,6 +147,9 @@ async def list_audit(
     return Page(items=items, next_cursor=next_cursor)
 
 
+ADMIN_UNRESTRICTED = "An admin's account can't be restricted: change their role first"
+
+
 async def set_status(
     db: AsyncSession,
     sessions: SessionStore,
@@ -156,24 +160,39 @@ async def set_status(
 ) -> None:
     """Ban, terminate or reinstate an account (admins and the CLI).
 
-    The lock FOR UPDATE waits for the user's writes under way (they hold KEY SHARE, see
-    auth.deps.optional_user), so none of them commits after the ban. The ban is in force once
-    this commits: every request reads the status from the DB. Ending the sessions after that
-    only cleans up, so a Redis failure is logged, not an error.
+    The exclusive write lock waits for the user's writes under way (see
+    users.repository.get_for_write), so none of them commits after the ban. The ban is in force
+    once this commits: every request reads the status from the DB, and sessions started before
+    it never work again. Ending them in Redis after that only cleans up, so a Redis failure is
+    logged, not an error.
     """
+    # Refused before any lock as well: an admin's request holds their own write lock, so two
+    # admins acting on each other (or one clicking twice) would wait on each other for good.
+    if user_id == actor.user_id:
+        raise Forbidden("You can't change your own account's status")
+    found = await users.get_by_id(db, user_id)
+    if found is not None and found.role is Role.ADMIN:
+        raise Forbidden(ADMIN_UNRESTRICTED)
     user = await users.lock_for_status(db, user_id)
     if user is None:
         raise NotFound("No such user")
-    if user.id == actor.user_id:
-        raise Forbidden("You can't change your own account's status")
-    if user.role is Role.ADMIN:  # read under the lock: a role change can't slip in
-        raise Forbidden("An admin's account can't be restricted: change their role first")
+    if user.role is Role.ADMIN:  # again under the lock: a role change can't slip in
+        raise Forbidden(ADMIN_UNRESTRICTED)
     previous = user.status
     if previous is not status:
         user.status = status
+        if status is not UserStatus.ACTIVE:
+            # The app's clock, as sessions record their start.
+            user.sessions_valid_after = datetime.now(UTC)
         details = {"from": previous, "to": status} | ({"reason": reason} if reason else {})
         await audit.record(
-            db, actor, AuditAction.SET_USER_STATUS, TargetType.USER, user.id, **details
+            db,
+            actor,
+            AuditAction.SET_USER_STATUS,
+            TargetType.USER,
+            user.id,
+            subject=user.id,
+            **details,
         )
     await db.commit()
     if status is not UserStatus.ACTIVE:  # again on a repeat: a retry finishes a failed revoke
@@ -200,6 +219,7 @@ async def hide_video(
             AuditAction.HIDE_VIDEO,
             TargetType.VIDEO,
             video.id,
+            subject=video.owner_id,
             reason=reason,
             reports=closed,
         )
@@ -212,7 +232,12 @@ async def restore_video(db: AsyncSession, moderator: User, public_id: str) -> No
     if video.is_hidden:
         video.is_hidden = False
         await audit.record(
-            db, Actor.of(moderator), AuditAction.RESTORE_VIDEO, TargetType.VIDEO, video.id
+            db,
+            Actor.of(moderator),
+            AuditAction.RESTORE_VIDEO,
+            TargetType.VIDEO,
+            video.id,
+            subject=video.owner_id,
         )
     await db.commit()
 
@@ -230,6 +255,7 @@ async def dismiss_video(db: AsyncSession, moderator: User, public_id: str) -> No
             AuditAction.DISMISS_VIDEO,
             TargetType.VIDEO,
             video.id,
+            subject=video.owner_id,
             reports=closed,
         )
     await db.commit()
@@ -263,6 +289,7 @@ async def delete_comment(db: AsyncSession, moderator: User, comment_id: UUID) ->
             AuditAction.DELETE_COMMENT,
             TargetType.COMMENT,
             comment.id,
+            subject=comment.author_id,
             replies=max(len(deleted) - 1, 0),
             reports=closed,
         )
@@ -283,6 +310,7 @@ async def dismiss_comment(db: AsyncSession, moderator: User, comment_id: UUID) -
             AuditAction.DISMISS_COMMENT,
             TargetType.COMMENT,
             comment.id,
+            subject=comment.author_id,
             reports=closed,
         )
     await db.commit()

@@ -22,7 +22,7 @@ class UserSession:
     id: str  # the cookie value; Redis never stores it
     user_id: UUID  # no role: it is read from the DB on each request, so changes apply at once
     csrf: str
-    created_at: int  # unix seconds
+    created_at: float  # unix time; older sessions have whole seconds
 
 
 class SessionStore:
@@ -52,7 +52,7 @@ class SessionStore:
             id=secrets.token_urlsafe(32),  # 256 bits
             user_id=user_id,
             csrf=secrets.token_urlsafe(32),
-            created_at=int(self._now()),
+            created_at=self._now(),  # fractions too: a ban's cutoff splits one second
         )
         value = {"user_id": str(user_id), "csrf": session.csrf, "created_at": session.created_at}
         key, index = self._key(session.id), self._index_key(user_id)

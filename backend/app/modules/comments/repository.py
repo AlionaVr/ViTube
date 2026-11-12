@@ -83,7 +83,13 @@ async def add_reply(db: AsyncSession, root_id: UUID) -> bool:
     return await db.scalar(statement) is not None
 
 
-async def add_comment(db: AsyncSession, video_id: UUID) -> None:
-    await db.execute(
-        update(Video).where(Video.id == video_id).values(comment_count=Video.comment_count + 1)
+async def add_comment(db: AsyncSession, video_id: UUID) -> bool:
+    """comment_count + 1, unless the video is hidden: a hide under way makes the UPDATE wait, and
+    Postgres checks the condition again on the row the hide left (ADR 0009). False: refused."""
+    statement = (
+        update(Video)
+        .where(Video.id == video_id, ~Video.is_hidden)
+        .values(comment_count=Video.comment_count + 1)
+        .returning(Video.id)
     )
+    return await db.scalar(statement) is not None

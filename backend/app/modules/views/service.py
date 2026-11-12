@@ -3,6 +3,7 @@
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.errors import NotFound
 from app.modules.users.models import User
 from app.modules.videos.interactions import get_ready
 from app.modules.views import repository as views
@@ -22,5 +23,7 @@ async def finish(
     viewer = tracker.viewer_id(user.id if user else None, ip)
     # Redis first: if the update then fails, a view is lost, never counted twice.
     if await tracker.finish(redis, video.id, viewer, video.duration_sec):
-        await views.add_view(db, video.id)  # the only lock: it can't be part of a deadlock
+        # The only lock: it can't be part of a deadlock.
+        if not await views.add_view(db, video.id):
+            raise NotFound("Video not found")  # hidden meanwhile
         await db.commit()

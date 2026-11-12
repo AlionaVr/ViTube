@@ -12,6 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.pagination import encode_cursor
+from app.core.rate_limit import RateLimit
 from app.modules.comments import repository, service
 from app.modules.comments.models import TEXT_MAX, Comment
 from app.modules.users.models import User
@@ -427,3 +428,14 @@ async def test_unfinished_video_takes_no_comments_even_from_its_owner(
 async def test_unknown_comment_has_no_replies(viewer: AsyncClient) -> None:
     assert (await replies_to(viewer, uuid4())).status_code == 404
     assert (await replies_to(viewer, "not-a-uuid")).status_code == 422
+
+
+async def test_comments_are_rate_limited_per_user(
+    viewer: AsyncClient, video: Video, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A ban keeps what was posted, so a spammer's loop must stop on its own.
+    monkeypatch.setattr(service, "COMMENTS_PER_USER", RateLimit("comment", limit=2, window=60))
+
+    codes = [(await post(viewer, video, f"Buy {n}")).status_code for n in range(3)]
+
+    assert codes == [201, 201, 429]

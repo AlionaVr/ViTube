@@ -15,25 +15,8 @@ from app.modules.users import repository as users_repository
 from app.modules.users.models import User, UserStatus
 from app.modules.videos.models import Video, VideoStatus
 from tests.interactions.conftest import PASSWORD, browser, csrf, meet_after, user_by_email
-from tests.moderation.conftest import OWNER_EMAIL, VIEWER_EMAIL, set_status
+from tests.moderation.conftest import ADMIN_EMAIL, OWNER_EMAIL, VIEWER_EMAIL, hold, set_status
 from tests.videos.factories import get_video
-
-
-def hold(
-    monkeypatch: pytest.MonkeyPatch, target: Any, name: str
-) -> tuple[asyncio.Event, asyncio.Event]:
-    """Pause calls to `target.name` until released. Returns (entered, release)."""
-    original = getattr(target, name)
-    entered, release = asyncio.Event(), asyncio.Event()
-
-    async def paused(*args: Any, **kwargs: Any) -> Any:
-        entered.set()
-        async with asyncio.timeout(10):
-            await release.wait()
-        return await original(*args, **kwargs)
-
-    monkeypatch.setattr(target, name, paused)
-    return entered, release
 
 
 async def test_a_login_racing_a_ban_gets_a_session_that_works_nowhere(
@@ -71,10 +54,10 @@ async def test_a_ban_waits_for_a_write_under_way_and_stops_the_next(
     entered, release = hold(monkeypatch, comments_repository, "insert_comment")
 
     writing = asyncio.create_task(viewer.post(path, json={"text": "Before"}, headers=csrf(viewer)))
-    await entered.wait()  # the write holds its user FOR KEY SHARE
+    await entered.wait()  # the write holds its user's write lock
     banning = asyncio.create_task(set_status(admin, handle, "banned"))
     await asyncio.sleep(0.3)
-    assert not banning.done()  # FOR UPDATE waits for that write
+    assert not banning.done()  # the ban waits for that write
     release.set()
 
     assert (await writing).status_code == 201
@@ -84,11 +67,49 @@ async def test_a_ban_waits_for_a_write_under_way_and_stops_the_next(
     assert (await get_video(db, video.public_id)).comment_count == 1
 
 
+async def test_a_write_that_comes_while_a_ban_waits_goes_after_it(
+    admin: AsyncClient,
+    viewer: AsyncClient,
+    db: AsyncSession,
+    video: Video,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Row share locks would let it pass the waiting ban, and a stream of such writes would hold
+    # the ban off for good; the write lock queues it behind the ban.
+    handle = (await user_by_email(db, VIEWER_EMAIL)).handle
+    path = f"/api/videos/{video.public_id}/comments"
+    entered, release = hold(monkeypatch, comments_repository, "insert_comment")
+    first = asyncio.create_task(viewer.post(path, json={"text": "First"}, headers=csrf(viewer)))
+    await entered.wait()
+    banning = asyncio.create_task(set_status(admin, handle, "banned"))
+    await asyncio.sleep(0.3)  # the ban waits for the first write
+
+    second = asyncio.create_task(viewer.post(path, json={"text": "Second"}, headers=csrf(viewer)))
+    await asyncio.sleep(0.3)
+    release.set()
+
+    assert (await first).status_code == 201
+    assert (await banning).status_code == 204
+    assert (await second).status_code == 401  # it waited for the ban, then saw it
+    assert (await get_video(db, video.public_id)).comment_count == 1
+
+
+async def test_an_admin_clicking_twice_on_their_own_status_gets_403s(
+    admin: AsyncClient, db: AsyncSession
+) -> None:
+    # Each request holds the admin's own write lock: locking first would deadlock them.
+    handle = (await user_by_email(db, ADMIN_EMAIL)).handle
+
+    responses = await asyncio.gather(*(set_status(admin, handle, "banned") for _ in range(2)))
+
+    assert [response.status_code for response in responses] == [403, 403]
+
+
 async def test_parallel_drafts_of_one_user_dont_deadlock(
     owner: AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # Both hold their user FOR KEY SHARE, then both lock it for the drafts count: NO KEY UPDATE
-    # waits for the other, FOR UPDATE would deadlock.
+    # Both hold their user's write lock (shared), then both lock the row for the drafts count:
+    # NO KEY UPDATE waits for the other, FOR UPDATE would deadlock.
     meet_after(monkeypatch, users_repository, "get_for_write", 2)
 
     responses = await asyncio.gather(

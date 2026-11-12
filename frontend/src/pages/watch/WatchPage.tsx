@@ -15,12 +15,10 @@ import type { Video } from '../../videos/types'
 import { useViewReport } from '../../views/useViewReport'
 import Comments from './comments/Comments'
 import Description from './Description'
+import { TWO_COLUMNS } from './layout'
 import UpNext from './UpNext'
 import VideoActions from './VideoActions'
 import styles from './WatchPage.module.css'
-
-/** Up next moves under the description below this width, as on YouTube. */
-const TWO_COLUMNS = '(min-width: 1016px)'
 
 /** A message in the player's place when there is nothing to play. */
 function PlayerNotice({ title, children }: { title: string; children: ReactNode }) {
@@ -137,7 +135,12 @@ export default function WatchPage() {
                 <UpNext videoId={id} grid />
               </div>
             )}
-            {ready && !frozen && <Comments video={video.data} />}
+            {ready &&
+              (frozen ? (
+                <p className={styles.commentsOff}>Comments are turned off.</p>
+              ) : (
+                <Comments video={video.data} />
+              ))}
           </>
         ) : video.isPending ? (
           <InfoSkeleton />

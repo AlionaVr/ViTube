@@ -4,8 +4,10 @@ import Icon, { type IconName } from '../../components/Icon'
 import IconButton from '../../components/IconButton'
 import Popover, { type TriggerProps } from '../../components/Popover'
 import SignInGate from '../../components/SignInGate'
+import { useMediaQuery } from '../../hooks/useMediaQuery'
 import type { ReportTarget } from '../../moderation/api'
 import { useViewer } from '../../viewer/useViewer'
+import { TWO_COLUMNS } from './layout'
 import ReportDialog from './ReportDialog'
 import styles from './ReportMenu.module.css'
 
@@ -22,6 +24,8 @@ interface ReportMenuProps {
 export default function ReportMenu({ target, owner, icon, label, className }: ReportMenuProps) {
   const viewer = useViewer()
   const [reporting, setReporting] = useState(false)
+  // YouTube opens these to the right, over Up next; in one column that would leave the screen.
+  const align = useMediaQuery(TWO_COLUMNS) ? 'start' : 'end'
   const trigger = (props: TriggerProps) => (
     <IconButton icon={icon} label={label} className={className} {...props} />
   )
@@ -33,7 +37,7 @@ export default function ReportMenu({ target, owner, icon, label, className }: Re
         <SignInGate
           title={`Need to report the ${target.kind}?`}
           text="Sign in to report inappropriate content."
-          align="end"
+          align={align}
           onAction={() => setReporting(true)}
         >
           {trigger}
@@ -42,7 +46,7 @@ export default function ReportMenu({ target, owner, icon, label, className }: Re
         <Popover
           label={label}
           role="menu"
-          align="end"
+          align={align}
           trigger={(props) => trigger({ ...props, disabled: viewer.status === 'loading' })}
         >
           {(close) => (

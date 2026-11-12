@@ -97,8 +97,7 @@ docker compose exec api python -m app.cli set-status <email> banned --by <admin 
 ```
 
 `banned` blocks sign-in and ends open sessions; `terminated` does the same and hides the channel's videos; `active`
-reinstates. The audit log records each command with the shell user and the admin named by `--by` (`set-role` takes
-`--by` too).
+reinstates. `--by` names you in the audit log; `set-role` takes it too, except for the first admin.
 
 Served over HTTPS? Set `COOKIE_SECURE=true` in `.env` and run `./install.sh` again: session cookies then go over
 HTTPS only.

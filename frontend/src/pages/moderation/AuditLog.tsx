@@ -329,8 +329,6 @@ function Details({ entry }: { entry: AuditEntry }) {
   if (typeof details.replies === 'number' && details.replies > 0) {
     parts.push(details.replies === 1 ? '1 reply deleted' : `${details.replies} replies deleted`)
   }
-  if (entry.source === 'cli') {
-    parts.push(entry.by ? `Run by ${entry.by} as ${entry.os_user}` : `Run as ${entry.os_user}`)
-  }
+  if (entry.source === 'cli' && entry.by) parts.push(`Run by ${entry.by}`)
   return parts.length > 0 ? <p className={styles.meta}>{parts.join('. ')}</p> : null
 }

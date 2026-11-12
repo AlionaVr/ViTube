@@ -401,7 +401,6 @@ describe('moderation page', () => {
       source: 'api' as const,
       actor: { handle: 'user-mod00001', name: 'user-mod00001', avatar_url: null },
       by: null,
-      os_user: null,
     }
     mockApi({
       'GET /api/auth/me': () => json(200, ADMIN),
@@ -414,7 +413,6 @@ describe('moderation page', () => {
               source: 'cli',
               actor: null,
               by: 'admin@example.com',
-              os_user: 'app',
               action: 'set_user_status',
               target: {
                 type: 'user',
@@ -452,7 +450,7 @@ describe('moderation page', () => {
     const list = await screen.findByRole('list', { name: 'Audit log' })
     const [cli, hid, gone] = Array.from(list.children) as HTMLElement[]
     expect(cli).toHaveTextContent('Command line terminated the channel @user-spammer1')
-    expect(cli).toHaveTextContent('“Scam channel”. Run by admin@example.com as app')
+    expect(cli).toHaveTextContent('“Scam channel”. Run by admin@example.com')
     expect(hid).toHaveTextContent('@user-mod00001 hid “Fake giveaway”')
     expect(hid).toHaveTextContent('Spam or misleading. 2 reports closed')
     expect(within(hid).getByRole('link', { name: '“Fake giveaway”' })).toHaveAttribute(
@@ -475,7 +473,6 @@ describe('moderation page', () => {
               source: 'api',
               actor: null,
               by: null,
-              os_user: null,
               action: 'restore_video',
               target: { type: 'video', label: '', video_id: null, handle: null },
               details: {},

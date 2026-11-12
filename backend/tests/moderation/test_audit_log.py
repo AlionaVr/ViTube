@@ -72,7 +72,7 @@ async def test_entries_come_newest_first_with_their_targets_named(
     assert deleted["target"]["video_id"] == video.public_id
 
 
-async def test_a_cli_entry_names_the_shell_user_and_by(
+async def test_a_cli_entry_names_the_admin_given_by(
     viewer: AsyncClient, admin: AsyncClient
 ) -> None:
     await run_cli("set-status", VIEWER_EMAIL, "banned", "--by", ADMIN_EMAIL)
@@ -80,7 +80,7 @@ async def test_a_cli_entry_names_the_shell_user_and_by(
     [entry] = (await audit_page(admin)).json()["items"]
 
     assert (entry["source"], entry["actor"], entry["by"]) == ("cli", None, ADMIN_EMAIL)
-    assert entry["os_user"]
+    assert "os_user" not in entry  # the container's user says nothing about who ran it
     assert entry["details"] == {"from": "active", "to": "banned"}
 
 
@@ -113,7 +113,7 @@ async def test_filters_by_action_source_and_actor(
     await hide(moderator, video)
     await act(moderator, video, "restore")
     await hide(admin, video)
-    await run_cli("set-status", VIEWER_EMAIL, "banned")
+    await run_cli("set-status", VIEWER_EMAIL, "banned", "--by", ADMIN_EMAIL)
     mod_handle = (await user_by_email(db, MODERATOR_EMAIL)).handle
 
     async def actions(**params: str | list[str]) -> list[str]:

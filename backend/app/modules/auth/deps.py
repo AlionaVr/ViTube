@@ -54,8 +54,8 @@ async def optional_user(
     """The signed-in user or None. Read from the DB each time: a role or status change applies
     to the next request.
 
-    An unsafe request reads the user FOR KEY SHARE and keeps it until it commits: a ban waits
-    for writes under way, and no write commits after it (ADR 0005).
+    An unsafe request holds the user's write lock until it commits: a ban waits for writes under
+    way, and no write commits after it (ADR 0005).
     """
     if session is None:
         return None
@@ -63,11 +63,21 @@ async def optional_user(
         user = await users.get_by_id(db, session.user_id)
     else:
         user = await users.get_for_write(db, session.user_id)
-    if user is None or user.status is not UserStatus.ACTIVE:
-        # Banned or gone: this session ends here, whether or not the ban's revoke reached it.
+    if (
+        user is None
+        or user.status is not UserStatus.ACTIVE
+        or _from_before_restriction(session, user)
+    ):
+        # Banned, gone, or a session from before a ban: it ends here, whether or not the ban's
+        # revoke reached it, and a reinstated account doesn't bring it back.
         await sessions.delete(session.id)
         return None
     return user
+
+
+def _from_before_restriction(session: UserSession, user: User) -> bool:
+    cutoff = user.sessions_valid_after
+    return cutoff is not None and session.created_at < cutoff.timestamp()
 
 
 OptionalUser = Annotated[User | None, Depends(optional_user)]
