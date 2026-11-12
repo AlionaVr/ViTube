@@ -51,7 +51,7 @@ describe('header account area', () => {
     mockApi({
       'GET /api/auth/me': () => json(200, ANNA),
       [`GET /api/channels/${ANNA.handle}`]: () => json(200, channel({ handle: ANNA.handle })),
-      [`GET /api/channels/${ANNA.handle}/videos`]: () => json(200, page([])),
+      'GET /api/me/channel/videos': () => json(200, page([])),
     })
     const router = renderApp('/')
 

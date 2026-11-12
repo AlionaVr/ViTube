@@ -2,19 +2,22 @@ import { Link } from 'react-router'
 
 import { formatTimeAgo, formatViews } from '../lib/format'
 import { channelUrl, watchUrl } from '../videos/paths'
-import type { VideoSummary } from '../videos/types'
+import type { Visibility, VideoSummary } from '../videos/types'
 import Avatar from './Avatar'
 import Thumbnail from './Thumbnail'
 import styles from './VideoCard.module.css'
+import VisibilityBadge from './VisibilityBadge'
 
 interface VideoCardProps {
   video: VideoSummary
   /** Off on a channel's own page, where every card is that channel's. */
   showChannel?: boolean
+  /** On the owner's own channel, which lists every visibility: marks what isn't public. */
+  visibility?: Visibility
 }
 
 /** A card in a video grid. The title link is the one tab stop to the video. */
-export default function VideoCard({ video, showChannel = true }: VideoCardProps) {
+export default function VideoCard({ video, showChannel = true, visibility }: VideoCardProps) {
   const { channel } = video
   return (
     <article className={styles.card}>
@@ -41,6 +44,7 @@ export default function VideoCard({ video, showChannel = true }: VideoCardProps)
           <p className={styles.stats}>
             {formatViews(video.view_count)} • {formatTimeAgo(video.created_at)}
           </p>
+          {visibility && <VisibilityBadge visibility={visibility} />}
         </div>
       </div>
     </article>

@@ -184,10 +184,26 @@ async def list_mine(
 async def list_channel_playlists(
     db: AsyncSession, viewer: User | None, handle: str, cursor: str | None
 ) -> Page[PlaylistOut]:
-    """The channel's Playlists tab: public ones only, the same list for every viewer."""
+    """The channel's Playlists tab: public ones only, the same list for every viewer (ADR 0012).
+    The owner's view is list_my_channel_playlists."""
     channel = await get_by_handle(db, handle, viewer)
+    return await _channel_playlists(db, channel, viewer, cursor, own=False)
+
+
+async def list_my_channel_playlists(
+    db: AsyncSession, user: User, cursor: str | None
+) -> Page[PlaylistOut]:
+    """Your own channel's Playlists tab: every playlist you made, whatever its visibility."""
+    return await _channel_playlists(db, user, user, cursor, own=True)
+
+
+async def _channel_playlists(
+    db: AsyncSession, channel: User, viewer: User | None, cursor: str | None, *, own: bool
+) -> Page[PlaylistOut]:
     after = decode_cursor(cursor, tuple[UUID])[0] if cursor else None
-    rows = await playlists.list_public(db, channel.id, after=after, limit=FEED_PAGE_SIZE + 1)
+    rows = await playlists.list_channel(
+        db, channel.id, own=own, after=after, limit=FEED_PAGE_SIZE + 1
+    )
     page, next_cursor = split_page(rows, FEED_PAGE_SIZE, lambda playlist: (playlist.id,))
     covers = await playlists.first_videos(db, [p.id for p in page], viewer) if page else {}
     items = [PlaylistOut.build(p, channel, _thumbnail(covers.get(p.id))) for p in page]

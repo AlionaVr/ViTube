@@ -193,13 +193,15 @@ async def list_owned(
     return (await db.scalars(query.order_by(*order).limit(limit))).all()
 
 
-async def list_public(
-    db: AsyncSession, owner_id: UUID, *, after: UUID | None, limit: int
+async def list_channel(
+    db: AsyncSession, owner_id: UUID, *, own: bool = False, after: UUID | None, limit: int
 ) -> Sequence[Playlist]:
-    """A channel's public playlists, newest first, after the cursor: the (owner_id, id) index."""
-    query = select(Playlist).where(
-        Playlist.owner_id == owner_id, Playlist.visibility == Visibility.PUBLIC
-    )
+    """A channel's public playlists, newest first, after the cursor: the (owner_id, id) index.
+
+    `own`: the owner's view of their channel, every playlist they made whatever its visibility.
+    """
+    shown = Playlist.kind == PlaylistKind.USER if own else Playlist.visibility == Visibility.PUBLIC
+    query = select(Playlist).where(Playlist.owner_id == owner_id, shown)
     if after is not None:
         query = query.where(Playlist.id < after)
     return (await db.scalars(query.order_by(Playlist.id.desc()).limit(limit))).all()

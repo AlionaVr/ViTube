@@ -1264,7 +1264,7 @@
           "channels"
         ],
         "summary": "A channel's public videos",
-        "description": "Only public, ready videos: the same for every viewer, the owner too.",
+        "description": "Only public, ready videos: the same for every viewer, the owner too. The owner's view is `/api/me/channel/videos`.",
         "operationId": "list_videos_api_channels__handle__videos_get",
         "parameters": [
           {
@@ -1315,6 +1315,68 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Page_VideoSummary_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me/channel/videos": {
+      "get": {
+        "tags": [
+          "channels"
+        ],
+        "summary": "Your channel's videos, whatever their visibility",
+        "description": "Your ready videos, private and unlisted too: your own channel's Videos tab. Hidden ones are left out, as of every list; `/api/me/videos` has them all.",
+        "operationId": "list_my_videos_api_me_channel_videos_get",
+        "parameters": [
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/VideoSort",
+              "default": "latest"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "next_cursor of the last page",
+              "title": "Cursor"
+            },
+            "description": "next_cursor of the last page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_MyChannelVideo_"
                 }
               }
             }
@@ -1933,7 +1995,7 @@
           "playlists"
         ],
         "summary": "A channel's public playlists, newest first",
-        "description": "The same list for every viewer, the owner too; covers are per viewer.",
+        "description": "The same list for every viewer, the owner too; covers are per viewer. The owner's view is `/api/me/channel/playlists`.",
         "operationId": "list_channel_playlists_api_channels__handle__playlists_get",
         "parameters": [
           {
@@ -1948,6 +2010,59 @@
             },
             "description": "Channel handle, without the @"
           },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "next_cursor of the last page",
+              "title": "Cursor"
+            },
+            "description": "next_cursor of the last page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_PlaylistOut_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me/channel/playlists": {
+      "get": {
+        "tags": [
+          "playlists"
+        ],
+        "summary": "Your channel's playlists, whatever their visibility",
+        "description": "Every playlist you made, newest first: your own channel's Playlists tab.",
+        "operationId": "list_my_channel_playlists_api_me_channel_playlists_get",
+        "parameters": [
           {
             "name": "cursor",
             "in": "query",
@@ -3808,6 +3923,55 @@
         "title": "ModeratedVideo",
         "description": "A video as a moderator sees it: in any state, hidden or not."
       },
+      "MyChannelVideo": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Public id, as in /watch?v=<id>"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "thumbnail_url": {
+            "type": "string",
+            "title": "Thumbnail Url"
+          },
+          "duration_sec": {
+            "type": "integer",
+            "title": "Duration Sec"
+          },
+          "view_count": {
+            "type": "integer",
+            "title": "View Count"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "channel": {
+            "$ref": "#/components/schemas/ChannelSummary"
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/Visibility"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "thumbnail_url",
+          "duration_sec",
+          "view_count",
+          "created_at",
+          "channel",
+          "visibility"
+        ],
+        "title": "MyChannelVideo",
+        "description": "A video on your own channel's tab, which shows every visibility: it says which."
+      },
       "MyPlaylist": {
         "properties": {
           "id": {
@@ -4049,6 +4213,34 @@
           "next_cursor"
         ],
         "title": "Page[ModeratedVideo]"
+      },
+      "Page_MyChannelVideo_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/MyChannelVideo"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "Page[MyChannelVideo]"
       },
       "Page_MyPlaylist_": {
         "properties": {

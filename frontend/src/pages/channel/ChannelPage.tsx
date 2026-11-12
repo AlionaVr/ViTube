@@ -14,7 +14,7 @@ import { NARROW_HEADER, useMediaQuery } from '../../hooks/useMediaQuery'
 import { formatSubscribers, formatVideoCount } from '../../lib/format'
 import { isAdmin } from '../../moderation/roles'
 import buttons from '../../styles/buttons.module.css'
-import { useViewer } from '../../viewer/useViewer'
+import { useViewer, type Viewer } from '../../viewer/useViewer'
 import RestrictDialog from '../moderation/RestrictDialog'
 import RowMenu from '../moderation/RowMenu'
 import NotFoundPage from '../NotFoundPage'
@@ -23,10 +23,26 @@ import styles from './ChannelPage.module.css'
 // The users.handle rule. A malformed one can't exist, so it needs no request.
 const HANDLE = /^[A-Za-z0-9._-]{3,30}$/
 
+/** Whose view the tabs show: the owner's lists every visibility (from /api/me/channel). */
+export type TabView = 'loading' | 'public' | 'own'
+
+/** What the page gives its tabs. */
+export interface ChannelTab {
+  handle: string
+  view: TabView
+}
+
+/** Handles are case-insensitive: /@ANNA is Anna's channel too. */
+function isOwn(viewer: Viewer, handle: string) {
+  return (
+    viewer.status === 'authenticated' && viewer.user.handle.toLowerCase() === handle.toLowerCase()
+  )
+}
+
 function Header({ channel }: { channel: Channel }) {
   const viewer = useViewer()
   const narrow = useMediaQuery(NARROW_HEADER)
-  const own = viewer.status === 'authenticated' && viewer.user.handle === channel.handle
+  const own = isOwn(viewer, channel.handle)
   // Admins restrict an account from its channel too, not only from a report on its content.
   const admin = viewer.status === 'authenticated' && isAdmin(viewer.user) && !own
   const [restricting, setRestricting] = useState(false)
@@ -109,6 +125,11 @@ function Tabs({ handle }: { handle: string }) {
 
 function ChannelView({ handle }: { handle: string }) {
   const channel = useChannel(handle)
+  const viewer = useViewer()
+  const tab: ChannelTab = {
+    handle,
+    view: viewer.status === 'loading' ? 'loading' : isOwn(viewer, handle) ? 'own' : 'public',
+  }
 
   if (channel.error instanceof ApiError && channel.error.status === 404) return <NotFoundPage />
   return (
@@ -128,7 +149,7 @@ function ChannelView({ handle }: { handle: string }) {
           )}
           <Tabs handle={handle} />
           {/* The tab loads with the header, not after it. */}
-          <Outlet context={handle} />
+          <Outlet context={tab} />
         </>
       )}
     </div>

@@ -11,7 +11,7 @@ from sqlalchemy.orm import aliased
 from app.modules.channels.models import Subscription
 from app.modules.channels.schemas import VideoSort
 from app.modules.users.models import User, UserStatus
-from app.modules.videos.models import Video
+from app.modules.videos.models import Video, VideoStatus
 from app.modules.videos.repository import LISTED, VideoRow
 
 
@@ -25,11 +25,17 @@ async def list_videos(
     owner_id: UUID,
     sort: VideoSort,
     *,
+    own: bool = False,
     after: tuple[object, ...] | None,
     limit: int,
 ) -> Sequence[Video]:
-    """The channel's listed videos in the sort's order, after the cursor (its sort key)."""
-    query = select(Video).where(Video.owner_id == owner_id, *LISTED)
+    """The channel's listed videos in the sort's order, after the cursor (its sort key).
+
+    `own`: the owner's view of their channel, every ready video whatever its visibility. Hidden ones
+    stay out, as of every list; Studio shows them with the reason. ix_videos_owner_id, then a sort.
+    """
+    shown = (Video.status == VideoStatus.READY, ~Video.is_hidden) if own else LISTED
+    query = select(Video).where(Video.owner_id == owner_id, *shown)
     match sort:
         case VideoSort.LATEST:  # ids are uuidv7: ordered by time
             order, key = (Video.id.desc(),), (Video.id,)

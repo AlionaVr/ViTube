@@ -136,7 +136,7 @@ describe('Layout', () => {
       'GET /api/auth/me': () => json(200, ANNA),
       'GET /api/me/subscriptions': () => json(200, { items: [], next_cursor: null }),
       [`GET /api/channels/${own}`]: () => json(200, channel({ handle: ANNA.handle })),
-      [`GET /api/channels/${own}/playlists`]: () => json(200, { items: [], next_cursor: null }),
+      'GET /api/me/channel/playlists': () => json(200, { items: [], next_cursor: null }),
     })
     renderApp(`/@${own}/playlists`)
     const guide = within(await screen.findByRole('navigation', { name: 'Main' }))

@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useOutletContext } from 'react-router'
 
-import { useChannelVideos } from '../../channels/hooks'
-import type { VideoSort } from '../../channels/types'
+import { useChannelVideos, useMyChannelVideos } from '../../channels/hooks'
+import type { MyChannelVideo, VideoSort } from '../../channels/types'
 import ChipBar, { type Chip } from '../../components/ChipBar'
 import EmptyState from '../../components/EmptyState'
 import ErrorState from '../../components/ErrorState'
@@ -10,6 +10,8 @@ import Spinner from '../../components/Spinner'
 import VideoCard, { VideoCardSkeleton } from '../../components/VideoCard'
 import { useInfiniteScroll } from '../../hooks/useInfiniteScroll'
 import grid from '../../styles/grid.module.css'
+import type { Page, VideoSummary } from '../../videos/types'
+import type { ChannelTab } from './ChannelPage'
 import styles from './ChannelVideos.module.css'
 
 const SORTS: Chip<VideoSort>[] = [
@@ -19,16 +21,19 @@ const SORTS: Chip<VideoSort>[] = [
 ]
 const SKELETON_CARDS = 8
 
-/** The Videos tab: the channel's public videos, in the order of the chosen chip. */
+/** The Videos tab in the order of the chosen chip: public videos, or all of them for the owner. */
 export default function ChannelVideos() {
-  const handle = useOutletContext<string>()
+  const { handle, view } = useOutletContext<ChannelTab>()
   const [sort, setSort] = useState<VideoSort>('latest')
-  const videos = useChannelVideos(handle, sort)
+  const shared = useChannelVideos(handle, sort, view === 'public')
+  const mine = useMyChannelVideos(sort, view === 'own')
+  const videos = view === 'own' ? mine : shared
   const sentinel = useInfiniteScroll<HTMLDivElement>(
     () => void videos.fetchNextPage(),
     videos.hasNextPage && !videos.isFetchingNextPage && !videos.isFetchNextPageError,
   )
-  const items = videos.data?.pages.flatMap((page) => page.items) ?? []
+  const pages: Page<VideoSummary | MyChannelVideo>[] = videos.data?.pages ?? []
+  const items = pages.flatMap((page) => page.items)
 
   if (videos.isSuccess && items.length === 0) {
     return <EmptyState title="This channel doesn’t have any content" />
@@ -55,7 +60,12 @@ export default function ChannelVideos() {
         <>
           <div className={grid.grid}>
             {items.map((video) => (
-              <VideoCard key={video.id} video={video} showChannel={false} />
+              <VideoCard
+                key={video.id}
+                video={video}
+                showChannel={false}
+                visibility={'visibility' in video ? video.visibility : undefined}
+              />
             ))}
           </div>
           <div ref={sentinel} />

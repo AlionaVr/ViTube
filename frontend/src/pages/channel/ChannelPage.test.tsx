@@ -158,7 +158,7 @@ describe('ChannelPage', () => {
     mockApi({
       ...SIGNED_IN,
       [`GET /api/channels/${ANNA.handle}`]: () => json(200, own),
-      [`GET /api/channels/${ANNA.handle}/videos`]: () => json(200, page([])),
+      'GET /api/me/channel/videos': () => json(200, page([])),
     })
     renderApp(`/@${ANNA.handle}`)
     await screen.findByRole('heading', { level: 1, name: ANNA.handle })
@@ -169,6 +169,48 @@ describe('ChannelPage', () => {
       'href',
       '/studio/videos',
     )
+  })
+
+  it('shows the owner every video of theirs, marking what is not public', async () => {
+    const own = channel({ handle: ANNA.handle, name: ANNA.handle })
+    const fetch = mockApi({
+      ...SIGNED_IN,
+      [`GET /api/channels/${ANNA.handle.toUpperCase()}`]: () => json(200, own),
+      'GET /api/me/channel/videos': () =>
+        json(
+          200,
+          page([
+            { ...summary(1), visibility: 'private' },
+            { ...summary(2), visibility: 'unlisted' },
+            { ...summary(3), visibility: 'public' },
+          ]),
+        ),
+    })
+    renderApp(`/@${ANNA.handle.toUpperCase()}/videos`)
+
+    const card = (n: number) => screen.getByText(summary(n).title).closest('article')!
+    await screen.findByText(summary(1).title)
+    expect(within(card(1)).getByText('Private')).toBeInTheDocument()
+    expect(within(card(2)).getByText('Unlisted')).toBeInTheDocument()
+    expect(within(card(3)).queryByText('Public')).not.toBeInTheDocument()
+    const paths = fetch.mock.calls.map(([request]) => new URL(request.url).pathname)
+    expect(paths).not.toContain(`/api/channels/${ANNA.handle.toUpperCase()}/videos`)
+  })
+
+  it('shows the owner every playlist of theirs, marking what is not public', async () => {
+    const own = channel({ handle: ANNA.handle, name: ANNA.handle })
+    mockApi({
+      ...SIGNED_IN,
+      [`GET /api/channels/${ANNA.handle}`]: () => json(200, own),
+      'GET /api/me/channel/playlists': () =>
+        json(200, page([playlist(1), { ...playlist(2), visibility: 'public' }])),
+    })
+    renderApp(`/@${ANNA.handle}/playlists`)
+
+    const card = (n: number) => screen.getByText(playlist(n).title).closest('article')!
+    await screen.findByText(playlist(1).title)
+    expect(within(card(1)).getByText('Private')).toBeInTheDocument()
+    expect(within(card(2)).queryByText('Public')).not.toBeInTheDocument()
   })
 
   it('shows Manage videos to no one but the owner', async () => {

@@ -1,7 +1,7 @@
 // Channels API.
 import { api, unwrap } from '../api/client'
 import type { Page, VideoSummary } from '../videos/types'
-import type { Channel, SubscribedChannel, Subscription, VideoSort } from './types'
+import type { Channel, MyChannelVideo, SubscribedChannel, Subscription, VideoSort } from './types'
 
 /** Throws ApiError 404 for an unknown handle. */
 export function getChannel(handle: string): Promise<Channel> {
@@ -19,6 +19,14 @@ export function listChannelVideos(
       params: { path: { handle }, query: { sort, cursor } },
     }),
   )
+}
+
+/** Your own channel's Videos tab: every ready video of yours. Throws ApiError 401 for a guest. */
+export function listMyChannelVideos(
+  sort: VideoSort,
+  cursor: string | null,
+): Promise<Page<MyChannelVideo>> {
+  return unwrap(api.GET('/api/me/channel/videos', { params: { query: { sort, cursor } } }))
 }
 
 /** Throws ApiError 401 for a guest, 400 on your own channel. */

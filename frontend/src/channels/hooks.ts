@@ -6,10 +6,12 @@ import {
   useQueryClient,
 } from '@tanstack/react-query'
 
+import { videoKeys } from '../videos/hooks'
 import type { Page } from '../videos/types'
 import {
   getChannel,
   listChannelVideos,
+  listMyChannelVideos,
   listSubscriptions,
   listSubscriptionsFeed,
   setSubscribed,
@@ -28,6 +30,8 @@ export const channelKeys = {
   detail: (handle: string) => ['channels', 'detail', handle.toLowerCase()] as const,
   videos: (handle: string, sort: VideoSort) =>
     ['channels', 'videos', handle.toLowerCase(), sort] as const,
+  // Under the owner's videos: an upload or an edit that refreshes those refreshes this too.
+  myVideos: (sort: VideoSort) => [...videoKeys.mine, 'channel', sort] as const,
 }
 
 const firstPage = null as string | null
@@ -57,12 +61,24 @@ export function useChannel(handle: string) {
   return useQuery({ queryKey: channelKeys.detail(handle), queryFn: () => getChannel(handle) })
 }
 
-export function useChannelVideos(handle: string, sort: VideoSort) {
+export function useChannelVideos(handle: string, sort: VideoSort, enabled = true) {
   return useInfiniteQuery({
     queryKey: channelKeys.videos(handle, sort),
     queryFn: ({ pageParam }) => listChannelVideos(handle, sort, pageParam),
     initialPageParam: firstPage,
     getNextPageParam: (page) => page.next_cursor,
+    enabled,
+  })
+}
+
+/** Your own channel's Videos tab: every visibility (the public tab is the same for everyone). */
+export function useMyChannelVideos(sort: VideoSort, enabled: boolean) {
+  return useInfiniteQuery({
+    queryKey: channelKeys.myVideos(sort),
+    queryFn: ({ pageParam }) => listMyChannelVideos(sort, pageParam),
+    initialPageParam: firstPage,
+    getNextPageParam: (page) => page.next_cursor,
+    enabled,
   })
 }
 
