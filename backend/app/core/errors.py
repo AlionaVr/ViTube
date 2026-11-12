@@ -49,6 +49,11 @@ class PayloadTooLarge(DomainError):
     detail = "Request body too large"
 
 
+class BadGateway(DomainError):
+    status_code = 502
+    detail = "An outside service didn't answer"
+
+
 class TooManyRequests(DomainError):
     status_code = 429
     detail = "Too many attempts. Try again later."
