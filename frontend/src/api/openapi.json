@@ -2930,6 +2930,11 @@
             "type": "boolean",
             "title": "Is Subscribed",
             "description": "False for guests and on your own channel"
+          },
+          "is_terminated": {
+            "type": "boolean",
+            "title": "Is Terminated",
+            "description": "Terminated by an admin: only moderators see it, and it is frozen"
           }
         },
         "type": "object",
@@ -2940,7 +2945,8 @@
           "joined_at",
           "subscriber_count",
           "video_count",
-          "is_subscribed"
+          "is_subscribed",
+          "is_terminated"
         ],
         "title": "ChannelOut",
         "description": "The channel page header. The watch page reads it for the subscriber count too."

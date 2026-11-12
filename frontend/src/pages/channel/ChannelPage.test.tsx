@@ -47,6 +47,18 @@ describe('ChannelPage', () => {
     expect(screen.getByText(/2 subscribers • 3 videos/)).toBeInTheDocument()
     expect(await screen.findByRole('button', { name: 'Subscribe' })).toBeEnabled()
     expect(document.title).toBe('Open Movie Club - ViTube')
+    expect(screen.queryByRole('note')).not.toBeInTheDocument()
+  })
+
+  it('tells a moderator a terminated channel is frozen and offers no Subscribe', async () => {
+    mockChannel(channel({ is_terminated: true, video_count: 0 }))
+    await openChannel()
+
+    const notice = screen.getByRole('note')
+    expect(notice).toHaveTextContent('Channel terminated')
+    expect(notice).toHaveTextContent('Only moderators can see this channel.')
+    await screen.findByRole('button', { name: 'Account menu' }) // the viewer is known
+    expect(screen.queryByRole('button', { name: 'Subscribe' })).not.toBeInTheDocument()
   })
 
   it('accepts the handle in any case and shows it as stored', async () => {

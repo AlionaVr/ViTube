@@ -982,6 +982,11 @@ export interface components {
              * @description False for guests and on your own channel
              */
             is_subscribed: boolean;
+            /**
+             * Is Terminated
+             * @description Terminated by an admin: only moderators see it, and it is frozen
+             */
+            is_terminated: boolean;
         };
         /**
          * ChannelSummary

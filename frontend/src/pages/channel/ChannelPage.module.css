@@ -43,6 +43,11 @@
   gap: 8px;
 }
 
+/* The moderation notice, between the header and the tabs. */
+.notice {
+  margin-top: 8px;
+}
+
 .tabs {
   margin-top: 8px;
   display: flex;

@@ -8,6 +8,7 @@ import SubscribeButton from '../../channels/SubscribeButton'
 import type { Channel } from '../../channels/types'
 import Avatar from '../../components/Avatar'
 import ErrorState from '../../components/ErrorState'
+import ModerationNotice from '../../components/ModerationNotice'
 import { NARROW_HEADER, useMediaQuery } from '../../hooks/useMediaQuery'
 import { formatSubscribers, formatVideoCount } from '../../lib/format'
 import { useViewer } from '../../viewer/useViewer'
@@ -34,10 +35,13 @@ function Header({ channel }: { channel: Channel }) {
           {' • '}
           {formatVideoCount(channel.video_count)}
         </p>
-        {/* Nothing until we know who is watching: the owner never sees a Subscribe flash by. */}
-        <div className={styles.actions}>
-          {viewer.status !== 'loading' && !own && <SubscribeButton channel={channel} />}
-        </div>
+        {/* Nothing until we know who is watching: the owner never sees a Subscribe flash by.
+            A terminated channel is frozen, so it has no actions. */}
+        {!channel.is_terminated && (
+          <div className={styles.actions}>
+            {viewer.status !== 'loading' && !own && <SubscribeButton channel={channel} />}
+          </div>
+        )}
       </div>
     </header>
   )
@@ -92,6 +96,13 @@ function ChannelView({ handle }: { handle: string }) {
       ) : (
         <>
           {channel.data ? <Header channel={channel.data} /> : <HeaderSkeleton />}
+          {/* Only moderators open a terminated channel (ADR 0009). */}
+          {channel.data?.is_terminated && (
+            <ModerationNotice title="Channel terminated" className={styles.notice}>
+              Only moderators can see this channel. Its videos are left out of lists, and
+              subscribing is off until an admin reinstates it.
+            </ModerationNotice>
+          )}
           <Tabs handle={handle} />
           {/* The tab loads with the header, not after it. */}
           <Outlet context={handle} />

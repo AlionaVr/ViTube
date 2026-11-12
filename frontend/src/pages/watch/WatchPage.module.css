@@ -98,29 +98,9 @@
   overflow-wrap: anywhere;
 }
 
-/* YouTube's grey information panel, between the player and the title. */
+/* The moderation notice sits between the player and the title. */
 .notice {
   margin-top: 12px;
-  padding: 12px 16px;
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  border-radius: 12px;
-  background: var(--color-hover);
-}
-
-.noticeTitle {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 20px;
-}
-
-.noticeText {
-  margin: 2px 0 0;
-  color: var(--color-text-secondary);
-  font-size: 14px;
-  line-height: 20px;
 }
 
 /* YouTube's line where the comments would be. */

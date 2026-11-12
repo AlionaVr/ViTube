@@ -10,6 +10,7 @@ export function channel(overrides: Partial<Channel> = {}): Channel {
     subscriber_count: 2,
     video_count: 3,
     is_subscribed: false,
+    is_terminated: false,
     ...overrides,
   }
 }

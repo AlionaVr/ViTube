@@ -52,9 +52,11 @@ async def test_a_terminated_channel_opens_only_for_staff(
         assert [(await staff.get(path)).status_code for path in paths] == [200] * len(paths)
     # Staff open it to review it, but public lists leave its videos out for everyone.
     assert (await moderator.get(f"/api/channels/{handle}/videos")).json()["items"] == []
+    assert (await moderator.get(f"/api/channels/{handle}")).json()["is_terminated"] is True
 
     assert (await set_status(admin, handle, "active")).status_code == 204
     assert [(await viewer.get(path)).status_code for path in paths] == [200] * len(paths)
+    assert (await moderator.get(f"/api/channels/{handle}")).json()["is_terminated"] is False
 
 
 async def test_a_banned_channel_stays_open(
@@ -64,7 +66,9 @@ async def test_a_banned_channel_stays_open(
 
     assert (await set_status(admin, handle, "banned")).status_code == 204
 
-    assert (await guest.get(f"/api/channels/{handle}")).status_code == 200
+    channel = await guest.get(f"/api/channels/{handle}")
+    assert channel.status_code == 200
+    assert channel.json()["is_terminated"] is False  # the API doesn't tell a ban
     videos = (await guest.get(f"/api/channels/{handle}/videos")).json()["items"]
     assert [item["id"] for item in videos] == [video.public_id]
 

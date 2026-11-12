@@ -6,6 +6,7 @@ import { useNavigate, useSearchParams } from 'react-router'
 import { ApiError } from '../../api/client'
 import ErrorState from '../../components/ErrorState'
 import Icon from '../../components/Icon'
+import ModerationNotice from '../../components/ModerationNotice'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { useStoredFlag } from '../../hooks/useStoredFlag'
 import Player from '../../player/Player'
@@ -54,13 +55,9 @@ function RestrictionNotice({ video }: { video: Video }) {
         'Only the channel owner and moderators can see this video. Likes, comments and views are off until a moderator restores it.',
       ]
   return (
-    <div className={styles.notice} role="note">
-      <Icon name="shieldPerson" />
-      <div>
-        <p className={styles.noticeTitle}>{title}</p>
-        <p className={styles.noticeText}>{text}</p>
-      </div>
-    </div>
+    <ModerationNotice title={title} className={styles.notice}>
+      {text}
+    </ModerationNotice>
   )
 }
 

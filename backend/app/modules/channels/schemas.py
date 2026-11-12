@@ -5,7 +5,7 @@ from typing import Annotated
 from fastapi import Path
 from pydantic import BaseModel, Field
 
-from app.modules.users.models import User
+from app.modules.users.models import User, UserStatus
 from app.modules.users.schemas import ChannelSummary
 from app.modules.videos.schemas import HANDLE_PATTERN
 
@@ -40,6 +40,9 @@ class ChannelOut(ChannelSummary):
     subscriber_count: int
     video_count: int = Field(description="Public, ready videos: what the Videos tab lists")
     is_subscribed: bool = Field(description="False for guests and on your own channel")
+    is_terminated: bool = Field(
+        description="Terminated by an admin: only moderators see it, and it is frozen"
+    )
 
     @classmethod
     def build(cls, user: User, *, video_count: int, is_subscribed: bool) -> "ChannelOut":
@@ -49,4 +52,5 @@ class ChannelOut(ChannelSummary):
             subscriber_count=user.subscriber_count,
             video_count=video_count,
             is_subscribed=is_subscribed,
+            is_terminated=user.status is UserStatus.TERMINATED,
         )
