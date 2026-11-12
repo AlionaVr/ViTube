@@ -107,6 +107,14 @@ async def list_open_cases(db: AsyncSession, *, after: UUID | None, limit: int) -
     ]
 
 
+async def exists(db: AsyncSession, *, reporter_id: UUID, comment_id: UUID) -> bool:
+    """Whether the user ever reported the comment, open or resolved. For the seed: one report."""
+    query = select(Report.id).where(
+        Report.reporter_id == reporter_id, Report.comment_id == comment_id
+    )
+    return await db.scalar(query.limit(1)) is not None
+
+
 async def resolve_open_of_video(
     db: AsyncSession, video_id: UUID, *, status: ReportStatus, resolved_by: UUID
 ) -> int:

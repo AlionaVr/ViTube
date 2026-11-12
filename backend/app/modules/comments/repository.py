@@ -58,6 +58,19 @@ async def list_replies(
     return (await db.execute(query.order_by(Comment.id).limit(limit))).all()
 
 
+async def find(
+    db: AsyncSession, *, video_id: UUID, author_id: UUID, parent_id: UUID | None, text: str
+) -> Comment | None:
+    """A comment by its content, deleted ones too. For the seed: it never posts one twice."""
+    query = select(Comment).where(
+        Comment.video_id == video_id,
+        Comment.author_id == author_id,
+        Comment.parent_id.is_not_distinct_from(parent_id),  # NULL for a top-level comment
+        Comment.text == text,
+    )
+    return await db.scalar(query.order_by(Comment.id).limit(1))
+
+
 async def insert_comment(
     db: AsyncSession, *, video_id: UUID, author_id: UUID, parent_id: UUID | None, text: str
 ) -> Comment:

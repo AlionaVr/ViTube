@@ -211,6 +211,12 @@ async def list_public(
     return (await db.scalars(query.order_by(Playlist.id.desc()).limit(limit))).all()
 
 
+async def get_owned_by_title(db: AsyncSession, owner_id: UUID, title: str) -> Playlist | None:
+    """The owner's oldest playlist with this title (titles aren't unique). For the seed."""
+    query = select(Playlist).where(Playlist.owner_id == owner_id, Playlist.title == title)
+    return await db.scalar(query.order_by(Playlist.id).limit(1))
+
+
 async def get_watch_later(db: AsyncSession, owner_id: UUID) -> Playlist | None:
     query = select(Playlist).where(Playlist.owner_id == owner_id, IS_WATCH_LATER)
     return await db.scalar(query)
