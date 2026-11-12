@@ -27,6 +27,22 @@
   color: var(--color-text-secondary);
 }
 
+/* YouTube's row of round buttons under the title; the first icon lines up with the text. */
+.actions {
+  margin: 4px 0 -4px -8px;
+  display: flex;
+}
+
+/* A pressed toggle: filled, as the chip of the active choice. */
+.on {
+  background: var(--color-text);
+  color: var(--color-text-inverse);
+}
+
+.on:hover {
+  background: var(--color-text);
+}
+
 /* Rows measure their offset from here, to scroll the current one up. */
 .rows {
   position: relative;

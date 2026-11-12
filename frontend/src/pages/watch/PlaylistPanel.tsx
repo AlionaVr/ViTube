@@ -1,25 +1,47 @@
 import { useLayoutEffect, useRef } from 'react'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 
 import ErrorState from '../../components/ErrorState'
 import Icon from '../../components/Icon'
+import IconButton from '../../components/IconButton'
 import Spinner from '../../components/Spinner'
 import Thumbnail from '../../components/Thumbnail'
 import { useInfiniteScroll } from '../../hooks/useInfiniteScroll'
+import { newSeed } from '../../playlists/queue'
 import { watchUrl } from '../../videos/paths'
 import styles from './PlaylistPanel.module.css'
 import type { PlayingList } from './usePlaylistQueue'
 
 /** YouTube's playlist panel on the watch page: the list with the current video marked. */
 export default function PlaylistPanel({ queue }: { queue: PlayingList }) {
-  const { list, videos, position, items } = queue
+  const { list, shuffle, videos, position, items } = queue
   const current = position === null ? undefined : videos[position].id
+  const [, setParams] = useSearchParams()
   const rows = useRef<HTMLOListElement>(null)
   // The panel scrolls itself; the sentinel inside it shows only near the end of its rows.
+  // Shuffled, the list is the first page: no more to load.
   const sentinel = useInfiniteScroll<HTMLLIElement>(
     () => void items.fetchNextPage(),
-    items.hasNextPage && !items.isFetchingNextPage && !items.isFetchNextPageError,
+    !shuffle && items.hasNextPage && !items.isFetchingNextPage && !items.isFetchNextPageError,
   )
+
+  // The video plays on; turned on, the shuffle starts with it.
+  function toggleShuffle() {
+    setParams(
+      (params) => {
+        const next = new URLSearchParams(params)
+        if (shuffle) {
+          next.delete('shuffle')
+          next.delete('index')
+        } else {
+          next.set('shuffle', newSeed())
+          next.set('index', '1')
+        }
+        return next
+      },
+      { replace: true },
+    )
+  }
 
   // The current row at the top of the panel; scrollIntoView would move the page too.
   useLayoutEffect(() => {
@@ -37,6 +59,15 @@ export default function PlaylistPanel({ queue }: { queue: PlayingList }) {
           {queue.owner.name}
           {position !== null && ` • ${position + 1} / ${queue.total}`}
         </p>
+        <div className={styles.actions}>
+          <IconButton
+            icon="shuffle"
+            label="Shuffle"
+            aria-pressed={shuffle !== null}
+            className={shuffle ? styles.on : undefined}
+            onClick={toggleShuffle}
+          />
+        </div>
       </div>
       <ol ref={rows} className={styles.rows}>
         {videos.map((video, index) => {
@@ -44,7 +75,7 @@ export default function PlaylistPanel({ queue }: { queue: PlayingList }) {
           return (
             <li key={video.id}>
               <Link
-                to={watchUrl(video.id, { list })}
+                to={watchUrl(video.id, { list, shuffle, index: index + 1 })}
                 className={styles.row}
                 aria-current={playing ? 'true' : undefined}
               >

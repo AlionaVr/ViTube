@@ -86,7 +86,12 @@ export default function WatchPage() {
   const navigate = useNavigate()
   const video = useVideo(id)
   const related = useRelatedVideos(id)
-  const queue = usePlaylistQueue(params.get('list') ?? '', id)
+  const queue = usePlaylistQueue(
+    params.get('list') ?? '',
+    id,
+    params.get('shuffle'),
+    Number(params.get('index')),
+  )
   const twoColumns = useMediaQuery(TWO_COLUMNS)
   const [theater, toggleTheater] = useStoredFlag('vitube:theater', false)
   const reportPlayed = useViewReport(id, video.data?.duration_sec ?? 0)

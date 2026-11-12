@@ -28,7 +28,9 @@ YouTube layout: header with logo, search and avatar; collapsible sidebar.
     - player with seeking;
     - title, channel + Subscribe, like/dislike, Share, Save, Report;
     - description, comments with replies;
-    - "Up next" list.
+    - "Up next" list;
+    - in a list (`&list=`, from Play all, Shuffle or a playlist row): a playlist panel above Up next, Next and the
+      end of a video go through the list; Shuffle mixes its first 100 (`&shuffle=<seed>&index=<n>`).
 3. **Channel** `/@handle` — banner, avatar, subscribers. Tabs: Videos, Playlists, About. Owner can edit videos and share
    private ones.
 4. **Search** `/results?search_query=` — YouTube-style list, suggestions while typing.

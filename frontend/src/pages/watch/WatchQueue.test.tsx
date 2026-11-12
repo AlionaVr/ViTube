@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 import { ANNA, json, mockApi } from '../../test/api'
 import { channel } from '../../test/channels'
+import { shuffled } from '../../playlists/queue'
 import { liked, likedItem } from '../../test/liked'
 import { intersectAll } from '../../test/observers'
 import { item, playlist } from '../../test/playlists'
@@ -192,6 +193,70 @@ describe('WatchPage with a list', () => {
     expect(screen.queryByRole('region', { name: /Blender films|Liked videos/ })).toBeNull()
     const urls = fetch.mock.calls.map(([request]) => new URL(request.url).pathname)
     expect(urls.filter((url) => url.startsWith('/api/me/liked'))).toEqual([])
+  })
+
+  it('shuffles from the panel: the video plays on and comes first', async () => {
+    const user = userEvent.setup()
+    mockQueue()
+    const { router, panel } = await openPanel(`/watch?v=video-00002&list=${PLAYLIST.id}`)
+    await screen.findByRole('region', { name: 'Video player' })
+    const playing = document.querySelector('video')
+
+    await user.click(within(panel).getByRole('button', { name: 'Shuffle', pressed: false }))
+
+    const params = new URLSearchParams(location(router))
+    const seed = params.get('shuffle')!
+    expect([params.get('v'), params.get('list'), params.get('index')]).toEqual([
+      'video-00002',
+      PLAYLIST.id,
+      '1',
+    ])
+    expect(within(panel).getByRole('button', { name: 'Shuffle', pressed: true })).toBeVisible()
+    expect(document.querySelector('video')).toBe(playing)
+    expect(panel).toHaveTextContent('Open Movie Club • 1 / 3')
+    const rows = within(panel).getAllByRole('link', { name: /Video/ })
+    expect(rows[0]).toHaveAttribute('aria-current', 'true')
+    expect(rows[0]).toHaveTextContent('Video 2')
+
+    // Next goes to the second row, in the same shuffle.
+    await user.click(screen.getByRole('button', { name: 'Next' }))
+    expect(`/watch${location(router)}`).toBe(rows[1].getAttribute('href'))
+    expect(new URLSearchParams(location(router)).get('index')).toBe('2')
+    expect(new URLSearchParams(location(router)).get('shuffle')).toBe(seed)
+
+    await user.click(within(panel).getByRole('button', { name: 'Shuffle', pressed: true }))
+    expect(location(router)).not.toMatch(/shuffle|index/)
+  })
+
+  it('goes through a shuffled list in its order and stops at its end', async () => {
+    const user = userEvent.setup()
+    mockQueue()
+    const order = shuffled(
+      [1, 2, 3].map((n) => summary(n)),
+      'seed-a',
+    ).map((video) => video.id)
+    const at = (index: number) =>
+      `?v=${order[index - 1]}&list=${PLAYLIST.id}&shuffle=seed-a&index=${index}`
+    const { router, panel } = await openPanel(`/watch${at(1)}`)
+
+    expect(
+      within(panel)
+        .getAllByRole('heading', { level: 3 })
+        .map((title) => title.textContent),
+    ).toEqual(order.map((id) => `Video ${Number(id.slice(-1))}`))
+    await user.click(await screen.findByRole('button', { name: 'Next' }))
+    expect(location(router)).toBe(at(2))
+    await screen.findByRole('heading', { level: 1, name: `Video ${Number(order[1].slice(-1))}` })
+    await user.click(
+      within(panel).getByRole('link', { name: new RegExp(`Video ${order[2].slice(-1)}`) }),
+    )
+    expect(location(router)).toBe(at(3))
+    await screen.findByRole('region', { name: 'Video player' })
+
+    fireEvent.ended(document.querySelector('video')!)
+    expect(location(router)).toBe(at(3))
+    await user.click(screen.getByRole('button', { name: 'Next' }))
+    expect(location(router)).toBe(`?v=${UP_NEXT.id}`)
   })
 
   it('puts the list before Up next on narrow screens', async () => {

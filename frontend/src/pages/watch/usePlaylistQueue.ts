@@ -3,9 +3,9 @@ import { useEffect } from 'react'
 import { useLiked, useLikedItems } from '../../liked/hooks'
 import { LIKED_VIDEOS } from '../../liked/paths'
 import { usePlaylist, usePlaylistItems, useWatchLater } from '../../playlists/hooks'
-import { type ItemsQuery, videosOf } from '../../playlists/items'
+import { firstPageOf, type ItemsQuery, videosOf } from '../../playlists/items'
 import { parseList, playlistUrl } from '../../playlists/paths'
-import { inOrder } from '../../playlists/queue'
+import { inOrder, inShuffle } from '../../playlists/queue'
 import type { Playlist } from '../../playlists/types'
 import { watchUrl } from '../../videos/paths'
 import type { VideoSummary } from '../../videos/types'
@@ -18,11 +18,14 @@ export type QueueNext = { status: 'pending' } | { status: 'video'; url: string }
 export interface PlayingList {
   /** Its `list=`: LL, WL or a playlist id. */
   list: string
+  /** The seed of a shuffled order; null plays the list in its order. */
+  shuffle: string | null
   title: string
   url: string
   owner: Playlist['owner']
-  /** How many videos it has: the count until every page is loaded, then the rows. */
+  /** How many videos it plays: the count until every page is loaded, then the rows. */
   total: number
+  /** In the order they play. */
   videos: VideoSummary[]
   /** The current video's; null while it isn't among the loaded rows. */
   position: number | null
@@ -34,8 +37,16 @@ export type Queue =
   /** No list, or one this viewer can't open: the page plays the video alone. */
   { status: 'none' } | { status: 'loading' } | ({ status: 'ready' } & PlayingList)
 
-/** The list in `list=` around the current video, as YouTube's playlist panel. */
-export function usePlaylistQueue(list: string, videoId: string): Queue {
+/**
+ * The list in `list=` around the current video, as YouTube's playlist panel. Shuffled, it plays
+ * the first page in the order of the `shuffle` seed, the current video at `index`.
+ */
+export function usePlaylistQueue(
+  list: string,
+  videoId: string,
+  shuffle: string | null,
+  index: number,
+): Queue {
   const ref = parseList(list)
   const kind = ref?.kind
   const viewer = useViewer()
@@ -50,12 +61,14 @@ export function usePlaylistQueue(list: string, videoId: string): Queue {
   const likedItems = useLikedItems(signedIn && kind === 'liked')
 
   const items: ItemsQuery = kind === 'liked' ? likedItems : playlistItems
-  const videos = videosOf(items)
+  const loaded = videosOf(items)
   // A page that fails to load ends the list there: Next falls back to Up next.
   const complete = !items.hasNextPage || items.isFetchNextPageError
-  const { position, next } = inOrder(videos, videoId, complete)
+  const { videos, position, next } = shuffle
+    ? inShuffle(firstPageOf(items), videoId, shuffle, index)
+    : { videos: loaded, ...inOrder(loaded, videoId, complete) }
 
-  // Pages load until the current video and the one after it are known.
+  // In order, pages load until the current video and the one after it are known.
   const { fetchNextPage } = items
   const needsPage = next.status === 'pending' && !items.isFetchingNextPage && !complete
   useEffect(() => {
@@ -85,14 +98,20 @@ export function usePlaylistQueue(list: string, videoId: string): Queue {
   return {
     status: 'ready',
     list,
+    shuffle,
     title: head.title,
     url: head.url,
     owner: head.owner,
-    total: items.hasNextPage ? head.count : videos.length,
+    total: items.hasNextPage && !shuffle ? head.count : videos.length,
     videos,
     position,
     items,
     next:
-      next.status === 'video' ? { status: 'video', url: watchUrl(next.video.id, { list }) } : next,
+      next.status === 'video'
+        ? {
+            status: 'video',
+            url: watchUrl(next.video.id, { list, shuffle, index: videos.indexOf(next.video) + 1 }),
+          }
+        : next,
   }
 }

@@ -24,8 +24,9 @@ import {
   useRemoveFromPlaylist,
   useWatchLater,
 } from '../../playlists/hooks'
-import { type ItemsQuery, videosOf } from '../../playlists/items'
+import { firstPageOf, type ItemsQuery, videosOf } from '../../playlists/items'
 import { parseList } from '../../playlists/paths'
+import { newSeed, shuffled } from '../../playlists/queue'
 import SaveDialog from '../../playlists/SaveDialog'
 import type { Playlist } from '../../playlists/types'
 import { VISIBILITY } from '../../playlists/visibility'
@@ -55,16 +56,20 @@ type Head = Pick<
 function Header({
   playlist,
   list,
-  first,
+  firstPage,
   tools,
 }: {
   playlist: Head
   /** Its `list=`, which the watch page plays. */
   list: string
-  first: VideoSummary | undefined
+  /** Play all starts here; Shuffle mixes it, as the watch page does. */
+  firstPage: VideoSummary[]
   tools?: ReactNode
 }) {
+  // One per visit, so the link can open in a new tab too.
+  const [seed] = useState(newSeed)
   const { label, icon } = VISIBILITY[playlist.visibility]
+  const first = firstPage[0]
   const { owner } = playlist
   return (
     <header className={styles.header}>
@@ -102,10 +107,19 @@ function Header({
       )}
       {tools}
       {first && (
-        <Link to={watchUrl(first.id, { list })} className={`${buttons.pill} ${styles.playAll}`}>
-          <Icon name="play" />
-          Play all
-        </Link>
+        <div className={styles.play}>
+          <Link to={watchUrl(first.id, { list })} className={`${buttons.pill} ${styles.playAll}`}>
+            <Icon name="play" />
+            Play all
+          </Link>
+          <Link
+            to={watchUrl(shuffled(firstPage, seed)[0].id, { list, shuffle: seed, index: 1 })}
+            className={`${buttons.pill} ${styles.shuffle}`}
+          >
+            <Icon name="shuffle" />
+            Shuffle
+          </Link>
+        </div>
       )}
     </header>
   )
@@ -259,7 +273,7 @@ function PlaylistView({ id, list }: { id: string; list: string }) {
         <Header
           playlist={data}
           list={list}
-          first={videos[0]}
+          firstPage={firstPageOf(items)}
           // Watch later can't be edited or deleted.
           tools={own && data.kind === 'user' && <PlaylistTools playlist={data} />}
         />
@@ -352,7 +366,7 @@ function LikedView() {
             visibility: 'private',
           }}
           list="LL"
-          first={videos[0]}
+          firstPage={firstPageOf(items)}
         />
       ) : (
         <HeaderSkeleton />

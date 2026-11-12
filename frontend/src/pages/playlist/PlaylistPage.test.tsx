@@ -2,6 +2,7 @@ import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 
+import { shuffled } from '../../playlists/queue'
 import type { Playlist, PlaylistItem } from '../../playlists/types'
 
 import { ANNA, json, mockApi } from '../../test/api'
@@ -9,7 +10,7 @@ import { liked, likedItem } from '../../test/liked'
 import { intersectAll } from '../../test/observers'
 import { item, mine, playlist } from '../../test/playlists'
 import { renderApp } from '../../test/render'
-import { page } from '../../test/videos'
+import { page, summary } from '../../test/videos'
 
 const GUEST = { 'GET /api/auth/me': () => json(401, { detail: 'Sign in required' }) }
 const PLAYLIST = playlist(1, {
@@ -157,6 +158,29 @@ describe('PlaylistPage', () => {
     )
   })
 
+  it('shuffles from the first video of a new order', async () => {
+    mockApi({
+      ...GUEST,
+      [`GET ${API}`]: () => json(200, PLAYLIST),
+      [`GET ${API}/items`]: () => json(200, page([item(1), item(2), item(3)])),
+    })
+    renderApp(`/playlist?list=${PLAYLIST.id}`)
+
+    const link = await screen.findByRole('link', { name: /Shuffle/ })
+    const params = new URL(link.getAttribute('href')!, window.location.origin).searchParams
+    const seed = params.get('shuffle')!
+    expect(seed).toMatch(/^[0-9a-z]+$/)
+    expect(Object.fromEntries(params)).toEqual({
+      v: shuffled(
+        [1, 2, 3].map((n) => summary(n)),
+        seed,
+      )[0].id,
+      list: PLAYLIST.id,
+      shuffle: seed,
+      index: '1',
+    })
+  })
+
   it('loads more videos on scroll', async () => {
     mockApi({
       ...GUEST,
@@ -259,6 +283,7 @@ describe('PlaylistPage', () => {
 
     expect(await screen.findByText('No videos in this playlist yet')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /Play all/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Shuffle/ })).not.toBeInTheDocument()
   })
 
   it('treats a missing or private playlist as not existing', async () => {

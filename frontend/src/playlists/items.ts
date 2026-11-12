@@ -17,3 +17,8 @@ export type ItemsQuery = Pick<
 export function videosOf(query: ItemsQuery): VideoSummary[] {
   return query.data?.pages.flatMap((page) => page.items.map((item) => item.video)) ?? []
 }
+
+/** What a shuffle mixes: one page, the same on the playlist and the watch page (one cache). */
+export function firstPageOf(query: ItemsQuery): VideoSummary[] {
+  return query.data?.pages[0]?.items.map((item) => item.video) ?? []
+}
