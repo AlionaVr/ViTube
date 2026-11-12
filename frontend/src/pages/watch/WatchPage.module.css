@@ -63,6 +63,15 @@
   padding-top: 24px;
 }
 
+/* An unavailable video has no Up next: its player sits in the middle of the page, not on the left. */
+@media (min-width: 1016px) {
+  .gone:not(.theater) .player {
+    grid-column: full;
+    justify-self: center;
+    width: min(var(--primary-max), calc(100% - 48px));
+  }
+}
+
 /*
  * One column, as on YouTube: the player edge to edge under the header, 16px text margins,
  * Up next as a card grid between the description and the comments (rendered there).
