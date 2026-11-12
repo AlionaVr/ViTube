@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 
 import Dialog from '../../components/Dialog'
 import EmptyState from '../../components/EmptyState'
@@ -82,8 +82,8 @@ function RowSkeleton() {
   )
 }
 
-function History() {
-  const history = useHistory()
+function History({ words }: { words: string }) {
+  const history = useHistory(words)
   const remove = useRemoveFromHistory()
   const toast = useToast()
   const sentinel = useInfiniteScroll<HTMLDivElement>(
@@ -105,7 +105,11 @@ function History() {
   }
   const items = history.data.pages.flatMap((page) => page.items)
   if (items.length === 0) {
-    return <EmptyState title="This list has no videos">Videos you watch appear here.</EmptyState>
+    return words ? (
+      <EmptyState title="No results">No videos in your watch history match “{words}”.</EmptyState>
+    ) : (
+      <EmptyState title="This list has no videos">Videos you watch appear here.</EmptyState>
+    )
   }
 
   // A promise, not a mutate callback: those skip all but the last call, and the row unmounts.
@@ -189,7 +193,46 @@ function ConfirmedAction({ icon, label, title, text, confirm, run, failed }: Con
   )
 }
 
-function Actions() {
+const WORDS_MAX = 200 // the server's limit
+
+/** YouTube's underlined search field; the search runs on Enter. */
+function HistorySearch({ words, onSearch }: { words: string; onSearch: (words: string) => void }) {
+  const [text, setText] = useState(words)
+  return (
+    <form
+      role="search"
+      className={styles.search}
+      onSubmit={(event) => {
+        event.preventDefault()
+        onSearch(text.trim())
+      }}
+    >
+      <button type="submit" className={styles.searchButton} aria-label="Search" title="Search">
+        <Icon name="search" />
+      </button>
+      <input
+        className={styles.searchInput}
+        aria-label="Search watch history"
+        placeholder="Search watch history"
+        maxLength={WORDS_MAX}
+        value={text}
+        onChange={(event) => setText(event.target.value)}
+      />
+      {text && (
+        <IconButton
+          icon="close"
+          label="Clear search"
+          onClick={() => {
+            setText('')
+            onSearch('')
+          }}
+        />
+      )}
+    </form>
+  )
+}
+
+function Actions({ words, onSearch }: { words: string; onSearch: (words: string) => void }) {
   const clear = useClearHistory()
   const settings = useHistorySettings(true)
   const setPaused = useSetHistoryPaused()
@@ -197,6 +240,8 @@ function Actions() {
 
   return (
     <div className={styles.side}>
+      {/* A new key on back and forward: the field shows the words of the page. */}
+      <HistorySearch key={words} words={words} onSearch={onSearch} />
       <ConfirmedAction
         icon="delete"
         label="Clear all watch history"
@@ -235,6 +280,8 @@ function Actions() {
 /** /feed/history: the videos the viewer watched, by day, last first. */
 export default function HistoryPage() {
   const viewer = useViewer()
+  const [params, setParams] = useSearchParams()
+  const words = params.get('q') ?? ''
   return (
     <div className={styles.page}>
       <title>Watch history - ViTube</title>
@@ -250,9 +297,9 @@ export default function HistoryPage() {
             <h1 className={styles.heading}>Watch history</h1>
             <div className={styles.columns}>
               <div className={styles.main}>
-                <History />
+                <History words={words} />
               </div>
-              <Actions />
+              <Actions words={words} onSearch={(next) => setParams(next ? { q: next } : {})} />
             </div>
           </>
         )

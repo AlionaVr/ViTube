@@ -2702,9 +2702,30 @@
           "history"
         ],
         "summary": "Your watch history, last watched first",
-        "description": "Only the videos you may still watch.",
+        "description": "Only the videos you may still watch. With `q`, only those with the words, still last watched first.",
         "operationId": "list_history_api_me_history_get",
         "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "pattern": "^[^\\x00-\\x1f\\x7f]*$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only videos with these words in the title or description",
+              "title": "Q"
+            },
+            "description": "Only videos with these words in the title or description"
+          },
           {
             "name": "cursor",
             "in": "query",

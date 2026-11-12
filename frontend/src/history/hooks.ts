@@ -18,7 +18,8 @@ import {
 
 export const historyKeys = {
   all: ['history'] as const,
-  list: ['history', 'list'] as const,
+  lists: ['history', 'list'] as const,
+  list: (words: string) => ['history', 'list', words] as const,
   progress: (videoId: string) => ['history', 'progress', videoId] as const,
   allProgress: ['history', 'progress'] as const,
   settings: ['history', 'settings'] as const,
@@ -28,10 +29,11 @@ type Items = InfiniteData<Page<HistoryItem>>
 
 const firstPage = null as string | null
 
-export function useHistory() {
+/** `words`: only videos that have them; empty: the whole history. */
+export function useHistory(words: string) {
   return useInfiniteQuery({
-    queryKey: historyKeys.list,
-    queryFn: ({ pageParam }) => listHistory(pageParam),
+    queryKey: historyKeys.list(words),
+    queryFn: ({ pageParam }) => listHistory(words, pageParam),
     initialPageParam: firstPage,
     getNextPageParam: (page) => page.next_cursor,
   })
@@ -43,7 +45,7 @@ export function useRemoveFromHistory() {
   return useMutation({
     mutationFn: removeFromHistory,
     onSuccess: (_data, videoId) => {
-      queryClient.setQueryData<Items>(historyKeys.list, (data) =>
+      queryClient.setQueriesData<Items>({ queryKey: historyKeys.lists }, (data) =>
         data
           ? {
               ...data,
@@ -64,7 +66,7 @@ export function useClearHistory() {
   return useMutation({
     mutationFn: clearHistory,
     onSuccess: () => {
-      queryClient.setQueryData<Items>(historyKeys.list, (data) =>
+      queryClient.setQueriesData<Items>({ queryKey: historyKeys.lists }, (data) =>
         data ? { pages: [{ items: [], next_cursor: null }], pageParams: [firstPage] } : data,
       )
       queryClient.setQueriesData({ queryKey: historyKeys.allProgress }, null)

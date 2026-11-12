@@ -4,11 +4,14 @@ from typing import Annotated
 from fastapi import Query
 from pydantic import BaseModel, Field, StringConstraints
 
-from app.modules.search.schemas import SearchResult
+from app.modules.search.schemas import SearchResult, Words
 from app.modules.videos.schemas import PUBLIC_ID_PATTERN
 
 MAX_PROGRESS_IDS = 100  # a page of the longest list, a playlist
 
+HistoryQuery = Annotated[
+    Words | None, Query(description="Only videos with these words in the title or description")
+]
 VideoIds = Annotated[
     list[Annotated[str, StringConstraints(pattern=PUBLIC_ID_PATTERN)]],
     Query(min_length=1, max_length=MAX_PROGRESS_IDS, description="Public video ids"),

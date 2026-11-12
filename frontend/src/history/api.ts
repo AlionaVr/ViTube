@@ -22,9 +22,11 @@ export function getProgress(ids: string[]): Promise<Record<string, number>> {
   return unwrap(api.GET('/api/me/history/progress', { params: { query: { v: ids } } }))
 }
 
-/** Last watched first. Throws ApiError 401 for a guest. */
-export function listHistory(cursor: string | null): Promise<Page<HistoryItem>> {
-  return unwrap(api.GET('/api/me/history', { params: { query: { cursor } } }))
+/** Last watched first; with `words`, only videos that have them. Throws ApiError 401 for a guest. */
+export function listHistory(words: string, cursor: string | null): Promise<Page<HistoryItem>> {
+  return unwrap(
+    api.GET('/api/me/history', { params: { query: { q: words || undefined, cursor } } }),
+  )
 }
 
 /** Its progress bar goes too. */

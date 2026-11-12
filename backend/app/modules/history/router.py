@@ -7,7 +7,13 @@ from app.core.redis import RedisClient
 from app.db.session import DbSession
 from app.modules.auth.deps import CurrentUser
 from app.modules.history import service
-from app.modules.history.schemas import HistoryItem, HistorySettings, PositionIn, VideoIds
+from app.modules.history.schemas import (
+    HistoryItem,
+    HistoryQuery,
+    HistorySettings,
+    PositionIn,
+    VideoIds,
+)
 from app.modules.videos.schemas import PublicId
 
 router = APIRouter(prefix="/api/me/history", tags=["history"])
@@ -17,12 +23,13 @@ router = APIRouter(prefix="/api/me/history", tags=["history"])
     "",
     response_model=Page[HistoryItem],
     summary="Your watch history, last watched first",
-    description="Only the videos you may still watch.",
+    description="Only the videos you may still watch. With `q`, only those with the words, still"
+    " last watched first.",
 )
 async def list_history(
-    user: CurrentUser, db: DbSession, cursor: Cursor = None
+    user: CurrentUser, db: DbSession, q: HistoryQuery = None, cursor: Cursor = None
 ) -> Page[HistoryItem]:
-    return await service.list_history(db, user, cursor)
+    return await service.list_history(db, user, q, cursor)
 
 
 @router.delete(

@@ -866,7 +866,7 @@ export interface paths {
         };
         /**
          * Your watch history, last watched first
-         * @description Only the videos you may still watch.
+         * @description Only the videos you may still watch. With `q`, only those with the words, still last watched first.
          */
         get: operations["list_history_api_me_history_get"];
         put?: never;
@@ -3543,6 +3543,8 @@ export interface operations {
     list_history_api_me_history_get: {
         parameters: {
             query?: {
+                /** @description Only videos with these words in the title or description */
+                q?: string | null;
                 /** @description next_cursor of the last page */
                 cursor?: string | null;
             };

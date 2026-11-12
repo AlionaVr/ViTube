@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.history.models import HistoryEntry
 from app.modules.users.models import User
+from app.modules.videos import repository as videos
 from app.modules.videos.access import viewable
 from app.modules.videos.models import Video, VideoStatus
 
@@ -39,16 +40,23 @@ async def positions(db: AsyncSession, user_id: UUID, public_ids: Sequence[str]) 
 
 
 async def list_entries(
-    db: AsyncSession, user: User, *, before: tuple[datetime, UUID] | None, limit: int
+    db: AsyncSession,
+    user: User,
+    words: str | None,
+    *,
+    before: tuple[datetime, UUID] | None,
+    limit: int,
 ) -> Sequence[HistoryRow]:
-    """The user's history, last watched first. Rows of videos they may no longer watch are kept,
-    not shown: the video may come back."""
+    """The user's history, last watched first; with `words`, only videos that have them. Rows
+    of videos they may no longer watch are kept, not shown: the video may come back."""
     query = (
         select(HistoryEntry, Video, User)
         .join(Video, Video.id == HistoryEntry.video_id)
         .join(User, User.id == Video.owner_id)
         .where(HistoryEntry.user_id == user.id, Video.status == VideoStatus.READY, viewable(user))
     )
+    if words is not None:
+        query = query.where(*videos.text_matches(videos.text_query(words)))
     if before is not None:
         query = query.where(
             tuple_(HistoryEntry.watched_at, HistoryEntry.video_id) < tuple_(*before)

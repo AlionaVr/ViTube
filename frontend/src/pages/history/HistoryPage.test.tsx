@@ -39,7 +39,14 @@ function mockHistory(items: HistoryItem[], fail = false, paused = false) {
       settings = (await request.json()) as { paused: boolean }
       return json(200, settings)
     },
-    'GET /api/me/history': () => json(200, page(current)),
+    // The words search the titles here.
+    'GET /api/me/history': (request) => {
+      const words = new URL(request.url).searchParams.get('q')?.toLowerCase()
+      const found = words
+        ? current.filter((item) => item.video.title.toLowerCase().includes(words))
+        : current
+      return json(200, page(found))
+    },
     'DELETE /api/me/history': () => {
       if (fail) return json(500, { detail: 'Internal error' })
       current = []
@@ -187,5 +194,38 @@ describe('HistoryPage', () => {
     expect(screen.getByRole('button', { name: 'Pause watch history' })).toBeInTheDocument()
     // What was there stays.
     expect(screen.getByRole('link', { name: 'Video 1' })).toBeInTheDocument()
+  })
+
+  it('searches the history on Enter and clears the search', async () => {
+    const fetch = mockHistory([entry(12), entry(2), entry(1)])
+    const router = renderApp('/feed/history')
+    await screen.findByRole('link', { name: 'Video 12' })
+
+    const field = screen.getByRole('textbox', { name: 'Search watch history' })
+    await userEvent.type(field, '  video 1 {Enter}')
+
+    await waitFor(() => expect(screen.queryByRole('link', { name: 'Video 2' })).toBeNull())
+    expect(screen.getByRole('link', { name: 'Video 12' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Video 1' })).toBeInTheDocument()
+    expect(router.state.location.search).toBe('?q=video+1')
+    const asked = fetch.mock.calls
+      .map(([request]) => new URL(request.url))
+      .filter((url) => url.pathname === '/api/me/history')
+      .map((url) => url.searchParams.get('q'))
+    expect(asked).toEqual([null, 'video 1'])
+
+    await userEvent.click(screen.getByRole('button', { name: 'Clear search' }))
+    expect(await screen.findByRole('link', { name: 'Video 2' })).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Search watch history' })).toHaveValue('')
+    expect(router.state.location.search).toBe('')
+  })
+
+  it('says when nothing in the history matches', async () => {
+    mockHistory([entry(1)])
+    renderApp('/feed/history?q=dragon')
+    expect(
+      await screen.findByText('No videos in your watch history match “dragon”.'),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Search watch history' })).toHaveValue('dragon')
   })
 })

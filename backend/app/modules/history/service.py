@@ -40,9 +40,11 @@ async def progress(db: AsyncSession, user: User, public_ids: list[str]) -> dict[
     return await history.positions(db, user.id, public_ids)
 
 
-async def list_history(db: AsyncSession, user: User, cursor: str | None) -> Page[HistoryItem]:
+async def list_history(
+    db: AsyncSession, user: User, words: str | None, cursor: str | None
+) -> Page[HistoryItem]:
     before = decode_cursor(cursor, tuple[AwareDatetime, UUID]) if cursor else None
-    rows = await history.list_entries(db, user, before=before, limit=PAGE_SIZE + 1)
+    rows = await history.list_entries(db, user, words, before=before, limit=PAGE_SIZE + 1)
     page, next_cursor = split_page(
         rows, PAGE_SIZE, lambda row: (row[0].watched_at, row[0].video_id)
     )

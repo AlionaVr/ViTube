@@ -2,9 +2,11 @@
 
 from collections.abc import Sequence
 from datetime import timedelta
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import (
+    ColumnElement,
     Row,
     Select,
     String,
@@ -117,6 +119,17 @@ async def _allow_title_typos(db: AsyncSession) -> None:
     )
 
 
+def text_query(words: str) -> ColumnElement[Any]:
+    """The words as a tsquery: "quotes", OR and -word work as on YouTube (ADR 0007)."""
+    return func.websearch_to_tsquery(literal(SEARCH_CONFIG, REGCONFIG), words)
+
+
+def text_matches(query: ColumnElement[Any]) -> tuple[ColumnElement[bool], ColumnElement[bool]]:
+    """Filters for videos with the words in the title or description. The first: some word is
+    required (querytree 'T': with "-word" only, every video would match)."""
+    return func.querytree(query) != "T", Video.search_vector.bool_op("@@")(query)
+
+
 async def search(
     db: AsyncSession,
     words: str,
@@ -130,14 +143,13 @@ async def search(
     With `typos`, titles close to the words match too. Rank: full-text rank (title over
     description) plus how close the title is to the words.
     """
-    query = func.websearch_to_tsquery(literal(SEARCH_CONFIG, REGCONFIG), words)
-    matches = Video.search_vector.bool_op("@@")(query)
+    query = text_query(words)
+    required, matches = text_matches(query)
     if typos:
         await _allow_title_typos(db)
         matches = or_(matches, Video.title.bool_op("%>")(words))
     rank = func.ts_rank(Video.search_vector, query) + func.word_similarity(words, Video.title)
-    # querytree 'T': no word is required ("-word" only), so every video would match.
-    statement = _WITH_OWNER.add_columns(rank).where(*LISTED, func.querytree(query) != "T", matches)
+    statement = _WITH_OWNER.add_columns(rank).where(*LISTED, required, matches)
     if after is not None:
         statement = statement.where(tuple_(rank, Video.id) < tuple_(*after))
     return (await db.execute(statement.order_by(rank.desc(), Video.id.desc()).limit(limit))).all()

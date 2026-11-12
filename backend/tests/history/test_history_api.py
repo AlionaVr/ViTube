@@ -425,3 +425,36 @@ async def test_settings_need_a_signed_in_user(guest: AsyncClient) -> None:
 async def test_bad_settings_get_422(viewer: AsyncClient, body: dict[str, object]) -> None:
     response = await viewer.put("/api/me/history/settings", json=body, headers=csrf(viewer))
     assert response.status_code == 422
+
+
+# --- Searching ---
+
+
+async def found(client: AsyncClient, words: str) -> list[str]:
+    response = await client.get("/api/me/history", params={"q": words})
+    assert response.status_code == 200, response.text
+    return [item["video"]["id"] for item in response.json()["items"]]
+
+
+async def test_search_finds_watched_videos_by_title_or_description(
+    viewer: AsyncClient, db: AsyncSession
+) -> None:
+    anna = await make_user(db, "anna")
+    dragon = await make_video(db, anna, title="Sintel", description="A girl and her dragon")
+    bunny = await make_video(db, anna, title="Big Buck Bunny")
+    dragons = await make_video(db, anna, title="Dragons of the north")
+    await make_video(db, anna, title="An unwatched dragon")
+    for video in (dragon, bunny, dragons):
+        await save(viewer, video)
+
+    # Last watched first, as without words; only what this user watched.
+    assert await found(viewer, "dragon") == [dragons.public_id, dragon.public_id]
+    assert await found(viewer, "bunny") == [bunny.public_id]
+    assert await found(viewer, "-dragon") == []
+    assert await found(viewer, "submarine") == []
+
+
+@pytest.mark.parametrize("words", ["", "   ", "x" * 201, "a\x00b"])
+async def test_search_refuses_bad_words(viewer: AsyncClient, words: str) -> None:
+    response = await viewer.get("/api/me/history", params={"q": words})
+    assert response.status_code == 422
