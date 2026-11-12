@@ -10,6 +10,7 @@ from app.core.rate_limit import RateLimit
 from app.modules.audit import repository as audit
 from app.modules.audit.models import AuditAction, TargetType
 from app.modules.audit.repository import Actor
+from app.modules.auth.google import GoogleAccount
 from app.modules.auth.passwords import hash_password, verify_password
 from app.modules.users import repository as users
 from app.modules.users.models import Role, User, UserStatus
@@ -22,7 +23,11 @@ LOGIN_PER_EMAIL_AND_IP = RateLimit("login_email_ip", limit=5, window=15 * 60)
 # Per account from all IPs: caps guessing spread over many IPs. Each IP adds at most 5,
 # so locking an account out takes 20+ IPs (ADR 0005).
 LOGIN_PER_EMAIL = RateLimit("login_email", limit=100, window=15 * 60)
+# New accounts per IP, made with a password or with Google.
+SIGNUP_PER_IP = RateLimit("signup_ip", limit=5, window=60 * 60)
 
+# The account that has the email may use a password or another Google account.
+GOOGLE_EMAIL_TAKEN = "This email is already registered with another sign-in method."
 
 BLOCKED = {
     UserStatus.BANNED: "This account is banned",
@@ -34,19 +39,52 @@ def random_handle() -> str:
     return "user-" + "".join(secrets.choice(HANDLE_ALPHABET) for _ in range(8))
 
 
-async def signup(db: AsyncSession, email: str, password: str) -> User:
-    password_hash = await hash_password(password)
+async def _insert_user(
+    db: AsyncSession, email: str, *, password_hash: str | None = None, google_sub: str | None = None
+) -> User | None:
+    """A new user with a random handle. None if the email or the Google account is taken."""
     for _ in range(HANDLE_TRIES):
         user = await users.insert_unless_taken(
-            db, email=email, handle=random_handle(), password_hash=password_hash
+            db,
+            email=email,
+            handle=random_handle(),
+            password_hash=password_hash,
+            google_sub=google_sub,
         )
         if user is not None:
-            await db.commit()
             return user
         if await users.get_by_email(db, email) is not None:
-            raise Conflict("This email is already registered")
+            return None
+        if google_sub is not None and await users.get_by_google_sub(db, google_sub) is not None:
+            return None
         # Otherwise the random handle was taken: try another.
     raise RuntimeError("No free handle found")  # 31^8 handles: practically never
+
+
+async def signup(db: AsyncSession, email: str, password: str) -> User:
+    user = await _insert_user(db, email, password_hash=await hash_password(password))
+    if user is None:
+        raise Conflict("This email is already registered")
+    await db.commit()
+    return user
+
+
+async def google_sign_in(db: AsyncSession, redis: Redis, account: GoogleAccount, ip: str) -> User:
+    """Sign in with Google; the first time, sign up. The account is found by Google's id, never
+    by email: password sign-up doesn't verify emails, so the same email doesn't prove the same
+    person (pre-hijacking, ADR 0014). A taken email is refused and nothing is linked."""
+    user = await users.get_by_google_sub(db, account.sub)
+    if user is None:
+        await SIGNUP_PER_IP.hit(redis, ip)  # a new account, as with a password
+        user = await _insert_user(db, account.email, google_sub=account.sub)
+        # None: the email is taken, or a parallel first sign-in of this account made the user.
+        user = user or await users.get_by_google_sub(db, account.sub)
+        if user is None:
+            raise Conflict(GOOGLE_EMAIL_TAKEN)
+        await db.commit()
+    if user.status is not UserStatus.ACTIVE:
+        raise Forbidden(BLOCKED[user.status])
+    return user
 
 
 async def login(db: AsyncSession, redis: Redis, email: str, password: str, ip: str) -> User:

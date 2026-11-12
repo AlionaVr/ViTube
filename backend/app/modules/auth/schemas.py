@@ -6,7 +6,7 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, Field, WithJsonSchem
 from app.modules.users.models import Role
 
 
-def _ascii_email(value: str) -> str:
+def ascii_email(value: str) -> str:
     # SMTPUTF8 off: an ASCII local part, and the domain comes back as punycode. All-ASCII
     # addresses lowercase the same in Python (rate limit keys) and Postgres (citext lookups).
     try:
@@ -19,7 +19,7 @@ def _ascii_email(value: str) -> str:
 
 
 Email = Annotated[
-    str, AfterValidator(_ascii_email), WithJsonSchema({"type": "string", "format": "email"})
+    str, AfterValidator(ascii_email), WithJsonSchema({"type": "string", "format": "email"})
 ]
 
 
@@ -41,3 +41,9 @@ class UserOut(BaseModel):
     handle: str
     email: str
     role: Role
+
+
+class Providers(BaseModel):
+    """Ways to sign in besides a password: the web app shows a button for each one that is on."""
+
+    google: bool

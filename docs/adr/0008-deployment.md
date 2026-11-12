@@ -26,7 +26,10 @@ Containers are hardened:
 - non-root users, `no-new-privileges`, all capabilities dropped (data services keep only what their entrypoint needs);
 - read-only root FS for our containers;
 - networks: `edge` (nginx only, the published port), internal `web` (nginx ↔ api) and internal `data`
-  (backend ↔ Postgres, Redis, MinIO). The backend and data have no internet access.
+  (backend ↔ Postgres, Redis, MinIO). The worker and data have no internet access. *(Amended 2026-11-12: the api
+  joins `oauth-egress` for Google sign-in, ADR 0014. It is a plain bridge network: Docker can't limit it to
+  Google's hosts, so the api can reach any host. A known exception, accepted for now. `install.sh` requires Docker
+  Engine 28+: older engines let hosts on the LAN route to the api through this network, past nginx.)*
 
 Local development adds `compose.local.yaml` (DB ports on localhost); `install.sh` never uses it.
 

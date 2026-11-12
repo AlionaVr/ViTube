@@ -33,7 +33,8 @@ YouTube layout: header with logo, search and avatar; collapsible sidebar.
    private ones.
 4. **Search** `/results?search_query=` — YouTube-style list, suggestions while typing.
 5. **Upload** — drag & drop, progress bar, metadata form, processing status, clear limit errors.
-6. **Sign in / Sign up** — email and password; the server gives a random @handle (editable later). A channel is
+6. **Sign in / Sign up** — email and password, or Google when it is set up
+   ([ADR 0014](adr/0014-google-sign-in.md)); the server gives a random @handle (editable later). A channel is
    created on sign-up.
 7. **Moderation** `/moderation` — report queue, hidden videos; for admins, restricted accounts and the audit log
    with filters.
@@ -72,7 +73,7 @@ One access policy, `can_view(user, video)`, is used everywhere.
 
 | Table             | Key fields / constraints                                                                                                                             |
 |-------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `users`           | email, handle (citext, unique), password_hash, role, status (active / banned / terminated), avatar, banner, history_paused                           |
+| `users`           | email, handle (citext, unique), password_hash and/or google_sub, role, status (active / banned / terminated), avatar, banner, history_paused         |
 | `videos`          | public_id (11 chars), owner, title, description, visibility, status, is_hidden, duration, counters, `search_vector` (GIN), title trigram (GIN)       |
 | `video_access`    | (video, user); only the owner grants                                                                                                                 |
 | `video_reactions` | (user, video), value ±1, rated_at; Liked videos read from it ([ADR 0013](adr/0013-liked-videos.md))                                                  |

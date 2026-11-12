@@ -43,13 +43,20 @@ class User(Base):
         CheckConstraint("subscriber_count >= 0", name="subscriber_count_not_negative"),
         # Admins can't be restricted (ADR 0009), so a restricted account can't become one.
         CheckConstraint("role <> 'admin' OR status = 'active'", name="admin_active"),
+        # Every account has a way to sign in: a password, Google, or both (ADR 0014).
+        CheckConstraint(
+            "password_hash IS NOT NULL OR google_sub IS NOT NULL", name="has_credentials"
+        ),
     )
 
     # uuidv7(): time-ordered (index-friendly) and not guessable like 1, 2, 3.
     id: Mapped[UUID] = mapped_column(primary_key=True, server_default=text("uuidv7()"))
     email: Mapped[str] = mapped_column(CITEXT, unique=True)
     handle: Mapped[str] = mapped_column(CITEXT, unique=True)
-    password_hash: Mapped[str] = mapped_column(Text)
+    # None for an account made with Google: it has no password to sign in with.
+    password_hash: Mapped[str | None] = mapped_column(Text)
+    # Google's "sub": the account's id, never reused. Not the email, which can change (ADR 0014).
+    google_sub: Mapped[str | None] = mapped_column(Text, unique=True)
     # Read from the DB on every request, like the role: a ban applies to the next request.
     status: Mapped[UserStatus] = mapped_column(
         str_enum(UserStatus, "status"), server_default=UserStatus.ACTIVE.value

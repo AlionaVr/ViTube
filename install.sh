@@ -3,6 +3,9 @@
 set -euo pipefail
 
 MIN_COMPOSE_VERSION=2.39.0  # build `provenance` in compose.yaml
+# 28 blocks the LAN from unpublished container ports: the api's internet network (ADR 0008)
+# must not let anyone reach it past nginx.
+MIN_ENGINE_VERSION=28.0.0
 
 log() { printf '\n==> %s\n' "$*"; }
 die() {
@@ -64,6 +67,13 @@ check_compose() {
   # sort -V -C succeeds only if the minimum sorts before (or equals) the installed version.
   printf '%s\n%s\n' "$MIN_COMPOSE_VERSION" "$version" | sort -V -C ||
     die "Docker Compose $version is too old: need $MIN_COMPOSE_VERSION or newer."
+}
+
+check_engine() {
+  local version
+  version=$("${DOCKER[@]}" version --format '{{.Server.Version}}')
+  printf '%s\n%s\n' "$MIN_ENGINE_VERSION" "$version" | sort -V -C ||
+    die "Docker Engine $version is too old: need $MIN_ENGINE_VERSION or newer."
 }
 
 random_secret() { od -An -N32 -tx1 /dev/urandom | tr -d ' \n'; }
@@ -146,6 +156,7 @@ main() {
   cd "$(dirname "$0")"
   command -v docker >/dev/null || install_docker
   pick_docker_command
+  check_engine
   check_compose
   create_env
   download_demo_videos

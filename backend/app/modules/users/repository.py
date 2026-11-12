@@ -28,18 +28,35 @@ async def get_by_email(db: AsyncSession, email: str) -> User | None:
     return await db.scalar(select(User).where(User.email == email))
 
 
+async def get_by_google_sub(db: AsyncSession, google_sub: str) -> User | None:
+    return await db.scalar(select(User).where(User.google_sub == google_sub))
+
+
 async def get_by_handle(db: AsyncSession, handle: str) -> User | None:
     # citext: the match ignores case.
     return await db.scalar(select(User).where(User.handle == handle))
 
 
 async def insert_unless_taken(
-    db: AsyncSession, *, email: str, handle: str, password_hash: str, role: Role = Role.USER
+    db: AsyncSession,
+    *,
+    email: str,
+    handle: str,
+    password_hash: str | None = None,
+    google_sub: str | None = None,
+    role: Role = Role.USER,
 ) -> User | None:
-    """Insert a user. None if the email or handle is taken: no exception, no savepoint needed."""
+    """Insert a user. None if the email, handle or Google account is taken: no exception, no
+    savepoint needed."""
     statement = (
         insert(User)
-        .values(email=email, handle=handle, password_hash=password_hash, role=role)
+        .values(
+            email=email,
+            handle=handle,
+            password_hash=password_hash,
+            google_sub=google_sub,
+            role=role,
+        )
         .on_conflict_do_nothing()
         .returning(User)
     )

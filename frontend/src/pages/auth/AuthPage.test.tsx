@@ -164,3 +164,28 @@ describe('sign up page', () => {
     expect(screen.getByRole('link', { name: 'Sign in instead' })).toHaveAttribute('href', '/login')
   })
 })
+
+describe('sign in with Google', () => {
+  it('offers Google when the server has it on', async () => {
+    mockApi({
+      'GET /api/auth/me': guest,
+      'GET /api/auth/providers': () => json(200, { google: true }),
+    })
+    renderApp('/signup')
+
+    const google = await screen.findByRole('link', { name: 'Sign up with Google' })
+    expect(google).toHaveAttribute('href', '/api/auth/google/start')
+  })
+
+  it('shows no Google button while it is off', async () => {
+    const fetch = mockApi({
+      'GET /api/auth/me': guest,
+      'GET /api/auth/providers': () => json(200, { google: false }),
+    })
+    renderApp('/login')
+
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2))
+    expect(screen.getByLabelText('Email')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Google/ })).not.toBeInTheDocument()
+  })
+})

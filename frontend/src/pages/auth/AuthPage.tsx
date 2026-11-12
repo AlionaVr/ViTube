@@ -2,13 +2,21 @@ import { type FormEvent, useRef, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router'
 
 import { ApiError } from '../../api/client'
-import { useMe, useSignIn, useSignUp } from '../../auth/hooks'
+import { useAuthProviders, useMe, useSignIn, useSignUp } from '../../auth/hooks'
+import { rememberReturnPath } from '../../auth/returnPath'
 import Icon from '../../components/Icon'
 import Logo from '../../components/Logo'
 import TextField from '../../components/TextField'
 import styles from './AuthPage.module.css'
+import GoogleButton from './GoogleButton'
 
 type Mode = 'signin' | 'signup'
+
+/** Router state: the page to go back to, and an error from signing in with Google. */
+export interface AuthState {
+  from?: string
+  error?: string
+}
 
 const MIN_PASSWORD = 8 // the server's rule for new passwords
 const MAX_PASSWORD = 128
@@ -18,6 +26,7 @@ const TEXT = {
     title: 'Sign in',
     subtitle: 'to continue to ViTube',
     submit: 'Sign in',
+    google: 'Sign in with Google',
     other: { label: 'Create account', to: '/signup' },
     passwordAutoComplete: 'current-password',
     passwordHint: undefined,
@@ -26,6 +35,7 @@ const TEXT = {
     title: 'Create a ViTube account',
     subtitle: 'Enter your email and a password',
     submit: 'Create account',
+    google: 'Sign up with Google',
     other: { label: 'Sign in instead', to: '/login' },
     passwordAutoComplete: 'new-password',
     passwordHint: `Use ${MIN_PASSWORD} or more characters`,
@@ -71,7 +81,10 @@ function errorsFrom(error: unknown): Errors {
 export default function AuthPage({ mode }: { mode: Mode }) {
   const text = TEXT[mode]
   const location = useLocation()
+  const state = location.state as AuthState | null
+  const from = state?.from ?? '/'
   const me = useMe()
+  const providers = useAuthProviders()
   const signIn = useSignIn()
   const signUp = useSignUp()
   const submit = mode === 'signin' ? signIn : signUp
@@ -79,13 +92,12 @@ export default function AuthPage({ mode }: { mode: Mode }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [errors, setErrors] = useState<Errors>({})
+  const [errors, setErrors] = useState<Errors>({ form: state?.error })
   const emailRef = useRef<HTMLInputElement>(null)
   const passwordRef = useRef<HTMLInputElement>(null)
 
   // Signed in (also right after this form succeeds): back to where the user came from.
   if (me.data) {
-    const from = (location.state as { from?: string } | null)?.from ?? '/'
     return <Navigate to={from} replace />
   }
 
@@ -123,6 +135,12 @@ export default function AuthPage({ mode }: { mode: Mode }) {
         <form className={styles.form} onSubmit={handleSubmit} noValidate>
           {/* Not disabled while a request runs: focus must reach a field that gets an error. */}
           <div className={styles.fields}>
+            {providers.data?.google && (
+              <>
+                <GoogleButton label={text.google} onClick={() => rememberReturnPath(from)} />
+                <div className={styles.or}>or</div>
+              </>
+            )}
             <TextField
               ref={emailRef}
               label="Email"
@@ -166,7 +184,8 @@ export default function AuthPage({ mode }: { mode: Mode }) {
           </div>
 
           <div className={styles.actions}>
-            <Link to={text.other.to} state={location.state} className={styles.secondary}>
+            {/* The return page goes along; an error from Google stays here. */}
+            <Link to={text.other.to} state={{ from: state?.from }} className={styles.secondary}>
               {text.other.label}
             </Link>
             <button type="submit" className={styles.primary} disabled={submit.isPending}>

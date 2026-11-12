@@ -17,3 +17,4 @@ One short file per key decision: context, decision, alternatives, consequences.
 | [0011](0011-view-counting.md)             | Views: one per viewer a day, after real playback  |
 | [0012](0012-watch-history.md)             | Watch history: one row per video, player saves    |
 | [0013](0013-liked-videos.md)              | Liked videos: a list read from likes              |
+| [0014](0014-google-sign-in.md)            | Sign-in with Google: OIDC code flow via Authlib   |
