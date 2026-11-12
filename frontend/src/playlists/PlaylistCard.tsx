@@ -3,18 +3,19 @@ import { Link } from 'react-router'
 import Icon from '../components/Icon'
 import { formatVideoCount } from '../lib/format'
 import styles from './PlaylistCard.module.css'
-import { playlistUrl } from './paths'
 import type { Playlist } from './types'
 
 /** YouTube's playlist card: a cover on a stack, the count on it, the title, `lines` of detail. */
 export default function PlaylistCard({
   playlist,
+  url,
   lines = [],
 }: {
-  playlist: Playlist
+  /** A stored playlist, or Liked videos. */
+  playlist: Pick<Playlist, 'title' | 'thumbnail_url' | 'video_count'>
+  url: string
   lines?: string[]
 }) {
-  const url = playlistUrl(playlist)
   return (
     <article className={styles.card}>
       {/* The title link names the playlist; this one is a larger target for the same page. */}

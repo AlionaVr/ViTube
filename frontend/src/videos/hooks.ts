@@ -1,5 +1,6 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import { likedKeys } from '../liked/hooks'
 import { getVideo, listCategories, listMyVideos, listRelated, listVideos, rateVideo } from './api'
 import type { Category, Rating, Video, VideoStatus } from './types'
 
@@ -107,5 +108,7 @@ export function useRateVideo(id: string) {
     onSuccess: (result) => {
       queryClient.setQueryData<Video>(key, (video) => video && { ...video, ...result })
     },
+    // Liked videos, its count and cover follow the rating. Returned: mutateAsync waits for it.
+    onSettled: () => queryClient.invalidateQueries({ queryKey: likedKeys.all }),
   })
 }

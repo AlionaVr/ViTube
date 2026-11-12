@@ -5,7 +5,7 @@ from collections.abc import Callable
 from datetime import datetime
 
 import pytest
-from httpx2 import AsyncClient, Response
+from httpx2 import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,23 +20,13 @@ from tests.interactions.conftest import (
     csrf,
     meet_after,
     posted,
+    rate,
+    rated,
     user_by_email,
 )
 from tests.videos.factories import get_video, grant, make_video
 
 NOT_READY = [status for status in VideoStatus if status is not VideoStatus.READY]
-
-
-async def rate(client: AsyncClient, video: Video, rating: str) -> Response:
-    return await client.put(
-        f"/api/videos/{video.public_id}/rating", json={"rating": rating}, headers=csrf(client)
-    )
-
-
-async def rated(client: AsyncClient, video: Video, rating: str) -> dict[str, object]:
-    response = await rate(client, video, rating)
-    assert response.status_code == 200
-    return response.json()
 
 
 async def stored(db: AsyncSession, video: Video) -> tuple[int, list[int]]:

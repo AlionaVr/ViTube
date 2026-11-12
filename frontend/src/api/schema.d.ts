@@ -946,6 +946,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/me/liked": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Your Liked videos: count, cover and last change
+         * @description Counts only the liked videos you may watch now, as the list shows them.
+         */
+        get: operations["get_liked_api_me_liked_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/me/liked/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Your liked videos, newest like first
+         * @description Only the videos you may watch now: one that turns private or hidden leaves the list and comes back with access.
+         */
+        get: operations["list_liked_api_me_liked_items_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -1180,6 +1220,37 @@ export interface components {
              */
             before: string | null;
         };
+        /** LikedItem */
+        LikedItem: {
+            video: components["schemas"]["VideoSummary"];
+            /**
+             * Liked At
+             * Format: date-time
+             */
+            liked_at: string;
+        };
+        /**
+         * LikedOut
+         * @description Liked videos (list=LL) as a playlist header or card shows it.
+         */
+        LikedOut: {
+            /**
+             * Video Count
+             * @description Liked videos you may watch now, as the list shows
+             */
+            video_count: number;
+            /**
+             * Thumbnail Url
+             * @description The newest liked video's; null: none
+             */
+            thumbnail_url: string | null;
+            /**
+             * Updated At
+             * @description When it was liked; null: no videos
+             */
+            updated_at: string | null;
+            owner: components["schemas"]["ChannelSummary"];
+        };
         /**
          * ModeratedComment
          * @description A comment as a moderator sees it, with the video it is on.
@@ -1303,6 +1374,13 @@ export interface components {
         Page_HistoryItem_: {
             /** Items */
             items: components["schemas"]["HistoryItem"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
+        /** Page[LikedItem] */
+        Page_LikedItem_: {
+            /** Items */
+            items: components["schemas"]["LikedItem"][];
             /** Next Cursor */
             next_cursor: string | null;
         };
@@ -3731,6 +3809,58 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_liked_api_me_liked_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LikedOut"];
+                };
+            };
+        };
+    };
+    list_liked_api_me_liked_items_get: {
+        parameters: {
+            query?: {
+                /** @description next_cursor of the last page */
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_LikedItem_"];
+                };
             };
             /** @description Validation Error */
             422: {

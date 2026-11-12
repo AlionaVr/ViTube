@@ -43,6 +43,21 @@ async def signup(client: AsyncClient, email: str) -> None:
     assert response.status_code == 201
 
 
+# --- Video ratings ---
+
+
+async def rate(client: AsyncClient, video: Video, rating: str) -> Response:
+    return await client.put(
+        f"/api/videos/{video.public_id}/rating", json={"rating": rating}, headers=csrf(client)
+    )
+
+
+async def rated(client: AsyncClient, video: Video, rating: str) -> dict[str, object]:
+    response = await rate(client, video, rating)
+    assert response.status_code == 200
+    return response.json()
+
+
 # --- Comments ---
 
 

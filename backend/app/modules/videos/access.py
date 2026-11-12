@@ -70,6 +70,26 @@ def viewable(user: User | None) -> ColumnElement[bool]:
     return or_(Video.owner_id == user.id, open_to_all, and_(allowed, granted))
 
 
+def watchable(user: User | None) -> ColumnElement[bool]:
+    """Videos a personal list (playlist, history) shows: ready ones the user may watch.
+    Rows of the others stay: the video may come back, and a lost one must not show that it
+    still exists (ADR 0004)."""
+    return and_(Video.status == VideoStatus.READY, viewable(user))
+
+
+def interactable(user: User | None) -> ColumnElement[bool]:
+    """can_interact as a SQL condition: Liked videos shows only videos whose like can still be
+    taken back. The same rule: tests/videos/test_visibility_rules.py checks the two agree."""
+    allowed = and_(Video.status == VideoStatus.READY, *videos.NOT_RESTRICTED)
+    if user is not None and user.role.at_least(Role.MODERATOR):
+        return allowed
+    open_to_all = Video.visibility != Visibility.PRIVATE
+    if user is None:
+        return and_(allowed, open_to_all)
+    granted = exists().where(VideoAccess.video_id == Video.id, VideoAccess.user_id == user.id)
+    return and_(allowed, or_(Video.owner_id == user.id, open_to_all, granted))
+
+
 async def get_viewable(db: AsyncSession, user: User | None, public_id: str) -> Video:
     """The video, or NotFound: others never learn that a private video exists (no 403)."""
     video = await videos.get_by_public_id(db, public_id)

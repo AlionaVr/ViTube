@@ -6,6 +6,7 @@ import Spinner from '../../components/Spinner'
 import { useInfiniteScroll } from '../../hooks/useInfiniteScroll'
 import { useChannelPlaylists } from '../../playlists/hooks'
 import PlaylistCard, { PlaylistCardSkeleton } from '../../playlists/PlaylistCard'
+import { playlistUrl } from '../../playlists/paths'
 import grid from '../../styles/grid.module.css'
 import styles from './ChannelPlaylists.module.css'
 
@@ -38,7 +39,7 @@ export default function ChannelPlaylists() {
         <>
           <div className={grid.grid}>
             {items.map((playlist) => (
-              <PlaylistCard key={playlist.id} playlist={playlist} />
+              <PlaylistCard key={playlist.id} playlist={playlist} url={playlistUrl(playlist)} />
             ))}
           </div>
           <div ref={sentinel} />

@@ -2985,6 +2985,81 @@
         }
       }
     },
+    "/api/me/liked": {
+      "get": {
+        "tags": [
+          "liked videos"
+        ],
+        "summary": "Your Liked videos: count, cover and last change",
+        "description": "Counts only the liked videos you may watch now, as the list shows them.",
+        "operationId": "get_liked_api_me_liked_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LikedOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me/liked/items": {
+      "get": {
+        "tags": [
+          "liked videos"
+        ],
+        "summary": "Your liked videos, newest like first",
+        "description": "Only the videos you may watch now: one that turns private or hidden leaves the list and comes back with access.",
+        "operationId": "list_liked_api_me_liked_items_get",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "next_cursor of the last page",
+              "title": "Cursor"
+            },
+            "description": "next_cursor of the last page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_LikedItem_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/health": {
       "get": {
         "tags": [
@@ -3461,6 +3536,70 @@
         ],
         "title": "ItemMove"
       },
+      "LikedItem": {
+        "properties": {
+          "video": {
+            "$ref": "#/components/schemas/VideoSummary"
+          },
+          "liked_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Liked At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "video",
+          "liked_at"
+        ],
+        "title": "LikedItem"
+      },
+      "LikedOut": {
+        "properties": {
+          "video_count": {
+            "type": "integer",
+            "title": "Video Count",
+            "description": "Liked videos you may watch now, as the list shows"
+          },
+          "thumbnail_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnail Url",
+            "description": "The newest liked video's; null: none"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At",
+            "description": "When it was liked; null: no videos"
+          },
+          "owner": {
+            "$ref": "#/components/schemas/ChannelSummary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "video_count",
+          "thumbnail_url",
+          "updated_at",
+          "owner"
+        ],
+        "title": "LikedOut",
+        "description": "Liked videos (list=LL) as a playlist header or card shows it."
+      },
       "ModeratedComment": {
         "properties": {
           "id": {
@@ -3758,6 +3897,34 @@
           "next_cursor"
         ],
         "title": "Page[HistoryItem]"
+      },
+      "Page_LikedItem_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LikedItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "Page[LikedItem]"
       },
       "Page_ModeratedVideo_": {
         "properties": {

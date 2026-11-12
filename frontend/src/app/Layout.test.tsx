@@ -76,7 +76,9 @@ describe('Layout', () => {
     })
     renderApp('/')
     expect(await screen.findByRole('button', { name: 'Account menu' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Liked videos' })).toBeInTheDocument()
+    const library = ['History', 'Playlists', 'Watch later', 'Liked videos', 'Your videos']
+    const links = screen.getAllByRole('link').map((link) => link.textContent)
+    expect(links.filter((name) => library.includes(name ?? ''))).toEqual(library)
     const heading = await screen.findByRole('heading', { name: 'Subscriptions' })
     expect(within(heading).getByRole('link')).toHaveAttribute('href', '/feed/channels')
     expect(screen.getByRole('link', { name: 'Anna' })).toHaveAttribute('href', '/@anna')
