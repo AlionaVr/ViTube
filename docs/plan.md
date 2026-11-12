@@ -37,6 +37,8 @@ YouTube layout: header with logo, search and avatar; collapsible sidebar.
    created on sign-up.
 7. **Moderation** `/moderation` — report queue, hidden videos; for admins, restricted accounts and the audit log
    with filters.
+8. **History** `/feed/history` — watched videos by day: search, remove, clear, pause. A red bar on every thumbnail
+   shows where the viewer stopped; the video resumes there.
 
 ## Acceptance
 
@@ -68,7 +70,7 @@ One access policy, `can_view(user, video)`, is used everywhere.
 
 | Table             | Key fields / constraints                                                                                                                             |
 |-------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `users`           | email, handle (citext, unique), password_hash, role, status (active / banned / terminated), avatar, banner                                           |
+| `users`           | email, handle (citext, unique), password_hash, role, status (active / banned / terminated), avatar, banner, history_paused                           |
 | `videos`          | public_id (11 chars), owner, title, description, visibility, status, is_hidden, duration, counters, `search_vector` (GIN), title trigram (GIN)       |
 | `video_access`    | (video, user); only the owner grants                                                                                                                 |
 | `video_reactions` | (user, video), value ±1                                                                                                                              |
@@ -76,7 +78,7 @@ One access policy, `can_view(user, video)`, is used everywhere.
 | `subscriptions`   | (subscriber, channel), check: not self                                                                                                               |
 | `playlists`       | owner, title, visibility, kind = user / watch_later                                                                                                  |
 | `playlist_items`  | (playlist, video), position                                                                                                                          |
-| `watch_history`   | (user, video), last_position_sec, watched_at                                                                                                         |
+| `watch_history`   | (user, video), position_sec, watched_at ([ADR 0012](adr/0012-watch-history.md))                                                                      |
 | `reports`         | reporter, target (video xor comment), reason, status, resolved_by                                                                                    |
 | `audit_log`       | source (api / cli), actor, action, target, details jsonb; append-only, no foreign keys                                                               |
 
