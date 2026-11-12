@@ -12,6 +12,9 @@ def test_health() -> None:
     assert response.json() == {"status": "ok"}
 
 
-def test_swagger_is_served() -> None:
-    assert client.get("/docs").status_code == 200
+def test_openapi_schema_is_served() -> None:
     assert client.get("/api/openapi.json").status_code == 200
+
+
+def test_swagger_page_is_left_to_nginx() -> None:
+    assert client.get("/docs").status_code == 404

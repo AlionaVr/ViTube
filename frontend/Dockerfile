@@ -15,3 +15,7 @@ FROM nginxinc/nginx-unprivileged:1.30-alpine
 # into /etc/nginx/conf.d at start; compose mounts a tmpfs there, as the root FS is read-only.
 COPY --from=nginx-conf default.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html
+# API docs (/docs): Swagger UI from the locked npm package and our page; no CDN at runtime.
+COPY --from=build /app/node_modules/swagger-ui-dist/swagger-ui-bundle.js \
+    /app/node_modules/swagger-ui-dist/swagger-ui.css /usr/share/nginx/html/swagger/
+COPY --from=nginx-conf swagger/ /usr/share/nginx/html/swagger/

@@ -118,9 +118,9 @@ accounts are never joined by email ([ADR 0014](docs/adr/0014-google-sign-in.md))
 ## Architecture
 
 ```
-Browser ──:80──► nginx ─┬─ /             → React static files
-                        ├─ /api/*, /docs → api (FastAPI)
-                        └─ /media/*      → auth_request → minio
+Browser ──:80──► nginx ─┬─ /, /docs     → static files (React, Swagger UI)
+                        ├─ /api/*       → api (FastAPI)
+                        └─ /media/*     → auth_request → minio
 api    ──► postgres, redis, minio; Google (sign-in only)
 worker (Celery + ffmpeg) ◄── redis; ──► minio, postgres
 one-shot jobs: minio-perms, migrate, minio-init, seed

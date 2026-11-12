@@ -48,7 +48,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 app = FastAPI(
     title="ViTube API",
     version="0.1.0",
-    docs_url="/docs",
+    docs_url=None,  # nginx serves /docs from its image: FastAPI's page loads scripts from a CDN
     redoc_url=None,
     openapi_url="/api/openapi.json",  # under /api so nginx proxies it with the rest of the API
     lifespan=lifespan,

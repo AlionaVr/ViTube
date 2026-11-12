@@ -61,9 +61,9 @@ YouTube layout: header with logo, search and avatar; collapsible sidebar.
 ## Architecture
 
 ```
-Browser ──:80──► nginx ─┬─ /             → React static files
-                        ├─ /api/*, /docs → api (FastAPI)
-                        └─ /media/*      → auth_request → minio
+Browser ──:80──► nginx ─┬─ /, /docs     → static files (React, Swagger UI)
+                        ├─ /api/*       → api (FastAPI)
+                        └─ /media/*     → auth_request → minio
 api    ──► postgres, redis, minio
 worker (Celery + ffmpeg) ◄── redis; ──► minio, postgres
 one-shot jobs: minio-perms, migrate, minio-init, seed

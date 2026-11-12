@@ -49,8 +49,15 @@ server {
         proxy_pass http://api;
     }
 
+    # API docs: Swagger UI from the image (nginx/swagger/), reading /api/openapi.json.
+    # File names have no hashes: revalidate, so a deploy is picked up at once.
     location = /docs {
-        proxy_pass http://api;
+        try_files /swagger/index.html =404;
+        expires -1;
+    }
+
+    location /swagger/ {
+        expires -1;
     }
 
     # Media (ADR 0004): the API decides, nginx streams from MinIO. Every request is checked, with

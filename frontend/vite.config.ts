@@ -13,7 +13,9 @@ export default defineConfig({
       '/api': api,
       // Videos and thumbnails: nginx checks access, MinIO answers Range requests.
       '/media': api,
+      // API docs: a page and Swagger UI files in the nginx image.
       '/docs': api,
+      '/swagger': api,
     },
   },
   test: {
