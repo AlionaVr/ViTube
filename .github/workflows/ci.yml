@@ -62,6 +62,11 @@ jobs:
       - uses: docker/setup-compose-action@v2
         with:
           version: latest
+      # install.sh downloads the demo videos; the cache spares their hosts a fetch on every run.
+      - uses: actions/cache@v6
+        with:
+          path: demo-data/videos
+          key: demo-videos-${{ hashFiles('demo-data/videos.json') }}
       - name: Deploy
         run: ./install.sh
       - name: Re-run is safe

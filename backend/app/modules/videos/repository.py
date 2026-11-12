@@ -223,6 +223,12 @@ async def insert_unless_taken(
     return await db.scalar(statement)
 
 
+async def get_owned_by_title(db: AsyncSession, owner_id: UUID, title: str) -> Video | None:
+    """The owner's oldest video with this title (titles aren't unique). For the seed."""
+    query = select(Video).where(Video.owner_id == owner_id, Video.title == title)
+    return await db.scalar(query.order_by(Video.id).limit(1))
+
+
 async def move_status(
     db: AsyncSession, video_id: UUID, *, current: VideoStatus, new: VideoStatus
 ) -> bool:

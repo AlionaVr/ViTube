@@ -9,10 +9,15 @@ right away.
 
 1. Installs Docker Engine and the compose plugin from Docker's apt repo if missing.
 2. Creates `.env` from `.env.example` with random secrets. Never overwrites an existing `.env`.
-3. Runs `docker compose up -d --build --wait`:
+3. Downloads the demo videos (`demo-data/download.py`, pinned hashes): they aren't in git, and the backend has no
+   internet. A failed download only warns; the site works without them.
+4. Runs `docker compose up -d --build --wait`:
     - services: nginx, api, worker, postgres, redis, minio;
-    - one-shot jobs: `migrate`, `minio-init`, `seed`.
-4. Prints the site URL, Swagger URL and demo logins.
+    - one-shot jobs: `migrate`, `minio-init`.
+5. Runs the one-shot `seed` job (`docker compose run --rm --no-deps seed`): demo accounts and videos. Safe to re-run.
+   *(Amended 2026-11-12: was part of `up`, but `up --wait` fails when a job that nothing depends on exits fast, even
+   with code 0.)*
+6. Prints the site URL, Swagger URL, demo logins and their password.
 
 Only port 80 is exposed. All services have healthchecks, `restart: unless-stopped`, and named volumes.
 

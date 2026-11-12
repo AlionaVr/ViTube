@@ -154,6 +154,28 @@ services:
       postgres:
         condition: service_healthy
 
+  # One-shot: demo accounts and videos. install.sh runs it after `up` (`compose run --rm seed`):
+  # `up --wait` fails on a job that exits fast with nothing depending on it. Safe to re-run.
+  seed:
+    <<: *backend
+    restart: "no"
+    profiles: [ seed ]
+    environment:
+      <<: [ *backend-env, *storage-env ]
+      DEMO_PASSWORD: ${DEMO_PASSWORD:?}
+    command: [ "python", "-m", "app.seed" ]
+    volumes:
+      - ./demo-data:/demo-data:ro
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      minio-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      worker:  # takes the queued videos; the seed waits for them
+        condition: service_started
+
   api:
     <<: *backend
     build:

@@ -9,6 +9,7 @@ die() {
   printf '\nError: %s\n' "$*" >&2
   exit 1
 }
+warn() { printf '\nWarning: %s\n' "$*" >&2; }
 
 # Root runs commands directly; other users go through sudo.
 SUDO=()
@@ -88,6 +89,17 @@ create_env() {
   mv .env.tmp .env # atomic: a failed run never leaves a half-written .env behind
 }
 
+# The demo videos aren't in git, and the backend has no internet (ADR 0008). Without them the site
+# still works: the seed skips the missing ones, and a re-run adds them.
+download_demo_videos() {
+  log "Downloading the demo videos"
+  if ! command -v python3 >/dev/null; then
+    warn "python3 is missing, so there are no demo videos. Install it and re-run to add them."
+    return
+  fi
+  python3 demo-data/download.py || warn "Could not download the demo videos. Re-run later to add them."
+}
+
 start_stack() {
   log "Building and starting the stack (the first run takes a few minutes)"
   "${DOCKER[@]}" compose up -d --build --wait ||
@@ -105,9 +117,18 @@ wait_for_site() {
   die "The site does not answer. Check: ${DOCKER[*]} compose logs nginx api"
 }
 
+# Not part of `up`: `up --wait` fails on a job that exits fast with nothing depending on it.
+seed_demo_data() {
+  log "Adding the demo data (the first run waits for the worker to process the videos)"
+  # --no-deps: `up --wait` has started them all; a plain `run` would run the migrate job again.
+  "${DOCKER[@]}" compose run --rm --no-deps seed ||
+    die "The demo data was not added. Check: ${DOCKER[*]} compose logs worker; re-run ./install.sh to go on"
+}
+
 print_summary() {
-  local port host url
+  local port host url password
   port=$(sed -n 's/^HTTP_PORT=//p' .env)
+  password=$(sed -n 's/^DEMO_PASSWORD=//p' .env)
   host=$(hostname -I 2>/dev/null | awk '{print $1}')
   url="http://${host:-localhost}"
   [ "${port:-80}" = 80 ] || url="$url:$port"
@@ -115,6 +136,9 @@ print_summary() {
   log "ViTube is running"
   printf '  Site:      %s/\n' "$url"
   printf '  API docs:  %s/docs\n' "$url"
+  printf '  Demo:      admin@example.com (admin), moderator@example.com (moderator),\n'
+  printf '             anna@example.com (user); all accounts are in README.md\n'
+  printf '  Password:  %s\n' "$password"
   printf '  Stop:      %s compose down\n' "${DOCKER[*]}"
 }
 
@@ -124,8 +148,10 @@ main() {
   pick_docker_command
   check_compose
   create_env
+  download_demo_videos
   start_stack
   wait_for_site
+  seed_demo_data
   print_summary
 }
 
