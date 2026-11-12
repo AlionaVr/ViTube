@@ -5,13 +5,14 @@ import EmptyState from '../../components/EmptyState'
 import ErrorState from '../../components/ErrorState'
 import Icon from '../../components/Icon'
 import IconButton from '../../components/IconButton'
-import MenuChoices from '../../components/Menu'
+import MenuChoices, { type MenuChoice } from '../../components/Menu'
 import Popover from '../../components/Popover'
 import Spinner from '../../components/Spinner'
 import Thumbnail from '../../components/Thumbnail'
 import { useInfiniteScroll } from '../../hooks/useInfiniteScroll'
 import { formatDate, formatExact } from '../../lib/format'
 import EditDetailsDialog from '../../upload/EditDetailsDialog'
+import SharePrivatelyDialog from '../../upload/SharePrivatelyDialog'
 import { useMyVideos } from '../../videos/hooks'
 import { watchUrl } from '../../videos/paths'
 import type { OwnVideo, VideoStatus } from '../../videos/types'
@@ -33,6 +34,7 @@ export default function StudioVideosPage() {
   const location = useLocation()
   const videos = useMyVideos(viewer.status === 'authenticated')
   const [editing, setEditing] = useState<OwnVideo | null>(null)
+  const [sharing, setSharing] = useState<OwnVideo | null>(null)
   const sentinel = useInfiniteScroll<HTMLDivElement>(
     () => void videos.fetchNextPage(),
     videos.hasNextPage && !videos.isFetchingNextPage && !videos.isFetchNextPageError,
@@ -62,7 +64,12 @@ export default function StudioVideosPage() {
         <>
           <VideoTable label="Videos">
             {items.map((video) => (
-              <VideoRow key={video.id} video={video} onEdit={() => setEditing(video)} />
+              <VideoRow
+                key={video.id}
+                video={video}
+                onEdit={() => setEditing(video)}
+                onShare={() => setSharing(video)}
+              />
             ))}
           </VideoTable>
           <div ref={sentinel} />
@@ -80,6 +87,7 @@ export default function StudioVideosPage() {
         </>
       )}
       {editing && <EditDetailsDialog video={editing} onClose={() => setEditing(null)} />}
+      {sharing && <SharePrivatelyDialog video={sharing} onClose={() => setSharing(null)} />}
     </div>
   )
 }
@@ -131,9 +139,19 @@ function VideoTable({
   )
 }
 
+interface RowActions {
+  onEdit: () => void
+  onShare: () => void
+}
+
 /** Studio's ⋮ on a row, always shown here (not only on hover). */
-function RowMenu({ video, onEdit }: { video: OwnVideo; onEdit: () => void }) {
+function RowMenu({ video, onEdit, onShare }: { video: OwnVideo } & RowActions) {
   const label = `Options for ${video.title}`
+  const choices: MenuChoice[] = [{ icon: 'edit', label: 'Edit details', onSelect: onEdit }]
+  // Grants count only while a video is private (ADR 0004).
+  if (video.visibility === 'private') {
+    choices.push({ icon: 'personAdd', label: 'Share privately', onSelect: onShare })
+  }
   return (
     <Popover
       label={label}
@@ -141,17 +159,12 @@ function RowMenu({ video, onEdit }: { video: OwnVideo; onEdit: () => void }) {
       align="end"
       trigger={(props) => <IconButton icon="moreVert" label={label} {...props} />}
     >
-      {(close) => (
-        <MenuChoices
-          choices={[{ icon: 'edit', label: 'Edit details', onSelect: onEdit }]}
-          close={close}
-        />
-      )}
+      {(close) => <MenuChoices choices={choices} close={close} />}
     </Popover>
   )
 }
 
-function VideoRow({ video, onEdit }: { video: OwnVideo; onEdit: () => void }) {
+function VideoRow({ video, ...actions }: { video: OwnVideo } & RowActions) {
   const url = watchUrl(video.id)
   return (
     <tr className={styles.row}>
@@ -172,7 +185,7 @@ function VideoRow({ video, onEdit }: { video: OwnVideo; onEdit: () => void }) {
             {video.description && <p className={styles.description}>{video.description}</p>}
           </div>
           <div className={styles.menu}>
-            <RowMenu video={video} onEdit={onEdit} />
+            <RowMenu video={video} {...actions} />
           </div>
         </div>
       </td>

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Link, Outlet, useLocation, useParams } from 'react-router'
 
 import { ApiError } from '../../api/client'
+import { HANDLE } from '../../channels/handle'
 import { useChannel } from '../../channels/hooks'
 import SubscribeButton from '../../channels/SubscribeButton'
 import type { Channel } from '../../channels/types'
@@ -19,9 +20,6 @@ import RestrictDialog from '../moderation/RestrictDialog'
 import RowMenu from '../moderation/RowMenu'
 import NotFoundPage from '../NotFoundPage'
 import styles from './ChannelPage.module.css'
-
-// The users.handle rule. A malformed one can't exist, so it needs no request.
-const HANDLE = /^[A-Za-z0-9._-]{3,30}$/
 
 /** Whose view the tabs show: the owner's lists every visibility (from /api/me/channel). */
 export type TabView = 'loading' | 'public' | 'own'

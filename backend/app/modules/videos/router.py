@@ -18,6 +18,7 @@ from app.modules.videos.schemas import (
     HANDLE_PATTERN,
     AccessGrant,
     PublicId,
+    SharedWith,
     UploadLimits,
     VideoCreate,
     VideoDetail,
@@ -130,10 +131,21 @@ async def upload_file(
         raise DomainError("The upload was interrupted") from None  # nothing was stored
 
 
+@router.get(
+    "/{public_id}/access",
+    response_model=list[SharedWith],
+    summary="Who may watch your video",
+    description=f"The people you shared it with, first shared first; up to {service.SHARED_MAX}.",
+)
+async def list_access(public_id: PublicId, user: CurrentUser, db: DbSession) -> list[SharedWith]:
+    return await service.list_access(db, user, public_id)
+
+
 @router.post(
     "/{public_id}/access",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Let a user watch your private video",
+    description=f"Sharing again changes nothing; up to {service.SHARED_MAX} people per video.",
 )
 async def grant_access(
     public_id: PublicId, body: AccessGrant, user: CurrentUser, db: DbSession

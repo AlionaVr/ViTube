@@ -226,9 +226,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Who may watch your video
+         * @description The people you shared it with, first shared first; up to 50.
+         */
+        get: operations["list_access_api_videos__public_id__access_get"];
         put?: never;
-        /** Let a user watch your private video */
+        /**
+         * Let a user watch your private video
+         * @description Sharing again changes nothing; up to 50 people per video.
+         */
         post: operations["grant_access_api_videos__public_id__access_post"];
         delete?: never;
         options?: never;
@@ -1785,6 +1792,23 @@ export interface components {
             /** Description */
             description: string;
         };
+        /**
+         * SharedWith
+         * @description Someone the owner shared a video with.
+         */
+        SharedWith: {
+            /** Handle */
+            handle: string;
+            /** Name */
+            name: string;
+            /** Avatar Url */
+            avatar_url: string | null;
+            /**
+             * Shared At
+             * Format: date-time
+             */
+            shared_at: string;
+        };
         /** StatusIn */
         StatusIn: {
             status: components["schemas"]["UserStatus"];
@@ -2428,6 +2452,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VideoOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_access_api_videos__public_id__access_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Public video id */
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SharedWith"][];
                 };
             };
             /** @description Validation Error */

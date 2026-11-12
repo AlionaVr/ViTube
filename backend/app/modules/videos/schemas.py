@@ -125,6 +125,16 @@ class AccessGrant(BaseModel):
     handle: str = Field(pattern=HANDLE_PATTERN, description="Who may watch, without the @")
 
 
+class SharedWith(ChannelSummary):
+    """Someone the owner shared a video with."""
+
+    shared_at: datetime
+
+    @classmethod
+    def build(cls, user: User, shared_at: datetime) -> "SharedWith":
+        return cls(**ChannelSummary.of(user).model_dump(), shared_at=shared_at)
+
+
 class UploadLimits(BaseModel):
     max_size_bytes: int
     max_duration_sec: int

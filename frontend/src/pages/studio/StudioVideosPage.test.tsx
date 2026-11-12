@@ -278,6 +278,106 @@ describe('StudioVideosPage', () => {
     })
   })
 
+  describe('Share privately', () => {
+    const VIDEO = own(1, { visibility: 'private' })
+    const ACCESS = `/api/videos/${VIDEO.id}/access`
+    const person = (handle: string) => ({
+      handle,
+      name: handle,
+      avatar_url: null,
+      shared_at: '2026-11-12T10:00:00Z',
+    })
+
+    /** The access list as the server keeps it; `refuse` answers a share instead. */
+    function mockSharing(refuse?: () => Response) {
+      let people = [person('ben')]
+      return mockApi({
+        ...SIGNED_IN,
+        'GET /api/me/videos': () => json(200, page([VIDEO])),
+        [`GET ${ACCESS}`]: () => json(200, people),
+        [`POST ${ACCESS}`]: async (request) => {
+          if (refuse) return refuse()
+          const { handle } = (await request.clone().json()) as { handle: string }
+          people = [...people, person(handle)]
+          return new Response(null, { status: 204 })
+        },
+        [`DELETE ${ACCESS}/ben`]: () => {
+          people = people.filter((p) => p.handle !== 'ben')
+          return new Response(null, { status: 204 })
+        },
+      })
+    }
+
+    async function openShare() {
+      renderApp('/studio/videos')
+      await screen.findByRole('link', { name: 'Video 1' })
+      await userEvent.click(rowOf('Video 1').getByRole('button', { name: 'Options for Video 1' }))
+      await userEvent.click(screen.getByRole('menuitem', { name: 'Share privately' }))
+      return within(screen.getByRole('dialog', { name: 'Share privately' }))
+    }
+
+    it('adds a person by handle and says so', async () => {
+      const fetch = mockSharing()
+      const dialog = await openShare()
+      expect(await dialog.findByText('@ben')).toBeInTheDocument()
+
+      await userEvent.type(dialog.getByRole('textbox', { name: 'Handle' }), '@anna{Enter}')
+
+      expect(await dialog.findByText('@anna')).toBeInTheDocument()
+      expect(screen.getByRole('status')).toHaveTextContent('Shared with @anna')
+      expect(dialog.getByRole('textbox', { name: 'Handle' })).toHaveValue('')
+      const post = fetch.mock.calls.find(([request]) => request.method === 'POST')![0]
+      expect(await post.json()).toEqual({ handle: 'anna' })
+    })
+
+    it('removes a person and says so', async () => {
+      mockSharing()
+      const dialog = await openShare()
+
+      await userEvent.click(await dialog.findByRole('button', { name: 'Remove @ben' }))
+
+      expect(await dialog.findByText('Only you can watch this video.')).toBeInTheDocument()
+      expect(screen.getByRole('status')).toHaveTextContent('Removed @ben')
+    })
+
+    it('shows why a share was refused under the field', async () => {
+      mockSharing(() => json(404, { detail: 'No user with this handle' }))
+      const dialog = await openShare()
+
+      await userEvent.type(dialog.getByRole('textbox', { name: 'Handle' }), 'nobody{Enter}')
+
+      expect(await dialog.findByText('No user with this handle')).toBeInTheDocument()
+      expect(dialog.getByRole('textbox', { name: 'Handle' })).toHaveAttribute(
+        'aria-invalid',
+        'true',
+      )
+    })
+
+    it('checks the handle before asking the server', async () => {
+      const fetch = mockSharing()
+      const dialog = await openShare()
+
+      await userEvent.type(dialog.getByRole('textbox', { name: 'Handle' }), 'a b{Enter}')
+
+      expect(dialog.getByText('Enter a handle such as @anna')).toBeInTheDocument()
+      expect(fetch.mock.calls.some(([request]) => request.method === 'POST')).toBe(false)
+    })
+
+    it('is offered for private videos only', async () => {
+      mockApi({
+        ...SIGNED_IN,
+        'GET /api/me/videos': () => json(200, page([own(1, { visibility: 'unlisted' })])),
+      })
+      renderApp('/studio/videos')
+      await screen.findByRole('link', { name: 'Video 1' })
+
+      await userEvent.click(rowOf('Video 1').getByRole('button', { name: 'Options for Video 1' }))
+
+      expect(screen.getByRole('menuitem', { name: 'Edit details' })).toBeInTheDocument()
+      expect(screen.queryByRole('menuitem', { name: 'Share privately' })).not.toBeInTheDocument()
+    })
+  })
+
   it('is where Your videos in the guide leads', async () => {
     mockApi({ ...SIGNED_IN, 'GET /api/me/videos': () => json(200, page([])) })
     renderApp('/studio/videos')
