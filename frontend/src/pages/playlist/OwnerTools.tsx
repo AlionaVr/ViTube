@@ -129,10 +129,10 @@ export interface ItemActions {
   moveToBottom?: () => void
 }
 
-/** ⋮ on a video of the owner's playlist. */
-export function ItemMenu({ playlist, actions }: { playlist: Playlist; actions: ItemActions }) {
+/** ⋮ on a video of the owner's playlist; `title` names the playlist. */
+export function ItemMenu({ title, actions }: { title: string; actions: ItemActions }) {
   const choices: MenuChoice[] = [
-    { icon: 'delete', label: `Remove from ${playlist.title}`, onSelect: actions.remove },
+    { icon: 'delete', label: `Remove from ${title}`, onSelect: actions.remove },
   ]
   if (actions.moveToTop) {
     choices.push({ icon: 'moveTop', label: 'Move to top', onSelect: actions.moveToTop })

@@ -1,5 +1,6 @@
 import '@fontsource/roboto/700.css'
 
+import type { InfiniteData, UseInfiniteQueryResult } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router'
 
@@ -14,6 +15,7 @@ import Thumbnail from '../../components/Thumbnail'
 import { useInfiniteScroll } from '../../hooks/useInfiniteScroll'
 import { useToast } from '../../hooks/useToast'
 import { formatTimeAgo, formatUpdated, formatVideoCount, formatViews } from '../../lib/format'
+import { useLiked, useLikedItems } from '../../liked/hooks'
 import {
   useMoveInPlaylist,
   usePlaylist,
@@ -21,10 +23,11 @@ import {
   useRemoveFromPlaylist,
   useWatchLater,
 } from '../../playlists/hooks'
-import type { Playlist, PlaylistItem } from '../../playlists/types'
+import type { Playlist } from '../../playlists/types'
 import { VISIBILITY } from '../../playlists/visibility'
 import buttons from '../../styles/buttons.module.css'
 import { channelUrl, watchUrl } from '../../videos/paths'
+import type { Page, VideoSummary } from '../../videos/types'
 import { useViewer } from '../../viewer/useViewer'
 import SignInToSee from '../feed/SignInToSee'
 import { type ItemActions, ItemMenu, PlaylistTools } from './OwnerTools'
@@ -38,14 +41,20 @@ function Missing() {
 
 const NOT_CHANGED = 'Couldn’t change the playlist. Try again.'
 
+/** What the header shows: a stored playlist, or Liked videos, which the API counts from likes. */
+type Head = Pick<
+  Playlist,
+  'title' | 'description' | 'visibility' | 'video_count' | 'thumbnail_url' | 'owner'
+> & { updated_at: string | null }
+
 function Header({
   playlist,
   first,
-  own,
+  tools,
 }: {
-  playlist: Playlist
-  first: PlaylistItem | undefined
-  own: boolean
+  playlist: Head
+  first: VideoSummary | undefined
+  tools?: ReactNode
 }) {
   const { label, icon } = VISIBILITY[playlist.visibility]
   const { owner } = playlist
@@ -76,17 +85,16 @@ function Header({
           {label}
         </span>
         <span>{formatVideoCount(playlist.video_count)}</span>
-        <span>{formatUpdated(playlist.updated_at)}</span>
+        {playlist.updated_at && <span>{formatUpdated(playlist.updated_at)}</span>}
       </p>
       {playlist.description && (
         <div className={styles.description}>
           <ClampedText text={playlist.description} lines={2} more="...more" />
         </div>
       )}
-      {/* Watch later can't be edited or deleted. */}
-      {own && playlist.kind === 'user' && <PlaylistTools playlist={playlist} />}
+      {tools}
       {first && (
-        <Link to={watchUrl(first.video.id)} className={`${buttons.pill} ${styles.playAll}`}>
+        <Link to={watchUrl(first.id)} className={`${buttons.pill} ${styles.playAll}`}>
           <Icon name="play" />
           Play all
         </Link>
@@ -107,8 +115,7 @@ function HeaderSkeleton() {
   )
 }
 
-function Row({ item, number, menu }: { item: PlaylistItem; number: number; menu?: ReactNode }) {
-  const { video } = item
+function Row({ video, number, menu }: { video: VideoSummary; number: number; menu?: ReactNode }) {
   return (
     <li className={styles.item}>
       <span className={styles.number}>{number}</span>
@@ -136,6 +143,62 @@ function Row({ item, number, menu }: { item: PlaylistItem; number: number; menu?
   )
 }
 
+/** A playlist's or Liked videos' pages of rows. */
+type ItemsQuery = Pick<
+  UseInfiniteQueryResult<InfiniteData<Page<{ video: VideoSummary }>>>,
+  | 'data'
+  | 'isPending'
+  | 'refetch'
+  | 'fetchNextPage'
+  | 'hasNextPage'
+  | 'isFetchingNextPage'
+  | 'isFetchNextPageError'
+>
+
+function videosOf(query: ItemsQuery): VideoSummary[] {
+  return query.data?.pages.flatMap((page) => page.items.map((item) => item.video)) ?? []
+}
+
+/** The numbered rows, loaded as the viewer scrolls; `menu` gives a row its ⋮. */
+function Items({
+  query,
+  videos,
+  menu,
+}: {
+  query: ItemsQuery
+  videos: VideoSummary[]
+  menu?: (index: number) => ReactNode
+}) {
+  const sentinel = useInfiniteScroll<HTMLDivElement>(
+    () => void query.fetchNextPage(),
+    query.hasNextPage && !query.isFetchingNextPage && !query.isFetchNextPageError,
+  )
+  return (
+    <section className={styles.items} aria-label="Videos">
+      {query.isPending ? (
+        <Spinner label="Loading videos" />
+      ) : !query.data ? (
+        <ErrorState title="Can’t load the videos" onRetry={() => void query.refetch()} />
+      ) : videos.length === 0 ? (
+        <p className={styles.empty}>No videos in this playlist yet</p>
+      ) : (
+        <>
+          <ol className={styles.list}>
+            {videos.map((video, index) => (
+              <Row key={video.id} video={video} number={index + 1} menu={menu?.(index)} />
+            ))}
+          </ol>
+          <div ref={sentinel} />
+          {query.isFetchingNextPage && <Spinner label="Loading more videos" />}
+          {query.isFetchNextPageError && (
+            <ErrorState title="Can’t load more videos" onRetry={() => void query.fetchNextPage()} />
+          )}
+        </>
+      )}
+    </section>
+  )
+}
+
 function PlaylistView({ id }: { id: string }) {
   const playlist = usePlaylist(id)
   const items = usePlaylistItems(id)
@@ -143,80 +206,53 @@ function PlaylistView({ id }: { id: string }) {
   const remove = useRemoveFromPlaylist(id)
   const move = useMoveInPlaylist(id)
   const toast = useToast()
-  const sentinel = useInfiniteScroll<HTMLDivElement>(
-    () => void items.fetchNextPage(),
-    items.hasNextPage && !items.isFetchingNextPage && !items.isFetchNextPageError,
-  )
 
   if (playlist.error instanceof ApiError && playlist.error.status === 404) return <Missing />
   if (playlist.isError) {
     return <ErrorState title="Can’t load this playlist" onRetry={() => void playlist.refetch()} />
   }
-  const videos = items.data?.pages.flatMap((page) => page.items) ?? []
+  const videos = videosOf(items)
   const own =
     viewer.status === 'authenticated' && playlist.data?.owner.handle === viewer.user.handle
 
   // Promises, not mutate callbacks: those skip all but the last call, and a removed row unmounts.
   function actionsFor(index: number, title: string): ItemActions {
-    const videoId = videos[index].video.id
+    const videoId = videos[index].id
     const failed = () => toast(NOT_CHANGED)
     const moveBefore = (before: string | null) =>
       void move.mutateAsync({ videoId, before }).catch(failed)
     return {
       remove: () =>
         void remove.mutateAsync(videoId).then(() => toast(`Removed from ${title}`), failed),
-      moveToTop: index > 0 ? () => moveBefore(videos[0].video.id) : undefined,
+      moveToTop: index > 0 ? () => moveBefore(videos[0].id) : undefined,
       moveToBottom:
         index < videos.length - 1 || items.hasNextPage ? () => moveBefore(null) : undefined,
     }
   }
 
+  const data = playlist.data
   return (
     <div className={styles.page}>
-      <title>{playlist.data ? `${playlist.data.title} - ViTube` : 'ViTube'}</title>
-      {playlist.data ? (
-        <Header playlist={playlist.data} first={videos[0]} own={own} />
+      <title>{data ? `${data.title} - ViTube` : 'ViTube'}</title>
+      {data ? (
+        <Header
+          playlist={data}
+          first={videos[0]}
+          // Watch later can't be edited or deleted.
+          tools={own && data.kind === 'user' && <PlaylistTools playlist={data} />}
+        />
       ) : (
         <HeaderSkeleton />
       )}
-      <section className={styles.items} aria-label="Videos">
-        {items.isPending ? (
-          <Spinner label="Loading videos" />
-        ) : !items.data ? (
-          <ErrorState title="Can’t load the videos" onRetry={() => void items.refetch()} />
-        ) : videos.length === 0 ? (
-          <p className={styles.empty}>No videos in this playlist yet</p>
-        ) : (
-          <>
-            <ol className={styles.list}>
-              {videos.map((item, index) => (
-                <Row
-                  key={item.video.id}
-                  item={item}
-                  number={index + 1}
-                  menu={
-                    own &&
-                    playlist.data && (
-                      <ItemMenu
-                        playlist={playlist.data}
-                        actions={actionsFor(index, playlist.data.title)}
-                      />
-                    )
-                  }
-                />
-              ))}
-            </ol>
-            <div ref={sentinel} />
-            {items.isFetchingNextPage && <Spinner label="Loading more videos" />}
-            {items.isFetchNextPageError && (
-              <ErrorState
-                title="Can’t load more videos"
-                onRetry={() => void items.fetchNextPage()}
-              />
-            )}
-          </>
-        )}
-      </section>
+      <Items
+        query={items}
+        videos={videos}
+        menu={
+          own && data
+            ? (index) => <ItemMenu title={data.title} actions={actionsFor(index, data.title)} />
+            : undefined
+        }
+      />
     </div>
   )
 }
@@ -242,11 +278,55 @@ function WatchLater() {
   return <Spinner label="Loading Watch later" />
 }
 
+const LIKED_VIDEOS = 'Liked videos'
+
+function LikedView() {
+  const liked = useLiked(true)
+  const items = useLikedItems(true)
+
+  if (liked.isError) {
+    return <ErrorState title="Can’t load Liked videos" onRetry={() => void liked.refetch()} />
+  }
+  const videos = videosOf(items)
+  return (
+    <div className={styles.page}>
+      <title>{`${LIKED_VIDEOS} - ViTube`}</title>
+      {liked.data ? (
+        <Header
+          // Private and without a description, as YouTube's.
+          playlist={{ ...liked.data, title: LIKED_VIDEOS, description: '', visibility: 'private' }}
+          first={videos[0]}
+        />
+      ) : (
+        <HeaderSkeleton />
+      )}
+      <Items query={items} videos={videos} />
+    </div>
+  )
+}
+
+/** list=LL is the viewer's own Liked videos, as on YouTube: the list of their likes. */
+function LikedVideos() {
+  const viewer = useViewer()
+  if (viewer.status === 'guest') {
+    return (
+      <SignInToSee
+        icon="like"
+        title="Enjoy your favorite videos"
+        text="Sign in to see the videos you liked"
+      />
+    )
+  }
+  if (viewer.status === 'loading') return <Spinner label="Loading Liked videos" />
+  return <LikedView />
+}
+
 /** /playlist?list=<id>, as on YouTube. */
 export default function PlaylistPage() {
   const [params] = useSearchParams()
   const id = params.get('list') ?? ''
   if (id === 'WL') return <WatchLater />
+  if (id === 'LL') return <LikedVideos />
   if (!UUID.test(id)) return <Missing />
   return <PlaylistView key={id} id={id} />
 }

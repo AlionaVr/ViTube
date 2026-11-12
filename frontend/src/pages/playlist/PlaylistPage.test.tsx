@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 import type { Playlist, PlaylistItem } from '../../playlists/types'
 
 import { ANNA, json, mockApi } from '../../test/api'
+import { liked, likedItem } from '../../test/liked'
 import { intersectAll } from '../../test/observers'
 import { item, playlist } from '../../test/playlists'
 import { renderApp } from '../../test/render'
@@ -169,17 +170,14 @@ describe('PlaylistPage', () => {
     expect(await screen.findByText('The playlist does not exist.')).toBeInTheDocument()
   })
 
-  it.each(['/playlist', '/playlist?list=LL', '/playlist?list=nope'])(
-    'needs a playlist id: %s',
-    async (path) => {
-      const fetch = mockApi(GUEST)
-      renderApp(path)
+  it.each(['/playlist', '/playlist?list=nope'])('needs a playlist id: %s', async (path) => {
+    const fetch = mockApi(GUEST)
+    renderApp(path)
 
-      expect(await screen.findByText('The playlist does not exist.')).toBeInTheDocument()
-      const urls = fetch.mock.calls.map(([request]) => new URL(request.url).pathname)
-      expect(urls.filter((url) => url.startsWith('/api/playlists'))).toEqual([])
-    },
-  )
+    expect(await screen.findByText('The playlist does not exist.')).toBeInTheDocument()
+    const urls = fetch.mock.calls.map(([request]) => new URL(request.url).pathname)
+    expect(urls.filter((url) => url.startsWith('/api/playlists'))).toEqual([])
+  })
 
   describe('owner', () => {
     it('edits the title, description and privacy', async () => {
@@ -351,6 +349,64 @@ describe('PlaylistPage', () => {
       expect(urls.filter((url) => url.includes('playlist') || url.includes('watch-later'))).toEqual(
         [],
       )
+    })
+  })
+
+  describe('Liked videos (list=LL)', () => {
+    function mockLiked(summary = liked(), items = [likedItem(1), likedItem(2)]) {
+      return mockApi({
+        ...SIGNED_IN,
+        'GET /api/me/liked': () => json(200, summary),
+        'GET /api/me/liked/items': () => json(200, page(items)),
+      })
+    }
+
+    it('lists the viewer’s likes as a private playlist', async () => {
+      mockLiked()
+      renderApp('/playlist?list=LL')
+
+      expect(
+        await screen.findByRole('heading', { level: 1, name: 'Liked videos' }),
+      ).toBeInTheDocument()
+      expect(screen.getByText('Private')).toBeInTheDocument()
+      expect(screen.getByText('2 videos')).toBeInTheDocument()
+      expect(screen.getByText('Updated today')).toBeInTheDocument()
+      const rows = within(screen.getByRole('region', { name: 'Videos' }))
+      const titles = (await rows.findAllByRole('heading', { level: 3 })).map((h) => h.textContent)
+      expect(titles).toEqual(['Video 1', 'Video 2'])
+      expect(screen.getByRole('link', { name: /Play all/ })).toHaveAttribute(
+        'href',
+        '/watch?v=video-00001',
+      )
+      expect(screen.getByRole('link', { name: 'Liked videos' })).toHaveAttribute(
+        'aria-current',
+        'page',
+      )
+      expect(document.title).toBe('Liked videos - ViTube')
+      // Made from likes: nothing to edit or delete.
+      expect(screen.queryByRole('button', { name: 'Edit playlist' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'More actions' })).not.toBeInTheDocument()
+    })
+
+    it('shows an empty list without a date or Play all', async () => {
+      mockLiked(liked({ video_count: 0, thumbnail_url: null, updated_at: null }), [])
+      renderApp('/playlist?list=LL')
+
+      expect(await screen.findByText('No videos in this playlist yet')).toBeInTheDocument()
+      expect(screen.getByText('No videos')).toBeInTheDocument()
+      expect(screen.queryByText(/^Updated/)).not.toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: /Play all/ })).not.toBeInTheDocument()
+    })
+
+    it('asks a guest to sign in', async () => {
+      const fetch = mockApi(GUEST)
+      renderApp('/playlist?list=LL')
+
+      expect(
+        await screen.findByRole('heading', { name: 'Enjoy your favorite videos' }),
+      ).toBeInTheDocument()
+      const urls = fetch.mock.calls.map(([request]) => new URL(request.url).pathname)
+      expect(urls.filter((url) => url.startsWith('/api/me/liked'))).toEqual([])
     })
   })
 })
