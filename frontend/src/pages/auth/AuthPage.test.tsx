@@ -71,6 +71,19 @@ describe('sign in page', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Too many attempts. Wait a few')
   })
 
+  it('says why a banned account cannot sign in', async () => {
+    mockApi({
+      'GET /api/auth/me': guest,
+      'POST /api/auth/login': () => json(403, { detail: 'This account is banned' }),
+    })
+    renderApp('/login')
+
+    await fillIn('anna@example.com', 'correct horse battery')
+    await submit('Sign in')
+
+    expect(await screen.findByText('This account is banned')).toBeInTheDocument()
+  })
+
   it('says when the server is out of reach', async () => {
     mockApi({
       'GET /api/auth/me': guest,

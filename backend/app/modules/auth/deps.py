@@ -12,7 +12,7 @@ from app.db.session import DbSession
 from app.modules.auth.cookies import SESSION_COOKIE
 from app.modules.auth.sessions import SessionStore, UserSession
 from app.modules.users import repository as users
-from app.modules.users.models import Role, User
+from app.modules.users.models import Role, User, UserStatus
 
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 
@@ -48,9 +48,36 @@ async def verify_csrf(request: Request, session: CurrentSession) -> None:
             raise Forbidden("Missing or wrong CSRF token")
 
 
-async def optional_user(session: CurrentSession, db: DbSession) -> User | None:
-    """The signed-in user or None. Read from the DB each time: role changes apply at once."""
-    return await users.get_by_id(db, session.user_id) if session else None
+async def optional_user(
+    request: Request, session: CurrentSession, sessions: Sessions, db: DbSession
+) -> User | None:
+    """The signed-in user or None. Read from the DB each time: a role or status change applies
+    to the next request.
+
+    An unsafe request holds the user's write lock until it commits: a ban waits for writes under
+    way, and no write commits after it (ADR 0005).
+    """
+    if session is None:
+        return None
+    if request.method in SAFE_METHODS:
+        user = await users.get_by_id(db, session.user_id)
+    else:
+        user = await users.get_for_write(db, session.user_id)
+    if (
+        user is None
+        or user.status is not UserStatus.ACTIVE
+        or _from_before_restriction(session, user)
+    ):
+        # Banned, gone, or a session from before a ban: it ends here, whether or not the ban's
+        # revoke reached it, and a reinstated account doesn't bring it back.
+        await sessions.delete(session.id)
+        return None
+    return user
+
+
+def _from_before_restriction(session: UserSession, user: User) -> bool:
+    cutoff = user.sessions_valid_after
+    return cutoff is not None and session.created_at < cutoff.timestamp()
 
 
 OptionalUser = Annotated[User | None, Depends(optional_user)]

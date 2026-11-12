@@ -12,7 +12,10 @@ shell commands in the DB container (`COPY … FROM PROGRAM`).
       `python -m app.db.roles`;
     - `vitube_app` (`POSTGRES_APP_PASSWORD`) is used by api and worker.
 - `vitube_app` may `SELECT, INSERT, UPDATE, DELETE` and use sequences. No DDL, no `TRUNCATE`, no access to
-  `alembic_version`. Timeouts: `statement_timeout` 30 s, `idle_in_transaction_session_timeout` 60 s.
+  `alembic_version`. `audit_log` is insert and read only (ADR 0009). Timeouts: `statement_timeout` 30 s,
+  `idle_in_transaction_session_timeout` 60 s. *(Amended 2026-11-11: audit_log.)*
+- A manual `alembic` run (not the `migrate` job) skips the role setup: run the job after it, or a recreated table
+  keeps the default grants until the next deploy.
 - The setup is idempotent and runs on every deploy:
     - grants on existing objects, so an existing volume works;
     - default privileges for objects that later migrations create;

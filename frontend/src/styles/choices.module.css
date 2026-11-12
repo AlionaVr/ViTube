@@ -1,0 +1,58 @@
+/* A list of radio choices in a dialog: a legend, then one row per choice. */
+
+.list {
+  margin: 16px 0 0;
+  padding: 0;
+  border: none;
+}
+
+.legend {
+  margin-bottom: 4px;
+  padding: 0;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.option {
+  padding: 6px 0;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-size: 14px;
+  line-height: 20px;
+  cursor: pointer;
+}
+
+.option input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  flex: none;
+  accent-color: var(--color-text);
+}
+
+.option input:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* A choice with a second line that says what it does. */
+.withHint {
+  align-items: flex-start;
+}
+
+.withHint input {
+  margin-top: 1px;
+}
+
+.label {
+  display: block;
+}
+
+.hint {
+  display: block;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  line-height: 18px;
+}

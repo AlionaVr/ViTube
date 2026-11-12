@@ -11,6 +11,7 @@ import Spinner from '../../../components/Spinner'
 import { formatCompact, formatTimeAgo } from '../../../lib/format'
 import buttons from '../../../styles/buttons.module.css'
 import { channelUrl } from '../../../videos/paths'
+import ReportMenu from '../ReportMenu'
 import CommentComposer from './CommentComposer'
 import styles from './Comments.module.css'
 
@@ -131,6 +132,7 @@ export default function CommentItem({ comment, videoId, threadId }: CommentItemP
           <CommentComposer
             videoId={videoId}
             parentId={threadId ?? comment.id}
+            mention={author.handle}
             autoFocus
             onDone={() => {
               setReplying(false)
@@ -152,6 +154,13 @@ export default function CommentItem({ comment, videoId, threadId }: CommentItemP
         )}
         {showReplies && <Replies videoId={videoId} commentId={comment.id} />}
       </div>
+      <ReportMenu
+        target={{ kind: 'comment', id: comment.id }}
+        owner={author.handle}
+        icon="moreVert"
+        label="Action menu"
+        className={styles.more}
+      />
     </article>
   )
 }

@@ -55,6 +55,8 @@ function errorsFrom(error: unknown): Errors {
   switch (error.status) {
     case 401:
       return { password: 'Wrong email or password. Try again.' }
+    case 403: // a banned account or a terminated channel: the server says which
+      return { form: error.message }
     case 409:
       return { email: 'This email is already registered. Sign in instead.' }
     case 422: // passwords are checked here first, so only the email is left

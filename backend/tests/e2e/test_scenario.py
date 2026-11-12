@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from httpx2 import Client, Response
+from httpx2 import Client, Cookies, Response
 
 BASE_URL = os.environ.get("E2E_BASE_URL", "")
 PASSWORD = "e2e correct horse battery"
@@ -41,13 +41,28 @@ class Browser:
         return self.http.request(method, path, headers=headers, **kwargs)
 
     def sign_in(self, email: str) -> str:
-        """Log in, or sign up the first time. Returns the handle."""
+        """Log in, or sign up the first time. Returns the handle.
+
+        Each account logs in once per run and its browsers share the session: the suite signs in
+        more often than the login limit allows a minute per IP. A session that ended (a ban) logs
+        in again.
+        """
+        if email in SESSIONS:
+            self.http.cookies = Cookies(SESSIONS[email])
+            me = self.get("/api/auth/me")
+            if me.status_code == 200:
+                return me.json()["handle"]
+            self.http.cookies = Cookies()
         body = {"email": email, "password": PASSWORD}
         response = self.send("POST", "/api/auth/login", json=body)
         if response.status_code == 401:
             response = self.send("POST", "/api/auth/signup", json=body)
         assert response.status_code in (200, 201), response.text
+        SESSIONS[email] = Cookies(self.http.cookies)
         return response.json()["handle"]
+
+
+SESSIONS: dict[str, Cookies] = {}  # email → the run's session cookies
 
 
 @pytest.fixture

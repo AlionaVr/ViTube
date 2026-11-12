@@ -7,7 +7,8 @@ from sqlalchemy import ColumnElement, and_, exists, or_, true
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import NotFound
-from app.modules.users.models import Role, User
+from app.modules.users import repository as users
+from app.modules.users.models import Role, User, UserStatus
 from app.modules.videos import repository as videos
 from app.modules.videos.models import Video, VideoAccess, VideoStatus, Visibility
 
@@ -18,12 +19,37 @@ MEDIA_PATH = re.compile(
 )
 
 
-async def can_view(db: AsyncSession, user: User | None, video: Video) -> bool:
-    """Owner and moderators: always. Others: ready videos only; private ones need a grant."""
-    if user is not None and (user.id == video.owner_id or user.role.at_least(Role.MODERATOR)):
+async def is_restricted(db: AsyncSession, video: Video) -> bool:
+    """Hidden by a moderator, or its channel terminated (ADR 0009). The SQL twin for lists is
+    repository.NOT_RESTRICTED. One query at most: callers check it once per decision."""
+    if video.is_hidden:
         return True
-    if video.status is not VideoStatus.READY:
+    return await users.get_status(db, video.owner_id) is UserStatus.TERMINATED
+
+
+async def can_view(db: AsyncSession, user: User | None, video: Video) -> bool:
+    """Owner and moderators: always, restricted videos too (to review them). Others: ready
+    videos that are not restricted (ADR 0009); private ones need a grant."""
+    if _owner_or_staff(user, video):
+        return True
+    if video.status is not VideoStatus.READY or await is_restricted(db, video):
         return False
+    return await _visibility_allows(db, user, video)
+
+
+async def can_interact(db: AsyncSession, user: User | None, video: Video) -> bool:
+    """Likes, comments, views and reports: a ready video that is not restricted, for everyone,
+    its owner and moderators too; and the viewer may watch it."""
+    if video.status is not VideoStatus.READY or await is_restricted(db, video):
+        return False
+    return _owner_or_staff(user, video) or await _visibility_allows(db, user, video)
+
+
+def _owner_or_staff(user: User | None, video: Video) -> bool:
+    return user is not None and (user.id == video.owner_id or user.role.at_least(Role.MODERATOR))
+
+
+async def _visibility_allows(db: AsyncSession, user: User | None, video: Video) -> bool:
     if video.visibility is not Visibility.PRIVATE:
         return True
     return user is not None and await videos.has_access(db, video.id, user.id)
@@ -36,12 +62,12 @@ def viewable(user: User | None) -> ColumnElement[bool]:
     """
     if user is not None and user.role.at_least(Role.MODERATOR):
         return true()
-    ready = Video.status == VideoStatus.READY
-    open_to_all = and_(ready, Video.visibility != Visibility.PRIVATE)
+    allowed = and_(Video.status == VideoStatus.READY, *videos.NOT_RESTRICTED)
+    open_to_all = and_(allowed, Video.visibility != Visibility.PRIVATE)
     if user is None:
         return open_to_all
     granted = exists().where(VideoAccess.video_id == Video.id, VideoAccess.user_id == user.id)
-    return or_(Video.owner_id == user.id, open_to_all, and_(ready, granted))
+    return or_(Video.owner_id == user.id, open_to_all, and_(allowed, granted))
 
 
 async def get_viewable(db: AsyncSession, user: User | None, public_id: str) -> Video:

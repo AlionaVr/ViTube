@@ -15,14 +15,21 @@ from redis.asyncio.lock import Lock
 from redis.exceptions import LockError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.errors import Conflict, DomainError, NotFound, PayloadTooLarge, RequestTimeout
+from app.core.errors import (
+    Conflict,
+    DomainError,
+    Forbidden,
+    NotFound,
+    PayloadTooLarge,
+    RequestTimeout,
+)
 from app.core.pagination import Page, decode_cursor, split_page
 from app.core.rate_limit import RateLimit
 from app.core.slots import Slots, hold
 from app.core.storage import Storage
 from app.modules.reactions import service as reactions
 from app.modules.users import repository as users
-from app.modules.users.models import User
+from app.modules.users.models import User, UserStatus
 from app.modules.videos import repository as videos
 from app.modules.videos.access import get_viewable
 from app.modules.videos.config import get_video_settings
@@ -142,8 +149,12 @@ async def list_categories(db: AsyncSession) -> list[Category]:
 
 async def get_video(db: AsyncSession, user: User | None, public_id: str) -> VideoDetail:
     video = await get_viewable(db, user, public_id)
-    out = VideoOut.of(video, await videos.get_owner(db, video))
-    return VideoDetail(**dict(out), my_rating=await reactions.my_rating(db, user, video.id))
+    owner = await videos.get_owner(db, video)
+    return VideoDetail(
+        **dict(VideoOut.of(video, owner)),
+        my_rating=await reactions.my_rating(db, user, video.id),
+        channel_terminated=owner.status is UserStatus.TERMINATED,
+    )
 
 
 async def update_video(
@@ -201,6 +212,10 @@ async def upload_file(
                 )
             if deadline.cancelled_caught:  # the upload was aborted: nothing stored
                 raise RequestTimeout("The upload took too long. Try again on a faster connection.")
+            # Banned while the file streamed: nothing may finish after a ban (ADR 0005).
+            owner = await users.get_for_write(db, user.id)
+            if owner is None or owner.status is not UserStatus.ACTIVE:
+                raise Forbidden("This account is banned")
             moved = await videos.move_status(
                 db, video.id, current=VideoStatus.UPLOADING, new=VideoStatus.UPLOADED
             )

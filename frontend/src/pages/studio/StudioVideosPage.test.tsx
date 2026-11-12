@@ -89,6 +89,7 @@ describe('StudioVideosPage', () => {
     const first = rowOf('Sintel – trailer')
     expect(first.getByText('A lone girl searches for a baby dragon.')).toBeInTheDocument()
     expect(first.getByText('Public')).toBeInTheDocument()
+    expect(first.getByText('None')).toBeInTheDocument()
     expect(first.getByText('Ready')).toBeInTheDocument()
     expect(first.getByText(formatDate(ready.created_at))).toBeInTheDocument()
     expect(first.getByText('Published')).toBeInTheDocument()
@@ -105,6 +106,19 @@ describe('StudioVideosPage', () => {
     expect(draft.getByText('Draft')).toBeInTheDocument()
     expect(draft.queryByText('Private')).not.toBeInTheDocument()
     expect(document.title).toBe('Channel content - ViTube')
+  })
+
+  it('shows a video a moderator hid in Restrictions', async () => {
+    mockApi({
+      ...SIGNED_IN,
+      'GET /api/me/videos': () =>
+        json(200, page([own(1, { title: 'Fake giveaway', is_hidden: true })])),
+    })
+    renderApp('/studio/videos')
+
+    await screen.findByRole('link', { name: 'Fake giveaway' })
+    expect(rowOf('Fake giveaway').getByText('Hidden by a moderator')).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Restrictions' })).toBeInTheDocument()
   })
 
   it('says why a video failed to process', async () => {

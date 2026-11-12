@@ -8,6 +8,11 @@ import ChannelsPage from '../pages/feed/ChannelsPage'
 import PlaylistsPage from '../pages/feed/PlaylistsPage'
 import SubscriptionsPage from '../pages/feed/SubscriptionsPage'
 import HomePage from '../pages/HomePage'
+import Accounts from '../pages/moderation/Accounts'
+import AuditLog from '../pages/moderation/AuditLog'
+import HiddenVideos from '../pages/moderation/HiddenVideos'
+import ModerationPage from '../pages/moderation/ModerationPage'
+import ReportQueue from '../pages/moderation/ReportQueue'
 import NotFoundPage from '../pages/NotFoundPage'
 import PlaylistPage from '../pages/playlist/PlaylistPage'
 import ResultsPage from '../pages/results/ResultsPage'
@@ -30,6 +35,16 @@ export const routes: RouteObject[] = [
       { path: 'feed/subscriptions', element: <SubscriptionsPage /> },
       { path: 'feed/channels', element: <ChannelsPage /> },
       { path: 'feed/playlists', element: <PlaylistsPage /> },
+      {
+        path: 'moderation',
+        element: <ModerationPage />,
+        children: [
+          { index: true, element: <ReportQueue /> },
+          { path: 'hidden', element: <HiddenVideos /> },
+          { path: 'accounts', element: <Accounts /> },
+          { path: 'audit', element: <AuditLog /> },
+        ],
+      },
       // /@handle. Static paths rank higher, so this only gets the rest.
       {
         path: ':channel',

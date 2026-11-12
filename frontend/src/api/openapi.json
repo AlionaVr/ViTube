@@ -2052,6 +2052,650 @@
         }
       }
     },
+    "/api/videos/{public_id}/report": {
+      "post": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Report a video to moderators",
+        "description": "One open report per user and video: reporting it again changes nothing.",
+        "operationId": "report_video_api_videos__public_id__report_post",
+        "parameters": [
+          {
+            "name": "public_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{11}$",
+              "description": "Public video id",
+              "title": "Public Id"
+            },
+            "description": "Public video id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/comments/{comment_id}/report": {
+      "post": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Report a comment to moderators",
+        "description": "One open report per user and comment: reporting it again changes nothing.",
+        "operationId": "report_comment_api_comments__comment_id__report_post",
+        "parameters": [
+          {
+            "name": "comment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Comment Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/moderation/reports": {
+      "get": {
+        "tags": [
+          "moderation"
+        ],
+        "summary": "Open reports by video or comment, oldest first",
+        "operationId": "list_reports_api_moderation_reports_get",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "next_cursor of the last page",
+              "title": "Cursor"
+            },
+            "description": "next_cursor of the last page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_ReportCase_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/moderation/videos/hidden": {
+      "get": {
+        "tags": [
+          "moderation"
+        ],
+        "summary": "Hidden videos, newest first",
+        "operationId": "list_hidden_api_moderation_videos_hidden_get",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "next_cursor of the last page",
+              "title": "Cursor"
+            },
+            "description": "next_cursor of the last page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_ModeratedVideo_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/moderation/videos/{public_id}/hide": {
+      "post": {
+        "tags": [
+          "moderation"
+        ],
+        "summary": "Hide a video and close its reports",
+        "description": "Only its owner and moderators can open it then; everyone else gets 404.",
+        "operationId": "hide_video_api_moderation_videos__public_id__hide_post",
+        "parameters": [
+          {
+            "name": "public_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{11}$",
+              "description": "Public video id",
+              "title": "Public Id"
+            },
+            "description": "Public video id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HideIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/moderation/videos/{public_id}/restore": {
+      "post": {
+        "tags": [
+          "moderation"
+        ],
+        "summary": "Show a hidden video again",
+        "operationId": "restore_video_api_moderation_videos__public_id__restore_post",
+        "parameters": [
+          {
+            "name": "public_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{11}$",
+              "description": "Public video id",
+              "title": "Public Id"
+            },
+            "description": "Public video id"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/moderation/videos/{public_id}/dismiss": {
+      "post": {
+        "tags": [
+          "moderation"
+        ],
+        "summary": "Close a video's reports: nothing wrong with it",
+        "operationId": "dismiss_video_api_moderation_videos__public_id__dismiss_post",
+        "parameters": [
+          {
+            "name": "public_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{11}$",
+              "description": "Public video id",
+              "title": "Public Id"
+            },
+            "description": "Public video id"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/moderation/comments/{comment_id}": {
+      "delete": {
+        "tags": [
+          "moderation"
+        ],
+        "summary": "Delete a comment and close its reports",
+        "description": "Deleting a thread's first comment deletes its replies too.",
+        "operationId": "delete_comment_api_moderation_comments__comment_id__delete",
+        "parameters": [
+          {
+            "name": "comment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Comment Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/moderation/comments/{comment_id}/dismiss": {
+      "post": {
+        "tags": [
+          "moderation"
+        ],
+        "summary": "Close a comment's reports: nothing wrong with it",
+        "operationId": "dismiss_comment_api_moderation_comments__comment_id__dismiss_post",
+        "parameters": [
+          {
+            "name": "comment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Comment Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/moderation/users": {
+      "get": {
+        "tags": [
+          "moderation"
+        ],
+        "summary": "Banned and terminated accounts (admins)",
+        "operationId": "list_restricted_api_moderation_users_get",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/UserStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "next_cursor of the last page",
+              "title": "Cursor"
+            },
+            "description": "next_cursor of the last page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_RestrictedAccount_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/moderation/users/{handle}/status": {
+      "put": {
+        "tags": [
+          "moderation"
+        ],
+        "summary": "Ban, terminate or reinstate an account (admins)",
+        "description": "banned: no sign-in, its sessions end, its content stays. terminated: the same, and its videos are unavailable to all but moderators. active: reinstated.",
+        "operationId": "set_status_api_moderation_users__handle__status_put",
+        "parameters": [
+          {
+            "name": "handle",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._-]{3,30}$",
+              "description": "Without the @",
+              "title": "Handle"
+            },
+            "description": "Without the @"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatusIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/moderation/audit-log": {
+      "get": {
+        "tags": [
+          "moderation"
+        ],
+        "summary": "Who did what, newest first (admins)",
+        "operationId": "list_audit_api_moderation_audit_log_get",
+        "parameters": [
+          {
+            "name": "action",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AuditAction"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Any of these actions",
+              "title": "Action"
+            },
+            "description": "Any of these actions"
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/AuditSource"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "cli: the command line",
+              "title": "Source"
+            },
+            "description": "cli: the command line"
+          },
+          {
+            "name": "actor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9._-]{3,30}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Who acted, without the @",
+              "title": "Actor"
+            },
+            "description": "Who acted, without the @"
+          },
+          {
+            "name": "account",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9._-]{3,30}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The account acted on, its videos and its comments; without the @",
+              "title": "Account"
+            },
+            "description": "The account acted on, its videos and its comments; without the @"
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "next_cursor of the last page",
+              "title": "Cursor"
+            },
+            "description": "next_cursor of the last page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_AuditEntryOut_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/health": {
       "get": {
         "tags": [
@@ -2094,6 +2738,136 @@
           "handle"
         ],
         "title": "AccessGrant"
+      },
+      "AuditAction": {
+        "type": "string",
+        "enum": [
+          "hide_video",
+          "restore_video",
+          "dismiss_video",
+          "delete_comment",
+          "dismiss_comment",
+          "set_user_status",
+          "set_user_role"
+        ],
+        "title": "AuditAction"
+      },
+      "AuditEntryOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "source": {
+            "$ref": "#/components/schemas/AuditSource"
+          },
+          "actor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChannelSummary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Who acted through the API; null for the CLI or an account deleted since"
+          },
+          "by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "By",
+            "description": "CLI: the admin named with --by (claimed, not proven)"
+          },
+          "action": {
+            "$ref": "#/components/schemas/AuditAction"
+          },
+          "target": {
+            "$ref": "#/components/schemas/AuditTarget"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details",
+            "description": "reason, reports, replies, from, to"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "created_at",
+          "source",
+          "actor",
+          "by",
+          "action",
+          "target",
+          "details"
+        ],
+        "title": "AuditEntryOut"
+      },
+      "AuditSource": {
+        "type": "string",
+        "enum": [
+          "api",
+          "cli"
+        ],
+        "title": "AuditSource"
+      },
+      "AuditTarget": {
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/TargetType"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "Video title, comment text or @handle; empty if it is gone"
+          },
+          "video_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Id",
+            "description": "Public id of the video, or of the comment's video"
+          },
+          "handle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handle",
+            "description": "The user, for a user target"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "label",
+          "video_id",
+          "handle"
+        ],
+        "title": "AuditTarget",
+        "description": "What an entry is about, as a person reads it."
       },
       "Category": {
         "type": "string",
@@ -2156,6 +2930,11 @@
             "type": "boolean",
             "title": "Is Subscribed",
             "description": "False for guests and on your own channel"
+          },
+          "is_terminated": {
+            "type": "boolean",
+            "title": "Is Terminated",
+            "description": "Terminated by an admin: only moderators see it, and it is frozen"
           }
         },
         "type": "object",
@@ -2166,7 +2945,8 @@
           "joined_at",
           "subscriber_count",
           "video_count",
-          "is_subscribed"
+          "is_subscribed",
+          "is_terminated"
         ],
         "title": "ChannelOut",
         "description": "The channel page header. The watch page reads it for the subscriber count too."
@@ -2323,6 +3103,19 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "HideIn": {
+        "properties": {
+          "reason": {
+            "$ref": "#/components/schemas/ReportReason",
+            "description": "The rule the video breaks"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "HideIn"
+      },
       "ItemMove": {
         "properties": {
           "before": {
@@ -2344,6 +3137,118 @@
           "before"
         ],
         "title": "ItemMove"
+      },
+      "ModeratedComment": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "author": {
+            "$ref": "#/components/schemas/ChannelSummary"
+          },
+          "published_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Published At"
+          },
+          "is_reply": {
+            "type": "boolean",
+            "title": "Is Reply"
+          },
+          "is_deleted": {
+            "type": "boolean",
+            "title": "Is Deleted"
+          },
+          "video": {
+            "$ref": "#/components/schemas/ModeratedVideo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "text",
+          "author",
+          "published_at",
+          "is_reply",
+          "is_deleted",
+          "video"
+        ],
+        "title": "ModeratedComment",
+        "description": "A comment as a moderator sees it, with the video it is on."
+      },
+      "ModeratedVideo": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Public id, as in /watch?v=<id>"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "thumbnail_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnail Url",
+            "description": "Set once the video is ready"
+          },
+          "duration_sec": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Sec"
+          },
+          "status": {
+            "$ref": "#/components/schemas/VideoStatus"
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/Visibility"
+          },
+          "is_hidden": {
+            "type": "boolean",
+            "title": "Is Hidden"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "channel": {
+            "$ref": "#/components/schemas/ChannelSummary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "thumbnail_url",
+          "duration_sec",
+          "status",
+          "visibility",
+          "is_hidden",
+          "created_at",
+          "channel"
+        ],
+        "title": "ModeratedVideo",
+        "description": "A video as a moderator sees it: in any state, hidden or not."
       },
       "MyPlaylist": {
         "properties": {
@@ -2447,6 +3352,34 @@
         ],
         "title": "NewAccount"
       },
+      "Page_AuditEntryOut_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AuditEntryOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "Page[AuditEntryOut]"
+      },
       "Page_CommentOut_": {
         "properties": {
           "items": {
@@ -2474,6 +3407,34 @@
           "next_cursor"
         ],
         "title": "Page[CommentOut]"
+      },
+      "Page_ModeratedVideo_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ModeratedVideo"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "Page[ModeratedVideo]"
       },
       "Page_MyPlaylist_": {
         "properties": {
@@ -2558,6 +3519,62 @@
           "next_cursor"
         ],
         "title": "Page[PlaylistOut]"
+      },
+      "Page_ReportCase_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReportCase"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "Page[ReportCase]"
+      },
+      "Page_RestrictedAccount_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RestrictedAccount"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "Page[RestrictedAccount]"
       },
       "Page_SearchResult_": {
         "properties": {
@@ -2874,6 +3891,120 @@
         ],
         "title": "RatingOut"
       },
+      "ReportCase": {
+        "properties": {
+          "video": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModeratedVideo"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The reported video; null for a comment"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModeratedComment"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The reported comment; null for a video"
+          },
+          "report_count": {
+            "type": "integer",
+            "title": "Report Count"
+          },
+          "reasons": {
+            "items": {
+              "$ref": "#/components/schemas/ReportReason"
+            },
+            "type": "array",
+            "title": "Reasons"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Notes",
+            "description": "The newest report texts"
+          },
+          "last_reported_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Reported At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "video",
+          "comment",
+          "report_count",
+          "reasons",
+          "notes",
+          "last_reported_at"
+        ],
+        "title": "ReportCase",
+        "description": "The open reports of one video or one comment."
+      },
+      "ReportIn": {
+        "properties": {
+          "reason": {
+            "$ref": "#/components/schemas/ReportReason"
+          },
+          "details": {
+            "type": "string",
+            "maxLength": 500,
+            "pattern": "^[^\\x00-\\x08\\x0b\\x0c\\x0e-\\x1f\\x7f]*$",
+            "title": "Details",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "ReportIn"
+      },
+      "ReportReason": {
+        "type": "string",
+        "enum": [
+          "sexual",
+          "violent",
+          "hateful",
+          "harassment",
+          "harmful",
+          "misinformation",
+          "child_abuse",
+          "terrorism",
+          "spam",
+          "legal"
+        ],
+        "title": "ReportReason",
+        "description": "YouTube's reasons, for videos and comments alike. Also why a moderator hid a video."
+      },
+      "RestrictedAccount": {
+        "properties": {
+          "channel": {
+            "$ref": "#/components/schemas/ChannelSummary"
+          },
+          "status": {
+            "$ref": "#/components/schemas/UserStatus"
+          }
+        },
+        "type": "object",
+        "required": [
+          "channel",
+          "status"
+        ],
+        "title": "RestrictedAccount",
+        "description": "A banned or terminated account."
+      },
       "Role": {
         "type": "string",
         "enum": [
@@ -2948,6 +4079,26 @@
         "title": "SearchResult",
         "description": "A result row also shows the start of the description."
       },
+      "StatusIn": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/UserStatus"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "pattern": "^[^\\x00-\\x08\\x0b\\x0c\\x0e-\\x1f\\x7f]*$",
+            "title": "Reason",
+            "description": "Why, for the audit log",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "StatusIn"
+      },
       "SubscribedChannel": {
         "properties": {
           "handle": {
@@ -3002,6 +4153,15 @@
         ],
         "title": "SubscriptionOut"
       },
+      "TargetType": {
+        "type": "string",
+        "enum": [
+          "video",
+          "comment",
+          "user"
+        ],
+        "title": "TargetType"
+      },
       "UploadLimits": {
         "properties": {
           "max_size_bytes": {
@@ -3041,6 +4201,16 @@
           "role"
         ],
         "title": "UserOut"
+      },
+      "UserStatus": {
+        "type": "string",
+        "enum": [
+          "active",
+          "banned",
+          "terminated"
+        ],
+        "title": "UserStatus",
+        "description": "What an admin allowed the account (ADR 0009). A user is also a channel, so it is both."
       },
       "ValidationError": {
         "properties": {
@@ -3159,6 +4329,11 @@
             ],
             "title": "Duration Sec"
           },
+          "is_hidden": {
+            "type": "boolean",
+            "title": "Is Hidden",
+            "description": "Hidden by a moderator: only its owner and moderators see it"
+          },
           "thumbnail_url": {
             "anyOf": [
               {
@@ -3205,6 +4380,11 @@
           },
           "my_rating": {
             "$ref": "#/components/schemas/Rating"
+          },
+          "channel_terminated": {
+            "type": "boolean",
+            "title": "Channel Terminated",
+            "description": "Its channel was terminated: only moderators see it, and it is frozen"
           }
         },
         "type": "object",
@@ -3217,6 +4397,7 @@
           "status",
           "error_message",
           "duration_sec",
+          "is_hidden",
           "thumbnail_url",
           "media_url",
           "view_count",
@@ -3224,7 +4405,8 @@
           "comment_count",
           "created_at",
           "channel",
-          "my_rating"
+          "my_rating",
+          "channel_terminated"
         ],
         "title": "VideoDetail",
         "description": "The watch page: the video and what this viewer did with it."
@@ -3276,6 +4458,11 @@
             ],
             "title": "Duration Sec"
           },
+          "is_hidden": {
+            "type": "boolean",
+            "title": "Is Hidden",
+            "description": "Hidden by a moderator: only its owner and moderators see it"
+          },
           "thumbnail_url": {
             "anyOf": [
               {
@@ -3331,6 +4518,7 @@
           "status",
           "error_message",
           "duration_sec",
+          "is_hidden",
           "thumbnail_url",
           "media_url",
           "view_count",

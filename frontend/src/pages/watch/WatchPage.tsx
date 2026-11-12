@@ -6,6 +6,7 @@ import { useNavigate, useSearchParams } from 'react-router'
 import { ApiError } from '../../api/client'
 import ErrorState from '../../components/ErrorState'
 import Icon from '../../components/Icon'
+import ModerationNotice from '../../components/ModerationNotice'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { useStoredFlag } from '../../hooks/useStoredFlag'
 import Player from '../../player/Player'
@@ -15,12 +16,10 @@ import type { Video } from '../../videos/types'
 import { useViewReport } from '../../views/useViewReport'
 import Comments from './comments/Comments'
 import Description from './Description'
+import { TWO_COLUMNS } from './layout'
 import UpNext from './UpNext'
 import VideoActions from './VideoActions'
 import styles from './WatchPage.module.css'
-
-/** Up next moves under the description below this width, as on YouTube. */
-const TWO_COLUMNS = '(min-width: 1016px)'
 
 /** A message in the player's place when there is nothing to play. */
 function PlayerNotice({ title, children }: { title: string; children: ReactNode }) {
@@ -42,6 +41,24 @@ function NotReady({ video }: { video: Video }) {
     return <PlayerNotice title="Upload not finished">This video has no file yet.</PlayerNotice>
   }
   return <PlayerNotice title="Processing video">It will play here once it’s ready.</PlayerNotice>
+}
+
+/** The owner and moderators open a restricted video to review it: say who else can't. */
+function RestrictionNotice({ video }: { video: Video }) {
+  const [title, text] = video.channel_terminated
+    ? [
+        'Channel terminated',
+        'Only moderators can see this channel’s videos. Likes, comments and views are off until an admin reinstates the channel.',
+      ]
+    : [
+        'Hidden by a moderator',
+        'Only the channel owner and moderators can see this video. Likes, comments and views are off until a moderator restores it.',
+      ]
+  return (
+    <ModerationNotice title={title} className={styles.notice}>
+      {text}
+    </ModerationNotice>
+  )
 }
 
 function InfoSkeleton() {
@@ -70,6 +87,8 @@ export default function WatchPage() {
   const next = related.data?.pages[0]?.items[0]
   const notFound = video.error instanceof ApiError && video.error.status === 404
   const ready = video.data?.status === 'ready'
+  // Restricted (ADR 0009): frozen for everyone who can open it.
+  const frozen = !!video.data && (video.data.is_hidden || video.data.channel_terminated)
 
   return (
     <div className={theater ? `${styles.watch} ${styles.theater}` : styles.watch}>
@@ -87,7 +106,7 @@ export default function WatchPage() {
                 theater={theater}
                 onTheaterToggle={toggleTheater}
                 onNext={next && (() => navigate(watchUrl(next.id)))}
-                onPlayed={reportPlayed}
+                onPlayed={frozen ? undefined : reportPlayed}
               />
             ) : (
               <NotReady video={video.data} />
@@ -103,16 +122,22 @@ export default function WatchPage() {
       <div className={styles.below}>
         {video.data ? (
           <>
+            {frozen && <RestrictionNotice video={video.data} />}
             <h1 className={styles.title}>{video.data.title}</h1>
-            {/* Ratings and comments open once the video is ready. */}
-            {ready && <VideoActions video={video.data} />}
+            {/* Ratings and comments open once the video is ready, and not while it's restricted. */}
+            {ready && <VideoActions video={video.data} frozen={frozen} />}
             <Description video={video.data} />
             {!twoColumns && (
               <div className={styles.upNextInline}>
                 <UpNext videoId={id} grid />
               </div>
             )}
-            {ready && <Comments video={video.data} />}
+            {ready &&
+              (frozen ? (
+                <p className={styles.commentsOff}>Comments are turned off.</p>
+              ) : (
+                <Comments video={video.data} />
+              ))}
           </>
         ) : video.isPending ? (
           <InfoSkeleton />

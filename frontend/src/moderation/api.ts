@@ -1,0 +1,137 @@
+// Moderation API (ADR 0009): the report queue and moderator actions.
+import { api, unwrap } from '../api/client'
+import type { components } from '../api/schema'
+
+export type ReportReason = components['schemas']['ReportReason']
+export type ReportCase = components['schemas']['ReportCase']
+export type ModeratedVideo = components['schemas']['ModeratedVideo']
+export type ReportPage = components['schemas']['Page_ReportCase_']
+
+/** What a viewer reports: a video (by its public id) or a comment. */
+export interface ReportTarget {
+  kind: 'video' | 'comment'
+  id: string
+}
+
+/** Flags it for moderators. Reporting the same target again changes nothing. */
+export async function report(
+  target: ReportTarget,
+  reason: ReportReason,
+  details: string,
+): Promise<void> {
+  const body = { reason, details }
+  await unwrap(
+    target.kind === 'video'
+      ? api.POST('/api/videos/{public_id}/report', {
+          params: { path: { public_id: target.id } },
+          body,
+        })
+      : api.POST('/api/comments/{comment_id}/report', {
+          params: { path: { comment_id: target.id } },
+          body,
+        }),
+  )
+}
+
+/** Open reports grouped by video, oldest first. Throws ApiError 403 for a non-moderator. */
+export function listReports(cursor: string | null): Promise<ReportPage> {
+  return unwrap(api.GET('/api/moderation/reports', { params: { query: { cursor } } }))
+}
+
+/** Hides the video from everyone but its owner and moderators; closes its reports. */
+export async function hideVideo(id: string, reason: ReportReason): Promise<void> {
+  await unwrap(
+    api.POST('/api/moderation/videos/{public_id}/hide', {
+      params: { path: { public_id: id } },
+      body: { reason },
+    }),
+  )
+}
+
+export type HiddenPage = components['schemas']['Page_ModeratedVideo_']
+
+/** Hidden videos, newest first. */
+export function listHidden(cursor: string | null): Promise<HiddenPage> {
+  return unwrap(api.GET('/api/moderation/videos/hidden', { params: { query: { cursor } } }))
+}
+
+/** Shows a hidden video to everyone who could watch it before. */
+export async function restoreVideo(id: string): Promise<void> {
+  await unwrap(
+    api.POST('/api/moderation/videos/{public_id}/restore', { params: { path: { public_id: id } } }),
+  )
+}
+
+/** Closes the video's open reports: nothing wrong with it. */
+export async function dismissVideo(id: string): Promise<void> {
+  await unwrap(
+    api.POST('/api/moderation/videos/{public_id}/dismiss', { params: { path: { public_id: id } } }),
+  )
+}
+
+export type ModeratedComment = components['schemas']['ModeratedComment']
+
+/** Deletes the comment for everyone; a thread's first comment takes its replies along. */
+export async function deleteComment(id: string): Promise<void> {
+  await unwrap(
+    api.DELETE('/api/moderation/comments/{comment_id}', { params: { path: { comment_id: id } } }),
+  )
+}
+
+/** Closes the comment's open reports: nothing wrong with it. */
+export async function dismissComment(id: string): Promise<void> {
+  await unwrap(
+    api.POST('/api/moderation/comments/{comment_id}/dismiss', {
+      params: { path: { comment_id: id } },
+    }),
+  )
+}
+
+export type UserStatus = components['schemas']['UserStatus']
+export type RestrictedAccount = components['schemas']['RestrictedAccount']
+export type AccountPage = components['schemas']['Page_RestrictedAccount_']
+
+/** Banned and terminated accounts, or one of the two. Admins only. */
+export function listRestricted(
+  status: UserStatus | null,
+  cursor: string | null,
+): Promise<AccountPage> {
+  return unwrap(api.GET('/api/moderation/users', { params: { query: { status, cursor } } }))
+}
+
+/** Ban, terminate or reinstate (active) an account. Admins only. */
+export async function setStatus(handle: string, status: UserStatus, reason = ''): Promise<void> {
+  await unwrap(
+    api.PUT('/api/moderation/users/{handle}/status', {
+      params: { path: { handle } },
+      body: { status, reason },
+    }),
+  )
+}
+
+/** The channel behind a reported video or comment: the account an admin may restrict. */
+export type Account = components['schemas']['ChannelSummary']
+
+export type AuditEntry = components['schemas']['AuditEntryOut']
+export type AuditPage = components['schemas']['Page_AuditEntryOut_']
+
+export type AuditAction = components['schemas']['AuditAction']
+export type AuditSource = components['schemas']['AuditSource']
+
+/** Each set field narrows the log; handles go without the @. */
+export interface AuditFilters {
+  actions: AuditAction[]
+  source: AuditSource | null
+  actor: string | null
+  account: string | null // the account itself, its videos and its comments
+}
+
+/** Who did what, newest first. Admins only. */
+export function listAudit(filters: AuditFilters, cursor: string | null): Promise<AuditPage> {
+  const { actions, ...rest } = filters
+  return unwrap(
+    api.GET('/api/moderation/audit-log', {
+      params: { query: { action: actions.length > 0 ? actions : null, ...rest, cursor } },
+    }),
+  )
+}

@@ -638,6 +638,225 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/videos/{public_id}/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Report a video to moderators
+         * @description One open report per user and video: reporting it again changes nothing.
+         */
+        post: operations["report_video_api_videos__public_id__report_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/comments/{comment_id}/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Report a comment to moderators
+         * @description One open report per user and comment: reporting it again changes nothing.
+         */
+        post: operations["report_comment_api_comments__comment_id__report_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/moderation/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Open reports by video or comment, oldest first */
+        get: operations["list_reports_api_moderation_reports_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/moderation/videos/hidden": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Hidden videos, newest first */
+        get: operations["list_hidden_api_moderation_videos_hidden_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/moderation/videos/{public_id}/hide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Hide a video and close its reports
+         * @description Only its owner and moderators can open it then; everyone else gets 404.
+         */
+        post: operations["hide_video_api_moderation_videos__public_id__hide_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/moderation/videos/{public_id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Show a hidden video again */
+        post: operations["restore_video_api_moderation_videos__public_id__restore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/moderation/videos/{public_id}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Close a video's reports: nothing wrong with it */
+        post: operations["dismiss_video_api_moderation_videos__public_id__dismiss_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/moderation/comments/{comment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a comment and close its reports
+         * @description Deleting a thread's first comment deletes its replies too.
+         */
+        delete: operations["delete_comment_api_moderation_comments__comment_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/moderation/comments/{comment_id}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Close a comment's reports: nothing wrong with it */
+        post: operations["dismiss_comment_api_moderation_comments__comment_id__dismiss_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/moderation/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Banned and terminated accounts (admins) */
+        get: operations["list_restricted_api_moderation_users_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/moderation/users/{handle}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Ban, terminate or reinstate an account (admins)
+         * @description banned: no sign-in, its sessions end, its content stays. terminated: the same, and its videos are unavailable to all but moderators. active: reinstated.
+         */
+        put: operations["set_status_api_moderation_users__handle__status_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/moderation/audit-log": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Who did what, newest first (admins) */
+        get: operations["list_audit_api_moderation_audit_log_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -666,6 +885,68 @@ export interface components {
              * @description Who may watch, without the @
              */
             handle: string;
+        };
+        /**
+         * AuditAction
+         * @enum {string}
+         */
+        AuditAction: "hide_video" | "restore_video" | "dismiss_video" | "delete_comment" | "dismiss_comment" | "set_user_status" | "set_user_role";
+        /** AuditEntryOut */
+        AuditEntryOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            source: components["schemas"]["AuditSource"];
+            /** @description Who acted through the API; null for the CLI or an account deleted since */
+            actor: components["schemas"]["ChannelSummary"] | null;
+            /**
+             * By
+             * @description CLI: the admin named with --by (claimed, not proven)
+             */
+            by: string | null;
+            action: components["schemas"]["AuditAction"];
+            target: components["schemas"]["AuditTarget"];
+            /**
+             * Details
+             * @description reason, reports, replies, from, to
+             */
+            details: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * AuditSource
+         * @enum {string}
+         */
+        AuditSource: "api" | "cli";
+        /**
+         * AuditTarget
+         * @description What an entry is about, as a person reads it.
+         */
+        AuditTarget: {
+            type: components["schemas"]["TargetType"];
+            /**
+             * Label
+             * @description Video title, comment text or @handle; empty if it is gone
+             */
+            label: string;
+            /**
+             * Video Id
+             * @description Public id of the video, or of the comment's video
+             */
+            video_id: string | null;
+            /**
+             * Handle
+             * @description The user, for a user target
+             */
+            handle: string | null;
         };
         /**
          * Category
@@ -701,6 +982,11 @@ export interface components {
              * @description False for guests and on your own channel
              */
             is_subscribed: boolean;
+            /**
+             * Is Terminated
+             * @description Terminated by an admin: only moderators see it, and it is frozen
+             */
+            is_terminated: boolean;
         };
         /**
          * ChannelSummary
@@ -773,6 +1059,11 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /** HideIn */
+        HideIn: {
+            /** @description The rule the video breaks */
+            reason: components["schemas"]["ReportReason"];
+        };
         /** ItemMove */
         ItemMove: {
             /**
@@ -780,6 +1071,60 @@ export interface components {
              * @description The playlist's video to put it before; null: at the end
              */
             before: string | null;
+        };
+        /**
+         * ModeratedComment
+         * @description A comment as a moderator sees it, with the video it is on.
+         */
+        ModeratedComment: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Text */
+            text: string;
+            author: components["schemas"]["ChannelSummary"];
+            /**
+             * Published At
+             * Format: date-time
+             */
+            published_at: string;
+            /** Is Reply */
+            is_reply: boolean;
+            /** Is Deleted */
+            is_deleted: boolean;
+            video: components["schemas"]["ModeratedVideo"];
+        };
+        /**
+         * ModeratedVideo
+         * @description A video as a moderator sees it: in any state, hidden or not.
+         */
+        ModeratedVideo: {
+            /**
+             * Id
+             * @description Public id, as in /watch?v=<id>
+             */
+            id: string;
+            /** Title */
+            title: string;
+            /**
+             * Thumbnail Url
+             * @description Set once the video is ready
+             */
+            thumbnail_url: string | null;
+            /** Duration Sec */
+            duration_sec: number | null;
+            status: components["schemas"]["VideoStatus"];
+            visibility: components["schemas"]["Visibility"];
+            /** Is Hidden */
+            is_hidden: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            channel: components["schemas"]["ChannelSummary"];
         };
         /** MyPlaylist */
         MyPlaylist: {
@@ -832,10 +1177,24 @@ export interface components {
             /** Password */
             password: string;
         };
+        /** Page[AuditEntryOut] */
+        Page_AuditEntryOut_: {
+            /** Items */
+            items: components["schemas"]["AuditEntryOut"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
         /** Page[CommentOut] */
         Page_CommentOut_: {
             /** Items */
             items: components["schemas"]["CommentOut"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
+        /** Page[ModeratedVideo] */
+        Page_ModeratedVideo_: {
+            /** Items */
+            items: components["schemas"]["ModeratedVideo"][];
             /** Next Cursor */
             next_cursor: string | null;
         };
@@ -857,6 +1216,20 @@ export interface components {
         Page_PlaylistOut_: {
             /** Items */
             items: components["schemas"]["PlaylistOut"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
+        /** Page[ReportCase] */
+        Page_ReportCase_: {
+            /** Items */
+            items: components["schemas"]["ReportCase"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
+        /** Page[RestrictedAccount] */
+        Page_RestrictedAccount_: {
+            /** Items */
+            items: components["schemas"]["RestrictedAccount"][];
             /** Next Cursor */
             next_cursor: string | null;
         };
@@ -977,6 +1350,53 @@ export interface components {
             my_rating: components["schemas"]["Rating"];
         };
         /**
+         * ReportCase
+         * @description The open reports of one video or one comment.
+         */
+        ReportCase: {
+            /** @description The reported video; null for a comment */
+            video: components["schemas"]["ModeratedVideo"] | null;
+            /** @description The reported comment; null for a video */
+            comment: components["schemas"]["ModeratedComment"] | null;
+            /** Report Count */
+            report_count: number;
+            /** Reasons */
+            reasons: components["schemas"]["ReportReason"][];
+            /**
+             * Notes
+             * @description The newest report texts
+             */
+            notes: string[];
+            /**
+             * Last Reported At
+             * Format: date-time
+             */
+            last_reported_at: string;
+        };
+        /** ReportIn */
+        ReportIn: {
+            reason: components["schemas"]["ReportReason"];
+            /**
+             * Details
+             * @default
+             */
+            details: string;
+        };
+        /**
+         * ReportReason
+         * @description YouTube's reasons, for videos and comments alike. Also why a moderator hid a video.
+         * @enum {string}
+         */
+        ReportReason: "sexual" | "violent" | "hateful" | "harassment" | "harmful" | "misinformation" | "child_abuse" | "terrorism" | "spam" | "legal";
+        /**
+         * RestrictedAccount
+         * @description A banned or terminated account.
+         */
+        RestrictedAccount: {
+            channel: components["schemas"]["ChannelSummary"];
+            status: components["schemas"]["UserStatus"];
+        };
+        /**
          * Role
          * @description Nested roles (ADR 0009): each one has all rights of the ones before it.
          *
@@ -1019,6 +1439,16 @@ export interface components {
             /** Description */
             description: string;
         };
+        /** StatusIn */
+        StatusIn: {
+            status: components["schemas"]["UserStatus"];
+            /**
+             * Reason
+             * @description Why, for the audit log
+             * @default
+             */
+            reason: string;
+        };
         /**
          * SubscribedChannel
          * @description A row of the viewer's subscriptions.
@@ -1040,6 +1470,11 @@ export interface components {
             /** Is Subscribed */
             is_subscribed: boolean;
         };
+        /**
+         * TargetType
+         * @enum {string}
+         */
+        TargetType: "video" | "comment" | "user";
         /** UploadLimits */
         UploadLimits: {
             /** Max Size Bytes */
@@ -1055,6 +1490,12 @@ export interface components {
             email: string;
             role: components["schemas"]["Role"];
         };
+        /**
+         * UserStatus
+         * @description What an admin allowed the account (ADR 0009). A user is also a channel, so it is both.
+         * @enum {string}
+         */
+        UserStatus: "active" | "banned" | "terminated";
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -1110,6 +1551,11 @@ export interface components {
             /** Duration Sec */
             duration_sec: number | null;
             /**
+             * Is Hidden
+             * @description Hidden by a moderator: only its owner and moderators see it
+             */
+            is_hidden: boolean;
+            /**
              * Thumbnail Url
              * @description Set once the video is ready
              */
@@ -1132,6 +1578,11 @@ export interface components {
             created_at: string;
             channel: components["schemas"]["ChannelSummary"];
             my_rating: components["schemas"]["Rating"];
+            /**
+             * Channel Terminated
+             * @description Its channel was terminated: only moderators see it, and it is frozen
+             */
+            channel_terminated: boolean;
         };
         /** VideoOut */
         VideoOut: {
@@ -1154,6 +1605,11 @@ export interface components {
             error_message: string | null;
             /** Duration Sec */
             duration_sec: number | null;
+            /**
+             * Is Hidden
+             * @description Hidden by a moderator: only its owner and moderators see it
+             */
+            is_hidden: boolean;
             /**
              * Thumbnail Url
              * @description Set once the video is ready
@@ -2558,6 +3014,396 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SavedOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    report_video_api_videos__public_id__report_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Public video id */
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    report_comment_api_comments__comment_id__report_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_reports_api_moderation_reports_get: {
+        parameters: {
+            query?: {
+                /** @description next_cursor of the last page */
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_ReportCase_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_hidden_api_moderation_videos_hidden_get: {
+        parameters: {
+            query?: {
+                /** @description next_cursor of the last page */
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_ModeratedVideo_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    hide_video_api_moderation_videos__public_id__hide_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Public video id */
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HideIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    restore_video_api_moderation_videos__public_id__restore_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Public video id */
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dismiss_video_api_moderation_videos__public_id__dismiss_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Public video id */
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_comment_api_moderation_comments__comment_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dismiss_comment_api_moderation_comments__comment_id__dismiss_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_restricted_api_moderation_users_get: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["UserStatus"] | null;
+                /** @description next_cursor of the last page */
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_RestrictedAccount_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_status_api_moderation_users__handle__status_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Without the @ */
+                handle: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StatusIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_audit_api_moderation_audit_log_get: {
+        parameters: {
+            query?: {
+                /** @description Any of these actions */
+                action?: components["schemas"]["AuditAction"][] | null;
+                /** @description cli: the command line */
+                source?: components["schemas"]["AuditSource"] | null;
+                /** @description Who acted, without the @ */
+                actor?: string | null;
+                /** @description The account acted on, its videos and its comments; without the @ */
+                account?: string | null;
+                /** @description next_cursor of the last page */
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_AuditEntryOut_"];
                 };
             };
             /** @description Validation Error */

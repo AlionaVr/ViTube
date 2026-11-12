@@ -36,23 +36,27 @@
 }
 
 .videoColumn {
-  width: 40%;
+  width: 35%;
 }
 
 .visibilityColumn {
-  width: 10%;
+  width: 9%;
 }
 
-.statusColumn {
-  width: 14%;
-}
-
-.dateColumn {
+.restrictionsColumn {
   width: 11%;
 }
 
+.statusColumn {
+  width: 12%;
+}
+
+.dateColumn {
+  width: 10%;
+}
+
 .countColumn {
-  width: 8%;
+  width: 7%;
 }
 
 .commentsColumn {
@@ -170,7 +174,7 @@
 /* A phone: a narrower sticky column leaves room to scroll the rest past it. */
 @media (max-width: 600px) {
   .table {
-    min-width: 720px;
+    min-width: 820px;
   }
 
   .videoColumn {

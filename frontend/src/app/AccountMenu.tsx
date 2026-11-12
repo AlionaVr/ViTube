@@ -1,9 +1,11 @@
 import { useEffect, useId, useRef, useState } from 'react'
+import { Link } from 'react-router'
 
 import type { User } from '../api/client'
 import { useSignOut } from '../auth/hooks'
 import Avatar from '../components/Avatar'
 import Icon from '../components/Icon'
+import { canModerate } from '../moderation/roles'
 import styles from './AccountMenu.module.css'
 
 /** The avatar in the header and the panel it opens (a disclosure: Tab moves through it). */
@@ -68,6 +70,16 @@ export default function AccountMenu({ user }: { user: User }) {
             <Icon name="signOut" />
             Sign out
           </button>
+          {/* A staff tool gets its own group after Sign out, as YouTube Studio does. */}
+          {canModerate(user) && (
+            <>
+              <hr className={styles.divider} />
+              <Link to="/moderation" className={styles.item} onClick={() => setOpen(false)}>
+                <Icon name="shieldPerson" />
+                Moderation
+              </Link>
+            </>
+          )}
         </div>
       )}
     </div>

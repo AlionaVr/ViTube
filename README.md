@@ -89,6 +89,16 @@ docker compose exec api python -m app.cli set-role <email> admin
 
 It applies at once, also to sessions that are already open.
 
+Moderators and admins open **Moderation** in the account menu (`/moderation`): reports, hidden videos and, for
+admins, accounts and the audit log. An admin can also restrict an account from the command line:
+
+```bash
+docker compose exec api python -m app.cli set-status <email> banned --by <admin email> --reason "Spam"
+```
+
+`banned` blocks sign-in and ends open sessions; `terminated` does the same and hides the channel's videos; `active`
+reinstates. `--by` names you in the audit log; `set-role` takes it too, except for the first admin.
+
 Served over HTTPS? Set `COOKIE_SECURE=true` in `.env` and run `./install.sh` again: session cookies then go over
 HTTPS only.
 

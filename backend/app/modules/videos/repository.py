@@ -22,7 +22,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import REGCONFIG, insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.users.models import User
+from app.modules.users.models import User, UserStatus
 from app.modules.videos.models import (
     GAVE_UP_REASON,
     SEARCH_CONFIG,
@@ -42,9 +42,21 @@ TYPO_SIMILARITY = 0.5
 # Public lists (feed, search, Up next) show only these. One place: a new rule reaches every list.
 # Partial indexes use models.LISTED_SQL: LISTED must imply it (may add rules, never drop one).
 # Literals, not bind parameters: a generic plan can't use a partial index for `visibility = $1`.
+# Restricted by moderation (ADR 0009): hidden, or the channel terminated. The SQL twin of
+# access.is_restricted. Not in LISTED_SQL: such videos are few, so filtering them out on top of
+# the partial indexes costs less than rebuilding them.
+NOT_RESTRICTED = (
+    ~Video.is_hidden,
+    Video.owner_id.not_in(
+        select(User.id).where(
+            User.status == literal(UserStatus.TERMINATED, User.status.type, literal_execute=True)
+        )
+    ),
+)
 LISTED = (
     Video.visibility == literal(Visibility.PUBLIC, Video.visibility.type, literal_execute=True),
     Video.status == literal(VideoStatus.READY, Video.status.type, literal_execute=True),
+    *NOT_RESTRICTED,
 )
 
 _WITH_OWNER = select(Video, User).join(User, User.id == Video.owner_id)

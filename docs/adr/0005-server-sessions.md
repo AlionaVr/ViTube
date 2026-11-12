@@ -16,7 +16,20 @@ work immediately.
 - **Logout.** Deletes the session.
 - **Durability.** Redis keeps an append-only log, fsync every second: a crash loses at most 1 s, so a logout is not
   undone. With snapshots only, a crash brought back sessions deleted since the last snapshot (up to an hour).
-- **Ban or password change.** Deletes all of the user's sessions.
+- **Ban or password change.** Deletes all of the user's sessions. *(Amended 2026-11-11: how a ban holds;
+  2026-11-12: advisory locks, and no session from before a ban works again.)*
+    - The DB decides, not Redis: every request reads the user's status, and a banned user's request runs as a
+      guest's and ends its session. So a session the cleanup misses (made during the ban, made before the index
+      existed, or Redis down) works nowhere.
+    - A ban also sets the user's `sessions_valid_after`: sessions started before it are refused for good, so a
+      reinstated account doesn't bring back one the cleanup missed.
+    - No write commits after a ban: an unsafe request takes its user's advisory lock, shared, until it commits; a
+      status or role change takes it exclusive first, so it waits for writes under way, and later ones queue
+      behind it and see it. Not row locks (`FOR KEY SHARE` against `FOR UPDATE`): new row share locks pass a
+      waiting `FOR UPDATE`, so a user who keeps a write in flight could hold their ban off for good. A request
+      that commits twice (upload) checks again before its last commit.
+    - Cleanup: Redis keeps each user's session keys in a sorted set, scored by creation time; a ban deletes the
+      keys it reads. Sessions past the absolute timeout leave the set on the next login.
 - **CSRF**, three layers:
     - `SameSite=Lax`;
     - `X-CSRF-Token` header on every unsafe method;

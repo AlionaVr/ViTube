@@ -5,11 +5,14 @@ import secrets
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.errors import Conflict, NotFound, Unauthorized
+from app.core.errors import Conflict, Forbidden, NotFound, Unauthorized
 from app.core.rate_limit import RateLimit
+from app.modules.audit import repository as audit
+from app.modules.audit.models import AuditAction, TargetType
+from app.modules.audit.repository import Actor
 from app.modules.auth.passwords import hash_password, verify_password
 from app.modules.users import repository as users
-from app.modules.users.models import Role, User
+from app.modules.users.models import Role, User, UserStatus
 
 HANDLE_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789"  # no look-alikes: i, l, o, 0, 1
 HANDLE_TRIES = 5
@@ -19,6 +22,12 @@ LOGIN_PER_EMAIL_AND_IP = RateLimit("login_email_ip", limit=5, window=15 * 60)
 # Per account from all IPs: caps guessing spread over many IPs. Each IP adds at most 5,
 # so locking an account out takes 20+ IPs (ADR 0005).
 LOGIN_PER_EMAIL = RateLimit("login_email", limit=100, window=15 * 60)
+
+
+BLOCKED = {
+    UserStatus.BANNED: "This account is banned",
+    UserStatus.TERMINATED: "This channel was terminated for breaking the rules",
+}
 
 
 def random_handle() -> str:
@@ -53,14 +62,34 @@ async def login(db: AsyncSession, redis: Redis, email: str, password: str, ip: s
         raise Unauthorized("Wrong email or password")
     # The owner's typos from this IP are forgiven; the account-wide count stays for guessers.
     await LOGIN_PER_EMAIL_AND_IP.reset(redis, ip_key)
+    # Only after the password: others can't learn that an account is banned.
+    if user.status is not UserStatus.ACTIVE:
+        raise Forbidden(BLOCKED[user.status])
     return user
 
 
-async def set_role(db: AsyncSession, email: str, role: Role) -> User:
-    """Open sessions get the new role on the next request: it is read from the DB each time."""
-    user = await users.get_by_email(db, email)
+async def set_role(db: AsyncSession, actor: Actor, email: str, role: Role) -> User:
+    """Open sessions get the new role on the next request: it is read from the DB each time.
+    A real change is written to the audit log in the same transaction."""
+    found = await users.get_by_email(db, email)
+    # Locked like a status change, so a ban can't check the old role while it changes.
+    user = await users.lock_for_status(db, found.id) if found else None
     if user is None:
         raise NotFound("No user with this email")
-    user.role = role
+    if role is Role.ADMIN and user.status is not UserStatus.ACTIVE:
+        # Admins can't be restricted, so they couldn't be reinstated either (a DB check too).
+        raise Forbidden("A restricted account can't be made an admin: reinstate it first")
+    previous = user.role
+    if previous is not role:
+        user.role = role
+        await audit.record(
+            db,
+            actor,
+            AuditAction.SET_USER_ROLE,
+            TargetType.USER,
+            user.id,
+            subject=user.id,
+            **{"from": previous.value, "to": role.value},
+        )
     await db.commit()
     return user

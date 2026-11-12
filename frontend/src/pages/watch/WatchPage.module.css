@@ -98,6 +98,19 @@
   overflow-wrap: anywhere;
 }
 
+/* The moderation notice sits between the player and the title. */
+.notice {
+  margin-top: 12px;
+}
+
+/* YouTube's line where the comments would be. */
+.commentsOff {
+  margin: 24px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  line-height: 20px;
+}
+
 .upNextInline {
   margin-top: 24px;
 }

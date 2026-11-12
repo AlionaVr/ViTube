@@ -27,6 +27,7 @@ async def test_guest_sees_the_channel(client: AsyncClient, db: AsyncSession) -> 
         "subscriber_count": 0,
         "video_count": 0,
         "is_subscribed": False,
+        "is_terminated": False,
     }
 
 

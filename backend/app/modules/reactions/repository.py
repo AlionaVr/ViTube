@@ -8,6 +8,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.reactions.models import CommentReaction, VideoReaction
+from app.modules.videos.models import Video
 
 type Table = type[VideoReaction] | type[CommentReaction]
 
@@ -60,14 +61,13 @@ async def delete_value(
     return await db.scalar(statement)
 
 
-async def add_likes(db: AsyncSession, table: Table, target_id: UUID, delta: int) -> int:
+async def add_likes(db: AsyncSession, table: Table, target_id: UUID, delta: int) -> int | None:
     """like_count + delta of the rated video or comment, in the DB itself: parallel updates
-    don't overwrite each other."""
+    don't overwrite each other. None: the video is hidden (checked again after a hide under
+    way, as comments.repository.add_comment)."""
     rated = table.rated
-    statement = (
-        update(rated)
-        .where(rated.id == target_id)
-        .values(like_count=rated.like_count + delta)
-        .returning(rated.like_count)
-    )
-    return (await db.execute(statement)).scalar_one()
+    statement = update(rated).where(rated.id == target_id)
+    if rated is Video:
+        statement = statement.where(~Video.is_hidden)
+    statement = statement.values(like_count=rated.like_count + delta).returning(rated.like_count)
+    return await db.scalar(statement)

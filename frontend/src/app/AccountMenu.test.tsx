@@ -39,6 +39,29 @@ describe('header account area', () => {
     expect(screen.queryByRole('link', { name: 'Sign in' })).not.toBeInTheDocument()
   })
 
+  it('leads moderators to the moderation page', async () => {
+    mockApi({ 'GET /api/auth/me': () => json(200, { ...ANNA, role: 'moderator' }) })
+    const router = renderApp('/')
+    await openMenu()
+    const signOut = screen.getByRole('button', { name: 'Sign out' })
+    const moderation = screen.getByRole('link', { name: 'Moderation' })
+    // Its own group after Sign out, as YouTube Studio's link is.
+    expect(signOut.compareDocumentPosition(moderation)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+
+    await userEvent.click(moderation)
+
+    expect(router.state.location.pathname).toBe('/moderation')
+  })
+
+  it('shows no moderation link to other users', async () => {
+    signedIn()
+    renderApp('/')
+
+    await openMenu()
+
+    expect(screen.queryByRole('link', { name: 'Moderation' })).not.toBeInTheDocument()
+  })
+
   it('signs out', async () => {
     const fetch = signedIn()
     renderApp('/')

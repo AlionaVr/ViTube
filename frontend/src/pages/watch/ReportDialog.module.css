@@ -1,0 +1,72 @@
+.title {
+  margin: 0 0 16px;
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 28px;
+}
+
+.question {
+  display: block;
+  padding: 0;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 22px;
+}
+
+.text {
+  margin: 4px 0 8px;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+/* A box with a counter under its right edge, as YouTube's "Add details". */
+.details {
+  display: block;
+}
+
+.details textarea {
+  width: 100%;
+  margin-top: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 14px;
+  line-height: 20px;
+  resize: vertical;
+}
+
+.details textarea:focus {
+  outline: none;
+  border-color: var(--color-link);
+}
+
+.details textarea::placeholder {
+  color: var(--color-placeholder);
+}
+
+.counter {
+  display: block;
+  margin-top: 4px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 16px;
+  text-align: right;
+}
+
+.error {
+  margin: 12px 0 0;
+  color: var(--color-error);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.actions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

@@ -51,6 +51,9 @@ class VideoOut(BaseModel):
     status: VideoStatus
     error_message: str | None = Field(description="Why processing failed")
     duration_sec: int | None
+    is_hidden: bool = Field(
+        description="Hidden by a moderator: only its owner and moderators see it"
+    )
     thumbnail_url: str | None = Field(description="Set once the video is ready")
     media_url: str | None = Field(description="MP4 with Range support; set once ready")
     view_count: int
@@ -71,6 +74,7 @@ class VideoOut(BaseModel):
             status=video.status,
             error_message=video.error_message,
             duration_sec=video.duration_sec,
+            is_hidden=video.is_hidden,
             thumbnail_url=MEDIA_PREFIX + video.thumbnail_key if ready else None,
             media_url=MEDIA_PREFIX + video.media_key if ready else None,
             view_count=video.view_count,
@@ -111,6 +115,9 @@ class VideoDetail(VideoOut):
     """The watch page: the video and what this viewer did with it."""
 
     my_rating: Rating
+    channel_terminated: bool = Field(
+        description="Its channel was terminated: only moderators see it, and it is frozen"
+    )
 
 
 class AccessGrant(BaseModel):

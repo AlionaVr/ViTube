@@ -10,6 +10,10 @@ FastAPI + PostgreSQL + MinIO + Celery + React. Deployed with `./install.sh` (Doc
 - Stack: `docker compose up -d --build --wait` (needs `.env`; `./install.sh` creates it with random secrets).
 - Backend (`backend/`): `uv run ruff check .`, `uv run pyright`, `uv run pytest` (needs Docker: tests start Postgres, Redis and MinIO via testcontainers; and ffmpeg for the worker tests).
 - E2E on a running stack (`backend/`): `E2E_BASE_URL=http://localhost uv run pytest tests/e2e -v` (needs ffmpeg).
+  Without ffmpeg, CI runs it on the PR: a new e2e test may be committed after ruff and pyright.
+- Worktree stacks share image tags (`vitube-backend`…): a build moves the other checkouts' next `up` or `run` onto
+  this code and its migrations. While other stacks run, rebuild only with the user's OK; check frontend work with
+  `API_PROXY=http://localhost:<stack port> npm run dev -- --port <free port>`.
 - Migrations: `docker compose run --rm migrate alembic <cmd>`. See the `add-migration` skill.
 - Frontend (`frontend/`): `npm run dev` (proxies `/api` to the stack, or to `API_PROXY`), `npm run lint`, `npm run format:check`, `npm test`, `npm run build`.
 - API types: after changing the API, run `npm run gen:api` in `frontend/` and commit `src/api/openapi.json` + `schema.d.ts` (CI checks).
@@ -36,11 +40,16 @@ FastAPI + PostgreSQL + MinIO + Celery + React. Deployed with `./install.sh` (Doc
     - `tasks/` is untracked and lives in the main checkout, one `todo.md` section per stage or branch.
       In a new worktree, link it: `ln -s "$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/tasks" tasks`.
     - After any correction from the user, add the pattern and a rule that prevents it to `tasks/lessons.md`.
-    - Read it at session start. At stage end, move its stable rules into this file.
+    - Read it at session start, after a context summary and before each stage step: other sessions add rules during
+      the day. At stage end, move its stable rules into this file.
 - **Frontend.** Load the `frontend-design:frontend-design` skill before each frontend step. The look follows YouTube
-  (likeness is graded).
+  (likeness is graded). Row menus (⋮) are always visible, not only on hover.
 - **Verify before done.**
     - Never call a task done without proof: run tests, check logs, show it works.
+    - While developing, run the tests of the changed modules and of the modules that import them, plus lint and
+      type checks (frontend: `npx vitest related --run <changed files>`). Run the full suites once before the PR,
+      and after a rebase onto `main` or a change to a shared contract (visibility rules, auth deps, models and
+      migrations, the API schema, shared components and hooks).
     - Run a suite once after a change. Rerun it only after a code change or for a flake you saw, never "to be sure".
     - Ask: "Would a staff engineer approve this?"
 - **Elegance, balanced.**
