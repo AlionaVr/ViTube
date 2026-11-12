@@ -5,8 +5,9 @@
 }
 
 .wordmark {
+  font-family: 'Roboto Condensed', var(--font-family);
   font-size: 20px;
-  font-weight: 500;
+  font-weight: 700;
   letter-spacing: -0.8px;
   color: var(--color-text);
 }

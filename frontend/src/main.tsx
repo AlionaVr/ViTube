@@ -1,5 +1,7 @@
 import '@fontsource/roboto/400.css'
 import '@fontsource/roboto/500.css'
+// The wordmark is Latin only, so one subset is enough.
+import '@fontsource/roboto-condensed/latin-700.css'
 import './styles/tokens.css'
 import './styles/global.css'
 
