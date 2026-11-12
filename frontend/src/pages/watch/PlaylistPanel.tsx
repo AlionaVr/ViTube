@@ -7,8 +7,9 @@ import IconButton from '../../components/IconButton'
 import Spinner from '../../components/Spinner'
 import Thumbnail from '../../components/Thumbnail'
 import { useInfiniteScroll } from '../../hooks/useInfiniteScroll'
+import { useToast } from '../../hooks/useToast'
 import { newSeed } from '../../playlists/queue'
-import { watchUrl } from '../../videos/paths'
+import { channelUrl, watchUrl } from '../../videos/paths'
 import styles from './PlaylistPanel.module.css'
 import type { PlayingList } from './usePlaylistQueue'
 
@@ -17,6 +18,7 @@ export default function PlaylistPanel({ queue }: { queue: PlayingList }) {
   const { list, shuffle, videos, position, items } = queue
   const current = position === null ? undefined : videos[position].id
   const [, setParams] = useSearchParams()
+  const toast = useToast()
   const rows = useRef<HTMLOListElement>(null)
   // The panel scrolls itself; the sentinel inside it shows only near the end of its rows.
   // Shuffled, the list is the first page: no more to load.
@@ -41,13 +43,15 @@ export default function PlaylistPanel({ queue }: { queue: PlayingList }) {
       },
       { replace: true },
     )
+    toast(shuffle ? 'Shuffle off' : 'Shuffle on')
   }
 
   // The current row at the top of the panel; scrollIntoView would move the page too.
+  // A shuffle toggle moves the rows under the same video, so it scrolls again.
   useLayoutEffect(() => {
     const row = rows.current?.querySelector<HTMLElement>('[aria-current]')
     if (rows.current && row) rows.current.scrollTop = row.offsetTop
-  }, [current])
+  }, [current, shuffle])
 
   return (
     <section className={styles.panel} aria-label={queue.title}>
@@ -56,15 +60,14 @@ export default function PlaylistPanel({ queue }: { queue: PlayingList }) {
           <Link to={queue.url}>{queue.title}</Link>
         </h2>
         <p className={styles.meta}>
-          {queue.owner.name}
+          <Link to={channelUrl(queue.owner.handle)}>{queue.owner.name}</Link>
           {position !== null && ` • ${position + 1} / ${queue.total}`}
         </p>
         <div className={styles.actions}>
           <IconButton
-            icon="shuffle"
-            label="Shuffle"
+            icon={shuffle ? 'shuffleOn' : 'shuffle'}
+            label="Shuffle playlist"
             aria-pressed={shuffle !== null}
-            className={shuffle ? styles.on : undefined}
             onClick={toggleShuffle}
           />
         </div>

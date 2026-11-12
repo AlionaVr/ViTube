@@ -1,6 +1,6 @@
 import '@fontsource/roboto/700.css'
 
-import type { ReactNode } from 'react'
+import { type ReactNode, useLayoutEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 
 import { ApiError } from '../../api/client'
@@ -80,6 +80,23 @@ function InfoSkeleton() {
   )
 }
 
+/** The player's height as `--player-height` on the page: the playlist panel ends with it. */
+function usePlayerHeight() {
+  const page = useRef<HTMLDivElement>(null)
+  const box = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const player = box.current
+    if (!player) return
+    // Straight to the style, not to state: a resize mustn't render the whole page again.
+    const observer = new ResizeObserver(() =>
+      page.current?.style.setProperty('--player-height', `${player.offsetHeight}px`),
+    )
+    observer.observe(player)
+    return () => observer.disconnect()
+  }, [])
+  return { page, box }
+}
+
 export default function WatchPage() {
   const [params] = useSearchParams()
   const id = params.get('v') ?? ''
@@ -93,6 +110,7 @@ export default function WatchPage() {
     Number(params.get('index')),
   )
   const twoColumns = useMediaQuery(TWO_COLUMNS)
+  const { page, box } = usePlayerHeight()
   const [theater, toggleTheater] = useStoredFlag('vitube:theater', false)
   const reportPlayed = useViewReport(id, video.data?.duration_sec ?? 0)
   const viewer = useViewer()
@@ -123,12 +141,12 @@ export default function WatchPage() {
   const frozen = !!video.data && (video.data.is_hidden || video.data.channel_terminated)
 
   return (
-    <div className={theater ? `${styles.watch} ${styles.theater}` : styles.watch}>
+    <div ref={page} className={theater ? `${styles.watch} ${styles.theater}` : styles.watch}>
       <title>{video.data ? `${video.data.title} - ViTube` : 'ViTube'}</title>
 
       {/* One place in the tree for the player, so theater mode doesn't restart the video. */}
       <div className={styles.player}>
-        <div className={styles.playerBox}>
+        <div ref={box} className={styles.playerBox}>
           {video.data &&
             (video.data.media_url && video.data.thumbnail_url ? (
               startKnown && (

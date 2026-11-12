@@ -249,7 +249,8 @@
     height: auto;
   }
 
-  .cover {
+  .cover,
+  .play {
     max-width: 360px;
   }
 }

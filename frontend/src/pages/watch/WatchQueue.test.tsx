@@ -1,6 +1,6 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { ANNA, json, mockApi } from '../../test/api'
 import { channel } from '../../test/channels'
@@ -59,6 +59,12 @@ function location(router: ReturnType<typeof renderApp>) {
   return router.state.location.search
 }
 
+/** Ends the video and lets a navigation it starts run, so a test sees where it leads. */
+async function endVideo() {
+  fireEvent.ended(document.querySelector('video')!)
+  await act(async () => {})
+}
+
 describe('WatchPage with a list', () => {
   it('shows the list above Up next, the current video marked', async () => {
     mockQueue()
@@ -69,6 +75,10 @@ describe('WatchPage with a list', () => {
       `/playlist?list=${PLAYLIST.id}`,
     )
     expect(panel).toHaveTextContent('Open Movie Club • 2 / 3')
+    expect(within(panel).getByRole('link', { name: 'Open Movie Club' })).toHaveAttribute(
+      'href',
+      '/@openmovieclub',
+    )
     expect(within(panel).getByRole('link', { current: true })).toHaveTextContent('Video 2')
     expect(within(panel).getByRole('link', { name: /Video 3/ })).toHaveAttribute(
       'href',
@@ -96,12 +106,13 @@ describe('WatchPage with a list', () => {
     const { router } = await openPanel(`/watch?v=video-00002&list=${PLAYLIST.id}`)
     await screen.findByRole('region', { name: 'Video player' })
 
-    fireEvent.ended(document.querySelector('video')!)
-    await waitFor(() => expect(location(router)).toBe(`?v=video-00003&list=${PLAYLIST.id}`))
+    await endVideo()
+    expect(location(router)).toBe(`?v=video-00003&list=${PLAYLIST.id}`)
     await screen.findByRole('heading', { level: 1, name: 'Video 3' })
     await screen.findByRole('region', { name: 'Video player' })
-    fireEvent.ended(document.querySelector('video')!)
+    await endVideo()
     expect(location(router)).toBe(`?v=video-00003&list=${PLAYLIST.id}`)
+    expect(screen.getByRole('heading', { level: 1, name: 'Video 3' })).toBeInTheDocument()
 
     // After the list, Next leaves it for Up next.
     await user.click(screen.getByRole('button', { name: 'Next' }))
@@ -202,8 +213,11 @@ describe('WatchPage with a list', () => {
     await screen.findByRole('region', { name: 'Video player' })
     const playing = document.querySelector('video')
 
-    await user.click(within(panel).getByRole('button', { name: 'Shuffle', pressed: false }))
+    await user.click(
+      within(panel).getByRole('button', { name: 'Shuffle playlist', pressed: false }),
+    )
 
+    expect(screen.getByRole('status')).toHaveTextContent('Shuffle on')
     const params = new URLSearchParams(location(router))
     const seed = params.get('shuffle')!
     expect([params.get('v'), params.get('list'), params.get('index')]).toEqual([
@@ -211,7 +225,9 @@ describe('WatchPage with a list', () => {
       PLAYLIST.id,
       '1',
     ])
-    expect(within(panel).getByRole('button', { name: 'Shuffle', pressed: true })).toBeVisible()
+    expect(
+      within(panel).getByRole('button', { name: 'Shuffle playlist', pressed: true }),
+    ).toBeVisible()
     expect(document.querySelector('video')).toBe(playing)
     expect(panel).toHaveTextContent('Open Movie Club • 1 / 3')
     const rows = within(panel).getAllByRole('link', { name: /Video/ })
@@ -224,8 +240,43 @@ describe('WatchPage with a list', () => {
     expect(new URLSearchParams(location(router)).get('index')).toBe('2')
     expect(new URLSearchParams(location(router)).get('shuffle')).toBe(seed)
 
-    await user.click(within(panel).getByRole('button', { name: 'Shuffle', pressed: true }))
+    await user.click(within(panel).getByRole('button', { name: 'Shuffle playlist', pressed: true }))
     expect(location(router)).not.toMatch(/shuffle|index/)
+    expect(screen.getByRole('status')).toHaveTextContent('Shuffle off')
+  })
+
+  it('scrolls the panel to the current row again when the shuffle moves it', async () => {
+    const user = userEvent.setup()
+    mockQueue()
+    const { panel } = await openPanel(`/watch?v=video-00002&list=${PLAYLIST.id}`)
+    const scrolled = vi.spyOn(Element.prototype, 'scrollTop', 'set')
+
+    await user.click(within(panel).getByRole('button', { name: 'Shuffle playlist' }))
+
+    expect(scrolled).toHaveBeenCalled()
+  })
+
+  it('lets the panel end where the player does', async () => {
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(540)
+    vi.stubGlobal(
+      'ResizeObserver',
+      // Reports a size at once, as a browser does after the first layout.
+      class {
+        private readonly changed: () => void
+        constructor(changed: () => void) {
+          this.changed = changed
+        }
+        observe() {
+          this.changed()
+        }
+        disconnect() {}
+      },
+    )
+    mockQueue()
+    const { panel } = await openPanel(`/watch?v=video-00002&list=${PLAYLIST.id}`)
+
+    const page = panel.closest<HTMLElement>('[style]')!
+    expect(page.style.getPropertyValue('--player-height')).toBe('540px')
   })
 
   it('goes through a shuffled list in its order and stops at its end', async () => {
@@ -253,7 +304,7 @@ describe('WatchPage with a list', () => {
     expect(location(router)).toBe(at(3))
     await screen.findByRole('region', { name: 'Video player' })
 
-    fireEvent.ended(document.querySelector('video')!)
+    await endVideo()
     expect(location(router)).toBe(at(3))
     await user.click(screen.getByRole('button', { name: 'Next' }))
     expect(location(router)).toBe(`?v=${UP_NEXT.id}`)
