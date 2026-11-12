@@ -26,6 +26,7 @@ import {
 import type { Playlist } from '../../playlists/types'
 import { VISIBILITY } from '../../playlists/visibility'
 import buttons from '../../styles/buttons.module.css'
+import { useRateVideo } from '../../videos/hooks'
 import { channelUrl, watchUrl } from '../../videos/paths'
 import type { Page, VideoSummary } from '../../videos/types'
 import { useViewer } from '../../viewer/useViewer'
@@ -280,6 +281,19 @@ function WatchLater() {
 
 const LIKED_VIDEOS = 'Liked videos'
 
+/** ⋮ on a liked video: removing it takes the like back, as on YouTube. */
+function LikedMenu({ videoId }: { videoId: string }) {
+  const rate = useRateVideo(videoId)
+  const toast = useToast()
+  // The promise waits for the list to refetch, so the row leaves as the toast shows.
+  const remove = () =>
+    void rate.mutateAsync('none').then(
+      () => toast(`Removed from ${LIKED_VIDEOS}`),
+      () => toast(NOT_CHANGED),
+    )
+  return <ItemMenu title={LIKED_VIDEOS} actions={{ remove }} />
+}
+
 function LikedView() {
   const liked = useLiked(true)
   const items = useLikedItems(true)
@@ -300,7 +314,11 @@ function LikedView() {
       ) : (
         <HeaderSkeleton />
       )}
-      <Items query={items} videos={videos} />
+      <Items
+        query={items}
+        videos={videos}
+        menu={(index) => <LikedMenu videoId={videos[index].id} />}
+      />
     </div>
   )
 }

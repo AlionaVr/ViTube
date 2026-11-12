@@ -388,6 +388,48 @@ describe('PlaylistPage', () => {
       expect(screen.queryByRole('button', { name: 'More actions' })).not.toBeInTheDocument()
     })
 
+    /** A server whose list and count follow ratings; `fail`: the rating request fails. */
+    function mockRatings(fail = false) {
+      let items = [likedItem(1), likedItem(2)]
+      const sent: unknown[] = []
+      mockApi({
+        ...SIGNED_IN,
+        'GET /api/me/liked': () => json(200, liked({ video_count: items.length })),
+        'GET /api/me/liked/items': () => json(200, page(items)),
+        'PUT /api/videos/video-00001/rating': async (request) => {
+          sent.push(await request.json())
+          if (fail) return json(500, { detail: 'Internal Server Error' })
+          items = items.filter((each) => each.video.id !== 'video-00001')
+          return json(200, { like_count: 0, my_rating: 'none' })
+        },
+      })
+      return { sent }
+    }
+
+    it('takes the like back from the ⋮ menu', async () => {
+      const { sent } = mockRatings()
+      renderApp('/playlist?list=LL')
+
+      await choose(0, 'Remove from Liked videos')
+
+      expect(await screen.findByRole('status')).toHaveTextContent('Removed from Liked videos')
+      expect(await rowTitles()).toEqual(['Video 2'])
+      expect(screen.getByText('1 video')).toBeInTheDocument()
+      expect(sent).toEqual([{ rating: 'none' }])
+    })
+
+    it('keeps the video and says so when the like can’t be taken back', async () => {
+      mockRatings(true)
+      renderApp('/playlist?list=LL')
+
+      await choose(0, 'Remove from Liked videos')
+
+      expect(await screen.findByRole('status')).toHaveTextContent(
+        'Couldn’t change the playlist. Try again.',
+      )
+      expect(await rowTitles()).toEqual(['Video 1', 'Video 2'])
+    })
+
     it('shows an empty list without a date or Play all', async () => {
       mockLiked(liked({ video_count: 0, thumbnail_url: null, updated_at: null }), [])
       renderApp('/playlist?list=LL')
