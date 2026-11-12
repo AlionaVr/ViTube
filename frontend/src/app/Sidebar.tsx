@@ -29,10 +29,10 @@ const HISTORY: NavItem = { to: '/feed/history', label: 'History', icon: 'history
 const LIBRARY: NavItem[] = [
   HISTORY,
   { to: '/feed/playlists', label: 'Playlists', icon: 'playlists' },
-  // Studio, as on YouTube: all of the user's videos; the channel tab shows only public ones.
-  { to: '/studio/videos', label: 'Your videos', icon: 'yourVideos' },
   { to: '/playlist?list=WL', label: 'Watch later', icon: 'watchLater' },
   { to: '/playlist?list=LL', label: 'Liked videos', icon: 'like', activeIcon: 'likeFill' },
+  // Studio, as on YouTube: all of the user's videos; the channel tab shows only public ones.
+  { to: '/studio/videos', label: 'Your videos', icon: 'yourVideos' },
 ]
 
 interface NavProps {
