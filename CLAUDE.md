@@ -45,7 +45,8 @@ FastAPI + PostgreSQL + MinIO + Celery + React. Deployed with `./install.sh` (Doc
     - Read it at session start, after a context summary and before each stage step: other sessions add rules during
       the day. At stage end, move its stable rules into this file.
 - **Frontend.** Load the `frontend-design:frontend-design` skill before each frontend step. The look follows YouTube
-  (likeness is graded). Row menus (⋮) are always visible, not only on hover.
+  (likeness is graded). Row menus (⋮) are always visible, not only on hover. The guide's order is the user's
+  (History, Playlists, Watch later, Liked videos, Your videos; `Layout.test.tsx` pins it): ask before changing it.
 - **Verify before done.**
     - Never call a task done without proof: run tests, check logs, show it works.
     - While developing, run the tests of the changed modules and of the modules that import them, plus lint and
