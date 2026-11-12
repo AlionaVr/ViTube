@@ -39,6 +39,8 @@ YouTube layout: header with logo, search and avatar; collapsible sidebar.
    with filters.
 8. **History** `/feed/history` — watched videos by day: search, remove, clear, pause. A red bar on every thumbnail
    shows where the viewer stopped; the video resumes there.
+9. **Liked videos** `/playlist?list=LL` — the viewer's likes as a private playlist, newest like first; ⋮ takes a
+   like back. A card on the Playlists page `/feed/playlists`, before Watch later.
 
 ## Acceptance
 
