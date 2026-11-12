@@ -14,9 +14,9 @@ class HistoryEntry(Base):
 
     __tablename__ = "watch_history"
     __table_args__ = (
-        CheckConstraint("position_sec >= 0", name="position_not_negative"),
+        CheckConstraint("position_sec >= 0", name="position_sec_not_negative"),
         # A user's history, newest first, paged by (watched_at, video_id).
-        Index("ix_watch_history_user_id_watched_at", "user_id", "watched_at", "video_id"),
+        Index("ix_watch_history_user_id_watched_at_video_id", "user_id", "watched_at", "video_id"),
     )
 
     # The key's first column also serves the cascade when a user is deleted.

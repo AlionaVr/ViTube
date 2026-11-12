@@ -13,11 +13,16 @@ from app.modules.history import repository as history
 from app.modules.history.schemas import HistoryItem, HistorySettings
 from app.modules.search.schemas import SearchResult
 from app.modules.users.models import User
-from app.modules.videos import repository as videos
 from app.modules.videos.interactions import get_ready
 
-# The player saves every 10 s while playing and on start, pause and end: far below this.
+# Per account. The player saves every 10 s while playing and on start, pause and end; seeking
+# while playing adds saves. Clicks on the history's controls have their own budget, so the
+# player can't use it up: "Pause" must work.
 HISTORY_WRITES = RateLimit("history_write", limit=120, window=60)
+HISTORY_CHANGES = RateLimit("history_change", limit=60, window=60)
+# A search reads the user's history row by row (its videos may be private, so the search index
+# doesn't serve it), as many rows as the history holds: a budget, as /api/search has. Pages count.
+HISTORY_SEARCHES = RateLimit("history_search", limit=60, window=60)
 PAGE_SIZE = 20
 
 
@@ -36,13 +41,15 @@ async def save_position(
 
 
 async def progress(db: AsyncSession, user: User, public_ids: list[str]) -> dict[str, int]:
-    """No access check: only the user's own rows, for ids they already have."""
-    return await history.positions(db, user.id, public_ids)
+    """Only videos the user may still watch, as in the list."""
+    return await history.positions(db, user, public_ids)
 
 
 async def list_history(
-    db: AsyncSession, user: User, words: str | None, cursor: str | None
+    db: AsyncSession, redis: Redis, user: User, words: str | None, cursor: str | None
 ) -> Page[HistoryItem]:
+    if words is not None:
+        await HISTORY_SEARCHES.hit(redis, str(user.id))
     before = decode_cursor(cursor, tuple[AwareDatetime, UUID]) if cursor else None
     rows = await history.list_entries(db, user, words, before=before, limit=PAGE_SIZE + 1)
     page, next_cursor = split_page(
@@ -56,16 +63,14 @@ async def list_history(
 
 
 async def remove(db: AsyncSession, redis: Redis, user: User, public_id: str) -> None:
-    """Idempotent. No access check: a video that turned private must still go."""
-    await HISTORY_WRITES.hit(redis, str(user.id))
-    video = await videos.get_by_public_id(db, public_id)
-    if video is not None:
-        await history.delete_entry(db, user.id, video.id)
-        await db.commit()
+    """Idempotent: a video that isn't there changes nothing."""
+    await HISTORY_CHANGES.hit(redis, str(user.id))
+    await history.delete_entry(db, user.id, public_id)
+    await db.commit()
 
 
 async def clear(db: AsyncSession, redis: Redis, user: User) -> None:
-    await HISTORY_WRITES.hit(redis, str(user.id))
+    await HISTORY_CHANGES.hit(redis, str(user.id))
     await history.delete_all(db, user.id)
     await db.commit()
 
@@ -76,7 +81,7 @@ def get_settings(user: User) -> HistorySettings:
 
 async def set_paused(db: AsyncSession, redis: Redis, user: User, paused: bool) -> HistorySettings:
     """The history stays as it is either way; only new saves stop or start."""
-    await HISTORY_WRITES.hit(redis, str(user.id))
+    await HISTORY_CHANGES.hit(redis, str(user.id))
     await history.set_paused(db, user.id, paused)
     await db.commit()
     return HistorySettings(paused=paused)

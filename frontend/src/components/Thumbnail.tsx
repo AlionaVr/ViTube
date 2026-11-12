@@ -15,7 +15,9 @@ interface ThumbnailProps {
 function WatchedBar({ videoId, durationSec }: { videoId: string; durationSec: number }) {
   const { data: seconds } = useWatchProgress(videoId)
   if (!seconds) return null
-  const percent = durationSec > 0 ? Math.min(100, Math.round((seconds / durationSec) * 100)) : 100
+  const watched = durationSec > 0 ? Math.min(100, (seconds / durationSec) * 100) : 100
+  // Rounded only for screen readers: a few seconds of a long video must still show some red.
+  const percent = Math.round(watched)
   return (
     <div
       className={styles.progress}
@@ -24,7 +26,7 @@ function WatchedBar({ videoId, durationSec }: { videoId: string; durationSec: nu
       aria-valuenow={percent}
       aria-valuetext={`${percent}% watched`}
     >
-      <div className={styles.watched} style={{ width: `${percent}%` }} />
+      <div className={styles.watched} style={{ width: `${watched}%` }} />
     </div>
   )
 }

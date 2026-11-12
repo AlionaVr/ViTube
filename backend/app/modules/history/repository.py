@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import Row, delete, func, select, tuple_, update
+from sqlalchemy import ColumnElement, Row, delete, func, select, tuple_, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +15,12 @@ from app.modules.videos.access import viewable
 from app.modules.videos.models import Video, VideoStatus
 
 HistoryRow = Row[HistoryEntry, Video, User]
+
+
+def _watchable(user: User) -> tuple[ColumnElement[bool], ColumnElement[bool]]:
+    """Rows the user sees: ready videos they may still watch. The others are kept, not shown:
+    the video may come back, and a lost one must not show that it still exists (ADR 0004)."""
+    return Video.status == VideoStatus.READY, viewable(user)
 
 
 async def save_position(db: AsyncSession, user_id: UUID, video_id: UUID, position_sec: int) -> None:
@@ -29,12 +35,12 @@ async def save_position(db: AsyncSession, user_id: UUID, video_id: UUID, positio
     await db.execute(statement)
 
 
-async def positions(db: AsyncSession, user_id: UUID, public_ids: Sequence[str]) -> dict[str, int]:
+async def positions(db: AsyncSession, user: User, public_ids: Sequence[str]) -> dict[str, int]:
     """Saved positions of the given videos the user watched, by public id."""
     query = (
         select(Video.public_id, HistoryEntry.position_sec)
         .join(Video, Video.id == HistoryEntry.video_id)
-        .where(HistoryEntry.user_id == user_id, Video.public_id.in_(public_ids))
+        .where(HistoryEntry.user_id == user.id, Video.public_id.in_(public_ids), *_watchable(user))
     )
     return {public_id: position for public_id, position in await db.execute(query)}
 
@@ -47,13 +53,12 @@ async def list_entries(
     before: tuple[datetime, UUID] | None,
     limit: int,
 ) -> Sequence[HistoryRow]:
-    """The user's history, last watched first; with `words`, only videos that have them. Rows
-    of videos they may no longer watch are kept, not shown: the video may come back."""
+    """The user's history, last watched first; with `words`, only videos that have them."""
     query = (
         select(HistoryEntry, Video, User)
         .join(Video, Video.id == HistoryEntry.video_id)
         .join(User, User.id == Video.owner_id)
-        .where(HistoryEntry.user_id == user.id, Video.status == VideoStatus.READY, viewable(user))
+        .where(HistoryEntry.user_id == user.id, *_watchable(user))
     )
     if words is not None:
         query = query.where(*videos.text_matches(videos.text_query(words)))
@@ -65,7 +70,9 @@ async def list_entries(
     return (await db.execute(query.order_by(*order).limit(limit))).all()
 
 
-async def delete_entry(db: AsyncSession, user_id: UUID, video_id: UUID) -> None:
+async def delete_entry(db: AsyncSession, user_id: UUID, public_id: str) -> None:
+    """Any video of the user's history, one they may no longer watch too: it must still go."""
+    video_id = select(Video.id).where(Video.public_id == public_id).scalar_subquery()
     await db.execute(
         delete(HistoryEntry).where(
             HistoryEntry.user_id == user_id, HistoryEntry.video_id == video_id

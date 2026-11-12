@@ -30,7 +30,7 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.CheckConstraint(
-            "position_sec >= 0", name=op.f("ck_watch_history_position_not_negative")
+            "position_sec >= 0", name=op.f("ck_watch_history_position_sec_not_negative")
         ),
         sa.ForeignKeyConstraint(
             ["user_id"],
@@ -47,7 +47,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("user_id", "video_id", name=op.f("pk_watch_history")),
     )
     op.create_index(
-        "ix_watch_history_user_id_watched_at",
+        "ix_watch_history_user_id_watched_at_video_id",
         "watch_history",
         ["user_id", "watched_at", "video_id"],
         unique=False,
@@ -57,5 +57,5 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_index(op.f("ix_watch_history_video_id"), table_name="watch_history")
-    op.drop_index("ix_watch_history_user_id_watched_at", table_name="watch_history")
+    op.drop_index("ix_watch_history_user_id_watched_at_video_id", table_name="watch_history")
     op.drop_table("watch_history")

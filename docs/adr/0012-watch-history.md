@@ -13,12 +13,14 @@ write per second. Public lists (home, search, channel) are the same for every vi
   video to the top.
 - The player saves when playback starts, pauses and ends, every 10 s while playing, and when the viewer leaves
   the video: another video, another page, or a closing tab (`fetch` with `keepalive`). The server cuts the position
-  to the video's length and allows 120 saves a minute per user.
+  to the video's length and allows 120 saves a minute per user. The history's controls (pause, remove, clear) and
+  its searches have budgets of their own, so the player can't use theirs up.
 - Progress bars come from their own request, `GET /api/me/history/progress?v=…` (up to 100 ids). Each thumbnail
   asks for its video; the client sends the ids asked for in one tick as one request (as a GraphQL DataLoader does).
   The player's saves update the bars in the client's cache, so they aren't fetched again.
-- The list applies the view policy (`viewable`) when it is read: a video that turns private or hidden leaves the
-  history and comes back with access. Only the user (remove, clear) and cascades delete rows.
+- The list and the progress bars apply the view policy (`viewable`) when they are read: a video that turns private
+  or hidden leaves the history, its bar and its resume point, and comes back with access. A lost video gives no hint
+  that it still exists (ADR 0004). Only the user (remove, clear) and cascades delete rows.
 - Pause: `users.history_paused`. While it is on, saves change nothing; the client also doesn't save while it
   doesn't know the setting yet.
 - Guests keep no history.

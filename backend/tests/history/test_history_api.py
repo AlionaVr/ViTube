@@ -248,10 +248,13 @@ async def test_video_turned_private_leaves_a_strangers_history_until_a_grant(
 
     await make_private(db, video)
     assert await listed(viewer) == []
+    # No bar either: it would show that the video still exists (ADR 0004).
+    assert await progress(viewer, video.public_id) == {}
     assert await position(db, VIEWER_EMAIL, video) == 4  # kept: access may come back
 
     await grant(db, video.public_id, VIEWER_EMAIL)
     assert await listed(viewer) == [video.public_id]
+    assert await progress(viewer, video.public_id) == {video.public_id: 4}
 
 
 async def test_owner_and_moderator_keep_a_video_that_turned_private(
@@ -458,3 +461,43 @@ async def test_search_finds_watched_videos_by_title_or_description(
 async def test_search_refuses_bad_words(viewer: AsyncClient, words: str) -> None:
     response = await viewer.get("/api/me/history", params={"q": words})
     assert response.status_code == 422
+
+
+# --- Budgets ---
+
+
+async def test_history_controls_work_when_the_player_used_up_its_budget(
+    viewer: AsyncClient, video: Video, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(service, "HISTORY_WRITES", RateLimit("history_write", 1, 60))
+    await save(viewer, video)
+    assert (await save(viewer, video)).status_code == 429
+
+    assert await set_paused(viewer, True) == 200
+    assert await remove(viewer, video.public_id) == 204
+    assert (await viewer.delete("/api/me/history", headers=csrf(viewer))).status_code == 204
+
+
+async def test_history_controls_are_rate_limited_per_user(
+    owner: AsyncClient, viewer: AsyncClient, video: Video, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(service, "HISTORY_CHANGES", RateLimit("history_change", 2, 60))
+    assert await set_paused(viewer, True) == 200
+    assert await remove(viewer, video.public_id) == 204
+
+    assert (await viewer.delete("/api/me/history", headers=csrf(viewer))).status_code == 429
+    assert await set_paused(owner, True) == 200  # another account has its own budget
+
+
+async def test_searches_and_their_pages_are_rate_limited_per_user(
+    owner: AsyncClient, viewer: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(service, "HISTORY_SEARCHES", RateLimit("history_search", 2, 60))
+    for _ in range(2):
+        await found(viewer, "dragon")
+
+    response = await viewer.get("/api/me/history", params={"q": "dragon"})
+
+    assert response.status_code == 429
+    assert await listed(viewer) == []  # the plain list costs nothing
+    assert await found(owner, "dragon") == []

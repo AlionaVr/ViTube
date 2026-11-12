@@ -58,6 +58,21 @@ describe('HomePage', () => {
     expect(asked).toEqual([['video-00001', 'video-00002', 'video-00003']])
   })
 
+  it('shows a few seconds of a long video as a sliver of red', async () => {
+    mockApi({
+      'GET /api/auth/me': () => json(200, ANNA),
+      'GET /api/me/subscriptions': () => json(200, page([])),
+      ...NO_CATEGORIES,
+      'GET /api/videos': () => json(200, page([summary(1, { duration_sec: 600 })])),
+      'GET /api/me/history/progress': () => json(200, { 'video-00001': 2 }),
+    })
+    renderApp('/')
+
+    const bar = await screen.findByRole('progressbar', { name: 'Watched', hidden: true })
+    expect(bar).toHaveAttribute('aria-valuenow', '0')
+    expect(parseFloat((bar.firstElementChild as HTMLElement).style.width)).toBeGreaterThan(0)
+  })
+
   it('asks a guest for no progress', async () => {
     const fetch = mockApi({
       ...ME,

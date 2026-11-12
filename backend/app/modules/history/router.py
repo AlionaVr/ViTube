@@ -27,9 +27,13 @@ router = APIRouter(prefix="/api/me/history", tags=["history"])
     " last watched first.",
 )
 async def list_history(
-    user: CurrentUser, db: DbSession, q: HistoryQuery = None, cursor: Cursor = None
+    user: CurrentUser,
+    db: DbSession,
+    redis: RedisClient,
+    q: HistoryQuery = None,
+    cursor: Cursor = None,
 ) -> Page[HistoryItem]:
-    return await service.list_history(db, user, q, cursor)
+    return await service.list_history(db, redis, user, q, cursor)
 
 
 @router.delete(

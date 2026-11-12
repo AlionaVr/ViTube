@@ -27,7 +27,7 @@ async def test_position_is_never_negative(db: AsyncSession) -> None:
     anna = await make_user(db, "anna")
     db.add(HistoryEntry(user_id=anna.id, video_id=(await make_video(db, anna)).id, position_sec=-1))
 
-    with pytest.raises(IntegrityError, match="ck_watch_history_position_not_negative"):
+    with pytest.raises(IntegrityError, match="ck_watch_history_position_sec_not_negative"):
         await db.commit()
 
 
