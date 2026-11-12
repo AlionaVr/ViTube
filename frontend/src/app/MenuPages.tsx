@@ -30,7 +30,6 @@ export default function MenuPages({ children }: { children?: ReactNode }) {
           <IconButton icon="arrowBack" label="Back" autoFocus onClick={() => setPage('back')} />
           Appearance
         </div>
-        <hr className={menu.divider} />
         <p className={styles.note}>Setting applies to this browser only</p>
         {CHOICES.map((choice) => (
           <button

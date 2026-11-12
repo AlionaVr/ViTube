@@ -21,6 +21,8 @@
   /* Text on --color-text, e.g. the selected chip. */
   --color-text-inverse: light-dark(#f1f1f1, #0f0f0f);
   --color-border: light-dark(#d3d3d3, #303030);
+  /* Outlined text fields (Material 3). */
+  --color-outline: light-dark(#747775, #8e918f);
   --color-divider: light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.2));
   --color-hover: light-dark(rgba(0, 0, 0, 0.05), rgba(255, 255, 255, 0.1));
   --color-hover-strong: light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.2));
@@ -36,7 +38,7 @@
   --color-text-disabled: light-dark(#909090, #717171);
   --color-error: light-dark(#cc0000, #ff5577);
   --shadow-popup: 0 4px 32px rgba(0, 0, 0, 0.1);
-  --color-scrollbar: #aaa;
+  --color-scrollbar: light-dark(#ccc, #606060);
   --color-focus: #1c62b9;
   --color-link: light-dark(#065fd4, #3ea6ff);
   --color-link-hover-bg: light-dark(#def1ff, #263850);

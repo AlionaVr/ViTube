@@ -1,19 +1,25 @@
-/* A page's top line: the back arrow and its name. */
+/* A page's top line, as YouTube's: the back arrow and its name over a rule, flush with the menu's top. */
 .title {
   display: flex;
-  gap: 8px;
+  gap: 4px;
   align-items: center;
-  height: 40px;
-  padding: 0 8px;
+  min-height: 48px;
+  margin: -8px 0 8px; /* over the menu's 8px top padding */
+  padding: 0 4px;
+  border-bottom: 1px solid var(--color-divider);
   font-size: 16px;
+  line-height: 22px;
 }
 
 .note {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
   margin: 0;
-  padding: 8px 16px;
+  padding: 0 16px;
   color: var(--color-text-secondary);
   font-size: 12px;
-  line-height: 16px;
+  line-height: 18px;
 }
 
 /* The chevron sits at the end of the row. */
