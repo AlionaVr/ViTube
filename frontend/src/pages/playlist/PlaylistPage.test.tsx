@@ -7,7 +7,7 @@ import type { Playlist, PlaylistItem } from '../../playlists/types'
 import { ANNA, json, mockApi } from '../../test/api'
 import { liked, likedItem } from '../../test/liked'
 import { intersectAll } from '../../test/observers'
-import { item, playlist } from '../../test/playlists'
+import { item, mine, playlist } from '../../test/playlists'
 import { renderApp } from '../../test/render'
 import { page } from '../../test/videos'
 
@@ -29,9 +29,17 @@ const ANNAS = playlist(2, {
   owner: { handle: ANNA.handle, name: ANNA.handle, avatar_url: null },
 })
 const OWN = `/api/playlists/${ANNAS.id}`
+const WATCH_LATER = playlist(9, {
+  title: 'Watch later',
+  kind: 'watch_later',
+  video_count: 1,
+  owner: { handle: ANNA.handle, name: ANNA.handle, avatar_url: null },
+})
+
+type Handlers = Parameters<typeof mockApi>[0]
 
 /** Anna's playlist as a server that keeps changes: edits, removals and moves. */
-function mockOwn(fail: Partial<Record<'PATCH' | 'DELETE', boolean>> = {}) {
+function mockOwn(fail: Partial<Record<'PATCH' | 'DELETE', boolean>> = {}, more: Handlers = {}) {
   let current: Playlist = ANNAS
   let items: PlaylistItem[] = [item(1), item(2), item(3)]
   const sent: { method: string; path: string; body?: unknown }[] = []
@@ -83,6 +91,7 @@ function mockOwn(fail: Partial<Record<'PATCH' | 'DELETE', boolean>> = {}) {
     // The Playlists page, where deleting leads.
     'GET /api/me/playlists': () => json(200, page([playlist(9, { kind: 'watch_later' })])),
     'GET /api/me/liked': () => json(200, liked()),
+    ...more,
   })
   return { fetch, sent }
 }
@@ -92,6 +101,14 @@ async function rowTitles() {
   return within(list)
     .getAllByRole('heading')
     .map((heading) => heading.textContent)
+}
+
+/** Opens a row's ⋮ and names its choices. */
+async function menuOf(row: number) {
+  const user = userEvent.setup()
+  const rows = within(await screen.findByRole('list', { name: '' })).getAllByRole('listitem')
+  await user.click(within(rows[row]).getByRole('button', { name: 'Action menu' }))
+  return screen.getAllByRole('menuitem').map((choice) => choice.textContent)
 }
 
 async function choose(row: number, choice: string) {
@@ -150,6 +167,81 @@ describe('PlaylistPage', () => {
     act(() => intersectAll())
 
     expect(await screen.findByRole('heading', { name: 'Video 2' })).toBeInTheDocument()
+  })
+
+  it('lets a guest only share a video, from its ⋮', async () => {
+    const user = userEvent.setup()
+    mockApi({
+      ...GUEST,
+      [`GET ${API}`]: () => json(200, { ...PLAYLIST, visibility: 'public' }),
+      [`GET ${API}/items`]: () => json(200, page([item(1), item(2)])),
+    })
+    renderApp(`/playlist?list=${PLAYLIST.id}`)
+
+    expect(await menuOf(1)).toEqual(['Share'])
+    await user.click(screen.getByRole('menuitem', { name: 'Share' }))
+
+    const dialog = screen.getByRole('dialog', { name: 'Share' })
+    expect(within(dialog).getByRole('textbox', { name: 'Video link' })).toHaveValue(
+      `${window.location.origin}/watch?v=video-00002`,
+    )
+  })
+
+  describe('saving from ⋮', () => {
+    /** Someone else's public playlist; `saved`: how the Watch later request answers. */
+    function mockOthers(saved = () => json(204)) {
+      const sent: string[] = []
+      mockApi({
+        ...SIGNED_IN,
+        [`GET ${API}`]: () => json(200, { ...PLAYLIST, visibility: 'public' }),
+        [`GET ${API}/items`]: () => json(200, page([item(1), item(2)])),
+        'GET /api/me/watch-later': () => json(200, WATCH_LATER),
+        [`PUT /api/playlists/${WATCH_LATER.id}/items/video-00002`]: (request) => {
+          sent.push(new URL(request.url).pathname)
+          return saved()
+        },
+        'GET /api/me/playlists': () => json(200, page([mine(9, false, WATCH_LATER)])),
+      })
+      return { sent }
+    }
+
+    it('offers a signed-in viewer save and share on others’ videos', async () => {
+      mockOthers()
+      renderApp(`/playlist?list=${PLAYLIST.id}`)
+
+      expect(await menuOf(0)).toEqual(['Save to Watch later', 'Save to playlist', 'Share'])
+    })
+
+    it('saves a video to Watch later and says so', async () => {
+      const { sent } = mockOthers()
+      renderApp(`/playlist?list=${PLAYLIST.id}`)
+
+      await choose(1, 'Save to Watch later')
+
+      expect(await screen.findByRole('status')).toHaveTextContent('Saved to Watch later')
+      expect(sent).toEqual([`/api/playlists/${WATCH_LATER.id}/items/video-00002`])
+    })
+
+    it('says so when saving to Watch later fails', async () => {
+      mockOthers(() => json(500, { detail: 'Internal Server Error' }))
+      renderApp(`/playlist?list=${PLAYLIST.id}`)
+
+      await choose(1, 'Save to Watch later')
+
+      expect(await screen.findByRole('status')).toHaveTextContent(
+        'Couldn’t save the video. Try again.',
+      )
+    })
+
+    it('opens the Save dialog for the row’s video', async () => {
+      mockOthers()
+      renderApp(`/playlist?list=${PLAYLIST.id}`)
+
+      await choose(1, 'Save to playlist')
+
+      const dialog = screen.getByRole('dialog', { name: 'Save video to...' })
+      expect(await within(dialog).findByRole('checkbox', { name: /Watch later/ })).not.toBeChecked()
+    })
   })
 
   it('says so when the playlist is empty', async () => {
@@ -239,6 +331,37 @@ describe('PlaylistPage', () => {
       expect(screen.getByRole('status')).toHaveTextContent('Playlist deleted')
     })
 
+    it('puts the owner’s actions after save and share', async () => {
+      mockOwn()
+      renderApp(`/playlist?list=${ANNAS.id}`)
+
+      expect(await menuOf(1)).toEqual([
+        'Save to Watch later',
+        'Save to playlist',
+        'Share',
+        'Remove from Blender films',
+        'Move to top',
+        'Move to bottom',
+      ])
+    })
+
+    it('keeps the Save dialog open when its video leaves the playlist', async () => {
+      const user = userEvent.setup()
+      const { sent } = mockOwn(
+        {},
+        { 'GET /api/me/playlists': () => json(200, page([mine(2, true, ANNAS)])) },
+      )
+      renderApp(`/playlist?list=${ANNAS.id}`)
+
+      await choose(1, 'Save to playlist')
+      const dialog = screen.getByRole('dialog', { name: 'Save video to...' })
+      await user.click(await within(dialog).findByRole('checkbox', { name: /Blender films/ }))
+
+      await waitFor(async () => expect(await rowTitles()).toEqual(['Video 1', 'Video 3']))
+      expect(sent).toEqual([{ method: 'DELETE', path: `${OWN}/items/video-00002` }])
+      expect(screen.getByRole('dialog', { name: 'Save video to...' })).toBe(dialog)
+    })
+
     it('removes a video', async () => {
       const { sent } = mockOwn()
       renderApp(`/playlist?list=${ANNAS.id}`)
@@ -305,18 +428,13 @@ describe('PlaylistPage', () => {
       expect(await screen.findByRole('heading', { name: 'Video 1' })).toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'Edit playlist' })).not.toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'More actions' })).not.toBeInTheDocument()
-      expect(screen.queryByRole('button', { name: 'Action menu' })).not.toBeInTheDocument()
+      expect(await menuOf(0)).not.toContain('Remove from Blender films')
     })
   })
 
   describe('Watch later (list=WL)', () => {
     it('opens the viewer’s own Watch later', async () => {
-      const watchLater = playlist(9, {
-        title: 'Watch later',
-        kind: 'watch_later',
-        video_count: 1,
-        owner: { handle: ANNA.handle, name: ANNA.handle, avatar_url: null },
-      })
+      const watchLater = WATCH_LATER
       mockApi({
         'GET /api/auth/me': () => json(200, ANNA),
         'GET /api/me/subscriptions': () => json(200, page([])),
@@ -335,9 +453,10 @@ describe('PlaylistPage', () => {
         'page',
       )
       // Its own: videos have the menu, but it can't be edited or deleted.
-      expect(screen.getByRole('button', { name: 'Action menu' })).toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'Edit playlist' })).not.toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'More actions' })).not.toBeInTheDocument()
+      // Saving to Watch later is no choice on Watch later itself.
+      expect(await menuOf(0)).toEqual(['Save to playlist', 'Share', 'Remove from Watch later'])
     })
 
     it('asks a guest to sign in', async () => {
@@ -388,6 +507,12 @@ describe('PlaylistPage', () => {
       // Made from likes: nothing to edit or delete.
       expect(screen.queryByRole('button', { name: 'Edit playlist' })).not.toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'More actions' })).not.toBeInTheDocument()
+      expect(await menuOf(0)).toEqual([
+        'Save to Watch later',
+        'Save to playlist',
+        'Share',
+        'Remove from Liked videos',
+      ])
     })
 
     /** A server whose list and count follow ratings; `fail`: the rating request fails. */

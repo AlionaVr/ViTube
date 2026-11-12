@@ -13,7 +13,7 @@ import buttons from '../../styles/buttons.module.css'
 import styles from './OwnerTools.module.css'
 
 /** YouTube's ⋮ menu. */
-function Menu({
+export function Menu({
   label,
   choices,
   light,
@@ -119,26 +119,4 @@ export function PlaylistTools({ playlist }: { playlist: Playlist }) {
       <DeleteDialog playlist={playlist} open={dialog === 'delete'} onClose={close} />
     </div>
   )
-}
-
-export interface ItemActions {
-  remove: () => void
-  /** Missing on the first item. */
-  moveToTop?: () => void
-  /** Missing on the last item. */
-  moveToBottom?: () => void
-}
-
-/** ⋮ on a video of the owner's playlist; `title` names the playlist. */
-export function ItemMenu({ title, actions }: { title: string; actions: ItemActions }) {
-  const choices: MenuChoice[] = [
-    { icon: 'delete', label: `Remove from ${title}`, onSelect: actions.remove },
-  ]
-  if (actions.moveToTop) {
-    choices.push({ icon: 'moveTop', label: 'Move to top', onSelect: actions.moveToTop })
-  }
-  if (actions.moveToBottom) {
-    choices.push({ icon: 'moveBottom', label: 'Move to bottom', onSelect: actions.moveToBottom })
-  }
-  return <Menu label="Action menu" choices={choices} />
 }

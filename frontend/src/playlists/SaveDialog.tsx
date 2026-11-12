@@ -67,7 +67,7 @@ function NewPlaylistForm({ videoId, onDone }: { videoId: string; onDone: () => v
   )
 }
 
-const NOT_SAVED = 'Couldn’t save the video. Try again.'
+export const NOT_SAVED = 'Couldn’t save the video. Try again.'
 
 function Playlists({ videoId }: { videoId: string }) {
   const mine = useMyPlaylists(videoId)

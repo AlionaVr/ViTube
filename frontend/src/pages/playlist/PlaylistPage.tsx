@@ -5,7 +5,7 @@ import {
   type UseInfiniteQueryResult,
   useQueryClient,
 } from '@tanstack/react-query'
-import type { ReactNode } from 'react'
+import { type ReactNode, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 
 import { ApiError } from '../../api/client'
@@ -28,15 +28,18 @@ import {
   useRemoveFromPlaylist,
   useWatchLater,
 } from '../../playlists/hooks'
+import SaveDialog from '../../playlists/SaveDialog'
 import type { Playlist } from '../../playlists/types'
 import { VISIBILITY } from '../../playlists/visibility'
 import buttons from '../../styles/buttons.module.css'
 import { useRateVideo } from '../../videos/hooks'
 import { channelUrl, watchUrl } from '../../videos/paths'
+import ShareDialog from '../../videos/ShareDialog'
 import type { Page, VideoSummary } from '../../videos/types'
 import { useViewer } from '../../viewer/useViewer'
 import SignInToSee from '../feed/SignInToSee'
-import { type ItemActions, ItemMenu, PlaylistTools } from './OwnerTools'
+import { PlaylistTools } from './OwnerTools'
+import { type ItemActions, type OpenDialog, RowMenu } from './RowMenu'
 import styles from './PlaylistPage.module.css'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -173,8 +176,16 @@ function Items({
 }: {
   query: ItemsQuery
   videos: VideoSummary[]
-  menu?: (index: number) => ReactNode
+  menu?: (index: number, openDialog: OpenDialog) => ReactNode
 }) {
+  const [dialog, setDialog] = useState<'save' | 'share' | null>(null)
+  // Kept on close, so a closing dialog doesn't lose its video.
+  const [videoId, setVideoId] = useState('')
+  const openDialog: OpenDialog = (kind, id) => {
+    setVideoId(id)
+    setDialog(kind)
+  }
+  const close = () => setDialog(null)
   const sentinel = useInfiniteScroll<HTMLDivElement>(
     () => void query.fetchNextPage(),
     query.hasNextPage && !query.isFetchingNextPage && !query.isFetchNextPageError,
@@ -191,7 +202,12 @@ function Items({
         <>
           <ol className={styles.list}>
             {videos.map((video, index) => (
-              <Row key={video.id} video={video} number={index + 1} menu={menu?.(index)} />
+              <Row
+                key={video.id}
+                video={video}
+                number={index + 1}
+                menu={menu?.(index, openDialog)}
+              />
             ))}
           </ol>
           <div ref={sentinel} />
@@ -201,6 +217,8 @@ function Items({
           )}
         </>
       )}
+      <SaveDialog videoId={videoId} open={dialog === 'save'} onClose={close} />
+      <ShareDialog videoId={videoId} open={dialog === 'share'} onClose={close} />
     </section>
   )
 }
@@ -254,9 +272,16 @@ function PlaylistView({ id }: { id: string }) {
         query={items}
         videos={videos}
         menu={
-          own && data
-            ? (index) => <ItemMenu title={data.title} actions={actionsFor(index, data.title)} />
-            : undefined
+          data &&
+          ((index, openDialog) => (
+            <RowMenu
+              videoId={videos[index].id}
+              title={data.title}
+              watchLater={data.kind === 'watch_later'}
+              actions={own ? actionsFor(index, data.title) : undefined}
+              openDialog={openDialog}
+            />
+          ))
         }
       />
     </div>
@@ -285,7 +310,7 @@ function WatchLater() {
 }
 
 /** ⋮ on a liked video: removing it takes the like back, as on YouTube. */
-function LikedMenu({ videoId }: { videoId: string }) {
+function LikedMenu({ videoId, openDialog }: { videoId: string; openDialog: OpenDialog }) {
   const rate = useRateVideo(videoId)
   const queryClient = useQueryClient()
   const toast = useToast()
@@ -297,7 +322,14 @@ function LikedMenu({ videoId }: { videoId: string }) {
         () => toast(`Removed from ${LIKED_VIDEOS.title}`),
         () => toast(NOT_CHANGED),
       )
-  return <ItemMenu title={LIKED_VIDEOS.title} actions={{ remove }} />
+  return (
+    <RowMenu
+      videoId={videoId}
+      title={LIKED_VIDEOS.title}
+      actions={{ remove }}
+      openDialog={openDialog}
+    />
+  )
 }
 
 function LikedView() {
@@ -328,7 +360,9 @@ function LikedView() {
       <Items
         query={items}
         videos={videos}
-        menu={(index) => <LikedMenu videoId={videos[index].id} />}
+        menu={(index, openDialog) => (
+          <LikedMenu videoId={videos[index].id} openDialog={openDialog} />
+        )}
       />
     </div>
   )

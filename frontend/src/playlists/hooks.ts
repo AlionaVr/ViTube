@@ -1,5 +1,6 @@
 import {
   type InfiniteData,
+  queryOptions,
   useInfiniteQuery,
   useMutation,
   useQuery,
@@ -49,8 +50,13 @@ export function useSaved(videoId: string, enabled: boolean) {
 }
 
 /** Only for a signed-in viewer: a guest has none. */
+export const watchLaterQuery = queryOptions({
+  queryKey: playlistKeys.watchLater,
+  queryFn: getWatchLater,
+})
+
 export function useWatchLater(enabled: boolean) {
-  return useQuery({ queryKey: playlistKeys.watchLater, queryFn: getWatchLater, enabled })
+  return useQuery({ ...watchLaterQuery, enabled })
 }
 
 export function usePlaylistItems(id: string) {

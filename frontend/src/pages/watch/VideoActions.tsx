@@ -12,11 +12,11 @@ import SaveDialog from '../../playlists/SaveDialog'
 import buttons from '../../styles/buttons.module.css'
 import { useRateVideo } from '../../videos/hooks'
 import { channelUrl } from '../../videos/paths'
+import ShareDialog from '../../videos/ShareDialog'
 import type { Video } from '../../videos/types'
 import { useViewer } from '../../viewer/useViewer'
 import Fireworks from './Fireworks'
 import ReportMenu from './ReportMenu'
-import ShareDialog from './ShareDialog'
 import styles from './VideoActions.module.css'
 
 function RatingButtons({ video }: { video: Video }) {
