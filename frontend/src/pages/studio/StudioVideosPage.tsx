@@ -11,8 +11,10 @@ import Spinner from '../../components/Spinner'
 import Thumbnail from '../../components/Thumbnail'
 import { useInfiniteScroll } from '../../hooks/useInfiniteScroll'
 import { formatDate, formatExact } from '../../lib/format'
+import buttons from '../../styles/buttons.module.css'
 import EditDetailsDialog from '../../upload/EditDetailsDialog'
 import SharePrivatelyDialog from '../../upload/SharePrivatelyDialog'
+import UploadDialog from '../../upload/UploadDialog'
 import { useMyVideos } from '../../videos/hooks'
 import { watchUrl } from '../../videos/paths'
 import type { OwnVideo, VideoStatus } from '../../videos/types'
@@ -35,6 +37,7 @@ export default function StudioVideosPage() {
   const videos = useMyVideos(viewer.status === 'authenticated')
   const [editing, setEditing] = useState<OwnVideo | null>(null)
   const [sharing, setSharing] = useState<OwnVideo | null>(null)
+  const [uploading, setUploading] = useState(false)
   const sentinel = useInfiniteScroll<HTMLDivElement>(
     () => void videos.fetchNextPage(),
     videos.hasNextPage && !videos.isFetchingNextPage && !videos.isFetchNextPageError,
@@ -49,7 +52,17 @@ export default function StudioVideosPage() {
   return (
     <div className={styles.page}>
       <title>Channel content - ViTube</title>
-      <h1 className={styles.heading}>Channel content</h1>
+      <div className={styles.top}>
+        <h1 className={styles.heading}>Channel content</h1>
+        {/* Opens the header's Create dialog: the new draft joins this list. */}
+        <button
+          type="button"
+          className={`${buttons.pill} ${buttons.primary}`}
+          onClick={() => setUploading(true)}
+        >
+          Upload videos
+        </button>
+      </div>
       {videos.isPending ? (
         <VideoTable label="Loading videos" busy>
           {Array.from({ length: SKELETON_ROWS }, (_, i) => (
@@ -59,7 +72,20 @@ export default function StudioVideosPage() {
       ) : !videos.data ? (
         <ErrorState title="Can’t load your videos" onRetry={() => void videos.refetch()} />
       ) : items.length === 0 ? (
-        <EmptyState title="No content available">Videos you upload will appear here.</EmptyState>
+        <EmptyState
+          title="No content available"
+          action={
+            <button
+              type="button"
+              className={`${buttons.pill} ${buttons.primary}`}
+              onClick={() => setUploading(true)}
+            >
+              Upload videos
+            </button>
+          }
+        >
+          Videos you upload will appear here.
+        </EmptyState>
       ) : (
         <>
           <VideoTable label="Videos">
@@ -88,6 +114,7 @@ export default function StudioVideosPage() {
       )}
       {editing && <EditDetailsDialog video={editing} onClose={() => setEditing(null)} />}
       {sharing && <SharePrivatelyDialog video={sharing} onClose={() => setSharing(null)} />}
+      {uploading && <UploadDialog onClose={() => setUploading(false)} />}
     </div>
   )
 }

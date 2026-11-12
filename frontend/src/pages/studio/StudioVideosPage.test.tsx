@@ -180,11 +180,36 @@ describe('StudioVideosPage', () => {
     expect(listRequests(fetch)).toHaveLength(asked)
   })
 
-  it('says so when the user has no videos', async () => {
-    mockApi({ ...SIGNED_IN, 'GET /api/me/videos': () => json(200, page([])) })
+  it('says so when the user has no videos, with a way to upload one', async () => {
+    mockApi({
+      ...SIGNED_IN,
+      'GET /api/me/videos': () => json(200, page([])),
+      'GET /api/videos/upload-limits': () =>
+        json(200, { max_size_bytes: 1024 ** 3, max_duration_sec: 1800 }),
+    })
     renderApp('/studio/videos')
 
     expect(await screen.findByText('No content available')).toBeInTheDocument()
+    const buttons = screen.getAllByRole('button', { name: 'Upload videos' })
+    expect(buttons).toHaveLength(2) // by the heading and in the empty list
+    await userEvent.click(buttons[1])
+    expect(screen.getByRole('dialog', { name: 'Upload videos' })).toBeInTheDocument()
+  })
+
+  it('opens the upload dialog from the heading', async () => {
+    mockApi({
+      ...SIGNED_IN,
+      'GET /api/me/videos': () => json(200, page([own(1)])),
+      'GET /api/videos/upload-limits': () =>
+        json(200, { max_size_bytes: 1024 ** 3, max_duration_sec: 1800 }),
+    })
+    renderApp('/studio/videos')
+    await screen.findByRole('link', { name: 'Video 1' })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Upload videos' }))
+
+    expect(screen.getByRole('dialog', { name: 'Upload videos' })).toBeInTheDocument()
+    expect(screen.getByText('Drag and drop a video file to upload')).toBeInTheDocument()
   })
 
   it('offers a retry when the list fails to load', async () => {

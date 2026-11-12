@@ -11,9 +11,17 @@
   }
 }
 
-.heading {
+.top {
   margin: 0 0 16px;
   padding: 0 var(--side);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.heading {
+  margin: 0;
   font-size: 24px;
   font-weight: 500;
   line-height: 32px;
