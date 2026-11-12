@@ -8,6 +8,7 @@ import ChannelVideos from '../pages/channel/ChannelVideos'
 import ChannelsPage from '../pages/feed/ChannelsPage'
 import PlaylistsPage from '../pages/feed/PlaylistsPage'
 import SubscriptionsPage from '../pages/feed/SubscriptionsPage'
+import YouPage from '../pages/feed/YouPage'
 import HistoryPage from '../pages/history/HistoryPage'
 import HomePage from '../pages/HomePage'
 import Accounts from '../pages/moderation/Accounts'
@@ -39,6 +40,7 @@ export const routes: RouteObject[] = [
       { path: 'feed/channels', element: <ChannelsPage /> },
       { path: 'feed/playlists', element: <PlaylistsPage /> },
       { path: 'feed/history', element: <HistoryPage /> },
+      { path: 'feed/you', element: <YouPage /> },
       {
         path: 'moderation',
         element: <ModerationPage />,
