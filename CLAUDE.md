@@ -46,6 +46,10 @@ FastAPI + PostgreSQL + MinIO + Celery + React. Deployed with `./install.sh` (Doc
   (likeness is graded). Row menus (⋮) are always visible, not only on hover.
 - **Verify before done.**
     - Never call a task done without proof: run tests, check logs, show it works.
+    - While developing, run the tests of the changed modules and of the modules that import them, plus lint and
+      type checks (frontend: `npx vitest related --run <changed files>`). Run the full suites once before the PR,
+      and after a rebase onto `main` or a change to a shared contract (visibility rules, auth deps, models and
+      migrations, the API schema, shared components and hooks).
     - Run a suite once after a change. Rerun it only after a code change or for a flake you saw, never "to be sure".
     - Ask: "Would a staff engineer approve this?"
 - **Elegance, balanced.**
