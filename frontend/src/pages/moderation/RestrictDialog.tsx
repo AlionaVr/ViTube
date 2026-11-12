@@ -25,7 +25,7 @@ const CHOICES = [
 
 type Choice = (typeof CHOICES)[number]['status']
 
-/** Admins only: ban the account behind a reported video or comment, or end its channel. */
+/** Admins only: ban an account or end its channel, from a report on its content or its channel page. */
 export default function RestrictDialog({
   target,
   onClose,

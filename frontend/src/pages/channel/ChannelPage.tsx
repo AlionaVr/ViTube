@@ -1,5 +1,6 @@
 import '@fontsource/roboto/700.css'
 
+import { useState } from 'react'
 import { Link, Outlet, useLocation, useParams } from 'react-router'
 
 import { ApiError } from '../../api/client'
@@ -11,7 +12,10 @@ import ErrorState from '../../components/ErrorState'
 import ModerationNotice from '../../components/ModerationNotice'
 import { NARROW_HEADER, useMediaQuery } from '../../hooks/useMediaQuery'
 import { formatSubscribers, formatVideoCount } from '../../lib/format'
+import { isAdmin } from '../../moderation/roles'
 import { useViewer } from '../../viewer/useViewer'
+import RestrictDialog from '../moderation/RestrictDialog'
+import RowMenu from '../moderation/RowMenu'
 import NotFoundPage from '../NotFoundPage'
 import styles from './ChannelPage.module.css'
 
@@ -22,6 +26,9 @@ function Header({ channel }: { channel: Channel }) {
   const viewer = useViewer()
   const narrow = useMediaQuery(NARROW_HEADER)
   const own = viewer.status === 'authenticated' && viewer.user.handle === channel.handle
+  // Admins restrict an account from its channel too, not only from a report on its content.
+  const admin = viewer.status === 'authenticated' && isAdmin(viewer.user) && !own
+  const [restricting, setRestricting] = useState(false)
 
   return (
     <header className={styles.header}>
@@ -36,13 +43,22 @@ function Header({ channel }: { channel: Channel }) {
           {formatVideoCount(channel.video_count)}
         </p>
         {/* Nothing until we know who is watching: the owner never sees a Subscribe flash by.
-            A terminated channel is frozen, so it has no actions. */}
-        {!channel.is_terminated && (
+            A terminated channel is frozen: no Subscribe. */}
+        {(!channel.is_terminated || admin) && (
           <div className={styles.actions}>
-            {viewer.status !== 'loading' && !own && <SubscribeButton channel={channel} />}
+            {viewer.status !== 'loading' && !own && !channel.is_terminated && (
+              <SubscribeButton channel={channel} />
+            )}
+            {admin && <RowMenu account={channel} onRestrict={() => setRestricting(true)} />}
           </div>
         )}
       </div>
+      {admin && (
+        <RestrictDialog
+          target={restricting ? channel : null}
+          onClose={() => setRestricting(false)}
+        />
+      )}
     </header>
   )
 }

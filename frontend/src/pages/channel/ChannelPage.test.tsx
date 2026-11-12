@@ -48,6 +48,35 @@ describe('ChannelPage', () => {
     expect(await screen.findByRole('button', { name: 'Subscribe' })).toBeEnabled()
     expect(document.title).toBe('Open Movie Club - ViTube')
     expect(screen.queryByRole('note')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /More actions/ })).not.toBeInTheDocument()
+  })
+
+  it('lets an admin terminate the channel from its page', async () => {
+    let terminated = false
+    const fetch = mockApi({
+      'GET /api/auth/me': () => json(200, { ...ANNA, role: 'admin' }),
+      [`GET ${API}`]: () => json(200, channel({ is_terminated: terminated })),
+      [`GET ${API}/videos`]: () => json(200, page([])),
+      'PUT /api/moderation/users/openmovieclub/status': () => {
+        terminated = true
+        return json(204)
+      },
+    })
+    await openChannel()
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'More actions for @openmovieclub' }),
+    )
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Restrict @openmovieclub' }))
+    const dialog = within(screen.getByRole('dialog', { name: 'Restrict account' }))
+    await userEvent.click(dialog.getByRole('radio', { name: /^Terminate channel/ }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Terminate' }))
+
+    expect(await screen.findByRole('note')).toHaveTextContent('Channel terminated')
+    expect(screen.getByRole('status')).toHaveTextContent('@openmovieclub’s channel terminated')
+    expect(screen.queryByRole('button', { name: 'Subscribe' })).not.toBeInTheDocument()
+    const call = fetch.mock.calls.find(([request]) => request.method === 'PUT')
+    expect(await call?.[0].json()).toEqual({ status: 'terminated', reason: '' })
   })
 
   it('tells a moderator a terminated channel is frozen and offers no Subscribe', async () => {

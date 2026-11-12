@@ -39,11 +39,11 @@
   outlives the account, video or comment it names. Admins filter it by action, by who acted (an account or the
   CLI) and by the account acted on (the account, its videos and its comments): each entry stores that account,
   so the filter works after the video or comment is gone. Each filter has an index.
-- Account status, set by admins (API and moderation page) and the CLI: `banned` (no sign-in, sessions end, content
-  stays), `terminated` (the same, and the channel's videos are restricted like hidden ones, by status, with no
-  change to each video; its page and playlists open only for moderators; subscriptions to it are kept, left out of
-  lists and frozen), `active` (reinstated). Admins can't restrict themselves or another admin, and a
-  restricted account can't become an admin (a DB check). How a ban holds: ADR 0005. A ban keeps content, so
+- Account status, set by admins (API; in the UI from a report or the channel page) and the CLI: `banned` (no sign-in,
+  sessions end, content stays), `terminated` (the same, and the channel's videos are restricted like hidden ones, by
+  status, with no change to each video; its page and playlists open only for moderators; subscriptions to it are
+  kept, left out of lists and frozen), `active` (reinstated). Admins can't restrict themselves or another admin, and
+  a restricted account can't become an admin (a DB check). How a ban holds: ADR 0005. A ban keeps content, so
   comments are rate-limited per user. *(Amended 2026-11-11: bans had no UI and channels no termination.)*
 - Roles are managed via the CLI, with no UI. The seed creates demo admin and moderator accounts. The CLI logs its
   changes with source `cli` and the admin named by `--by`, required to restrict an account (claimed, not proven:
