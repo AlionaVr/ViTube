@@ -857,6 +857,95 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/me/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Your watch history, last watched first
+         * @description Only the videos you may still watch. With `q`, only those with the words, still last watched first.
+         */
+        get: operations["list_history_api_me_history_get"];
+        put?: never;
+        post?: never;
+        /**
+         * Clear your watch history
+         * @description The progress bars go too.
+         */
+        delete: operations["clear_history_api_me_history_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/me/history/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Where you stopped in these videos
+         * @description Saved positions by public id, for the progress bars on thumbnails. Videos you haven't watched are left out.
+         */
+        get: operations["get_progress_api_me_history_progress_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/me/history/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Whether your history is paused */
+        get: operations["get_settings_api_me_history_settings_get"];
+        /**
+         * Pause or turn on your watch history
+         * @description While paused, videos you watch don't go to your history and their progress isn't saved. What is there stays.
+         */
+        put: operations["set_settings_api_me_history_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/me/history/{public_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Save where playback is
+         * @description Puts the video on top of your history. Send on start, pause and end, and every 10 s while playing.
+         */
+        put: operations["save_position_api_me_history__public_id__put"];
+        post?: never;
+        /**
+         * Remove a video from your watch history
+         * @description Its progress bar goes too. Removing it again, or a video that isn't there, changes nothing.
+         */
+        delete: operations["remove_from_history_api_me_history__public_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -1064,6 +1153,25 @@ export interface components {
             /** @description The rule the video breaks */
             reason: components["schemas"]["ReportReason"];
         };
+        /** HistoryItem */
+        HistoryItem: {
+            /** @description With its description, as a search result row */
+            video: components["schemas"]["SearchResult"];
+            /**
+             * Watched At
+             * Format: date-time
+             * @description When this viewer last watched it
+             */
+            watched_at: string;
+        };
+        /** HistorySettings */
+        HistorySettings: {
+            /**
+             * Paused
+             * @description Videos you watch don't go to your history meanwhile
+             */
+            paused: boolean;
+        };
         /** ItemMove */
         ItemMove: {
             /**
@@ -1188,6 +1296,13 @@ export interface components {
         Page_CommentOut_: {
             /** Items */
             items: components["schemas"]["CommentOut"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
+        /** Page[HistoryItem] */
+        Page_HistoryItem_: {
+            /** Items */
+            items: components["schemas"]["HistoryItem"][];
             /** Next Cursor */
             next_cursor: string | null;
         };
@@ -1334,6 +1449,14 @@ export interface components {
             description?: string | null;
             visibility?: components["schemas"]["Visibility"] | null;
         };
+        /** PositionIn */
+        PositionIn: {
+            /**
+             * Position Sec
+             * @description Where playback is, in whole seconds; past the end: the end
+             */
+            position_sec: number;
+        };
         /**
          * Rating
          * @enum {string}
@@ -1414,7 +1537,7 @@ export interface components {
         };
         /**
          * SearchResult
-         * @description A result row also shows the start of the description.
+         * @description A row that also shows the start of the description: search results, watch history.
          */
         SearchResult: {
             /**
@@ -3405,6 +3528,209 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Page_AuditEntryOut_"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_history_api_me_history_get: {
+        parameters: {
+            query?: {
+                /** @description Only videos with these words in the title or description */
+                q?: string | null;
+                /** @description next_cursor of the last page */
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_HistoryItem_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    clear_history_api_me_history_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_progress_api_me_history_progress_get: {
+        parameters: {
+            query: {
+                /** @description Public video ids */
+                v: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: number;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_settings_api_me_history_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HistorySettings"];
+                };
+            };
+        };
+    };
+    set_settings_api_me_history_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HistorySettings"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HistorySettings"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_position_api_me_history__public_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Public video id */
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PositionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_from_history_api_me_history__public_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Public video id */
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

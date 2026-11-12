@@ -4,7 +4,7 @@ import enum
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import CheckConstraint, DateTime, Enum, Integer, Text, func, text
+from sqlalchemy import Boolean, CheckConstraint, DateTime, Enum, Integer, Text, false, func, text
 from sqlalchemy.dialects.postgresql import CITEXT
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -71,4 +71,6 @@ class User(Base):
     )
     # Updated in place (x = x + n) by subscriptions. Not indexed, so updates stay HOT.
     subscriber_count: Mapped[int] = mapped_column(Integer, server_default="0")
+    # The user paused their watch history: the player's saves change nothing.
+    history_paused: Mapped[bool] = mapped_column(Boolean, server_default=false())
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

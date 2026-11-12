@@ -2696,6 +2696,295 @@
         }
       }
     },
+    "/api/me/history": {
+      "get": {
+        "tags": [
+          "history"
+        ],
+        "summary": "Your watch history, last watched first",
+        "description": "Only the videos you may still watch. With `q`, only those with the words, still last watched first.",
+        "operationId": "list_history_api_me_history_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "pattern": "^[^\\x00-\\x1f\\x7f]*$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only videos with these words in the title or description",
+              "title": "Q"
+            },
+            "description": "Only videos with these words in the title or description"
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "next_cursor of the last page",
+              "title": "Cursor"
+            },
+            "description": "next_cursor of the last page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_HistoryItem_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "history"
+        ],
+        "summary": "Clear your watch history",
+        "description": "The progress bars go too.",
+        "operationId": "clear_history_api_me_history_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        }
+      }
+    },
+    "/api/me/history/progress": {
+      "get": {
+        "tags": [
+          "history"
+        ],
+        "summary": "Where you stopped in these videos",
+        "description": "Saved positions by public id, for the progress bars on thumbnails. Videos you haven't watched are left out.",
+        "operationId": "get_progress_api_me_history_progress_get",
+        "parameters": [
+          {
+            "name": "v",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{11}$"
+              },
+              "minItems": 1,
+              "maxItems": 100,
+              "description": "Public video ids",
+              "title": "V"
+            },
+            "description": "Public video ids"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "integer"
+                  },
+                  "title": "Response Get Progress Api Me History Progress Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me/history/settings": {
+      "get": {
+        "tags": [
+          "history"
+        ],
+        "summary": "Whether your history is paused",
+        "operationId": "get_settings_api_me_history_settings_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistorySettings"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "history"
+        ],
+        "summary": "Pause or turn on your watch history",
+        "description": "While paused, videos you watch don't go to your history and their progress isn't saved. What is there stays.",
+        "operationId": "set_settings_api_me_history_settings_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HistorySettings"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistorySettings"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me/history/{public_id}": {
+      "put": {
+        "tags": [
+          "history"
+        ],
+        "summary": "Save where playback is",
+        "description": "Puts the video on top of your history. Send on start, pause and end, and every 10 s while playing.",
+        "operationId": "save_position_api_me_history__public_id__put",
+        "parameters": [
+          {
+            "name": "public_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{11}$",
+              "description": "Public video id",
+              "title": "Public Id"
+            },
+            "description": "Public video id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PositionIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "history"
+        ],
+        "summary": "Remove a video from your watch history",
+        "description": "Its progress bar goes too. Removing it again, or a video that isn't there, changes nothing.",
+        "operationId": "remove_from_history_api_me_history__public_id__delete",
+        "parameters": [
+          {
+            "name": "public_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{11}$",
+              "description": "Public video id",
+              "title": "Public Id"
+            },
+            "description": "Public video id"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/health": {
       "get": {
         "tags": [
@@ -3116,6 +3405,40 @@
         ],
         "title": "HideIn"
       },
+      "HistoryItem": {
+        "properties": {
+          "video": {
+            "$ref": "#/components/schemas/SearchResult",
+            "description": "With its description, as a search result row"
+          },
+          "watched_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Watched At",
+            "description": "When this viewer last watched it"
+          }
+        },
+        "type": "object",
+        "required": [
+          "video",
+          "watched_at"
+        ],
+        "title": "HistoryItem"
+      },
+      "HistorySettings": {
+        "properties": {
+          "paused": {
+            "type": "boolean",
+            "title": "Paused",
+            "description": "Videos you watch don't go to your history meanwhile"
+          }
+        },
+        "type": "object",
+        "required": [
+          "paused"
+        ],
+        "title": "HistorySettings"
+      },
       "ItemMove": {
         "properties": {
           "before": {
@@ -3407,6 +3730,34 @@
           "next_cursor"
         ],
         "title": "Page[CommentOut]"
+      },
+      "Page_HistoryItem_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "Page[HistoryItem]"
       },
       "Page_ModeratedVideo_": {
         "properties": {
@@ -3853,6 +4204,22 @@
         "title": "PlaylistUpdate",
         "description": "Changes only the given fields; null leaves a field as it is."
       },
+      "PositionIn": {
+        "properties": {
+          "position_sec": {
+            "type": "integer",
+            "maximum": 2147483647.0,
+            "minimum": 0.0,
+            "title": "Position Sec",
+            "description": "Where playback is, in whole seconds; past the end: the end"
+          }
+        },
+        "type": "object",
+        "required": [
+          "position_sec"
+        ],
+        "title": "PositionIn"
+      },
       "Rating": {
         "type": "string",
         "enum": [
@@ -4077,7 +4444,7 @@
           "description"
         ],
         "title": "SearchResult",
-        "description": "A result row also shows the start of the description."
+        "description": "A row that also shows the start of the description: search results, watch history."
       },
       "StatusIn": {
         "properties": {

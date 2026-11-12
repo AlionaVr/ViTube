@@ -7,10 +7,9 @@ from app.modules.users.models import User
 from app.modules.videos.models import Video
 from app.modules.videos.schemas import VideoSummary
 
-SearchQuery = Annotated[
+# What a search box sends. No control characters: Postgres refuses NUL (a 500, not a 422).
+Words = Annotated[
     str,
-    Query(description="Words to find in titles and descriptions"),
-    # No control characters: Postgres refuses NUL (a 500, not a 422).
     StringConstraints(
         strip_whitespace=True,
         min_length=1,
@@ -18,10 +17,11 @@ SearchQuery = Annotated[
         pattern=r"^[^\x00-\x1f\x7f]*$",
     ),
 ]
+SearchQuery = Annotated[Words, Query(description="Words to find in titles and descriptions")]
 
 
 class SearchResult(VideoSummary):
-    """A result row also shows the start of the description."""
+    """A row that also shows the start of the description: search results, watch history."""
 
     description: str
 

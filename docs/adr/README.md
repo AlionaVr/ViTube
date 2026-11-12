@@ -15,3 +15,4 @@ One short file per key decision: context, decision, alternatives, consequences.
 | [0009](0009-moderation-audit.md)          | Moderation: reports, hiding, audit log            |
 | [0010](0010-db-roles.md)                  | DB roles: the app gets data access only           |
 | [0011](0011-view-counting.md)             | Views: one per viewer a day, after real playback  |
+| [0012](0012-watch-history.md)             | Watch history: one row per video, player saves    |

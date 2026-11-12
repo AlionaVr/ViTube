@@ -34,3 +34,17 @@
   right: 4px;
   bottom: 4px;
 }
+
+.progress {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 4px;
+  background: rgba(170, 170, 170, 0.6);
+}
+
+.watched {
+  height: 100%;
+  background: var(--color-brand);
+}
