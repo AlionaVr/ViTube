@@ -17,7 +17,7 @@
   align-items: center;
   border: 1px solid var(--color-border);
   border-radius: 40px 0 0 40px;
-  background: var(--color-bg);
+  background: var(--color-search-bg);
 }
 
 .box:focus-within {
@@ -70,7 +70,7 @@
   padding: 8px 0;
   list-style: none;
   border-radius: 12px;
-  background: var(--color-bg);
+  background: var(--color-raised);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
@@ -114,13 +114,13 @@
   border: 1px solid var(--color-border);
   border-left: none;
   border-radius: 0 40px 40px 0;
-  background: var(--color-surface);
+  background: var(--color-search-button);
   color: var(--color-text);
   cursor: pointer;
 }
 
 .submit:hover {
-  background: var(--color-surface-hover);
+  background: var(--color-search-button-hover);
   box-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
 }
 

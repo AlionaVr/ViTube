@@ -65,7 +65,7 @@
 
 .primary {
   background: var(--color-link);
-  color: #fff;
+  color: var(--color-on-primary);
 }
 
 .primary:hover:enabled {

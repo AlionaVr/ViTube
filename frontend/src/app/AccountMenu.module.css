@@ -28,8 +28,8 @@
   width: 300px;
   padding: 8px 0;
   border-radius: 12px;
-  background: var(--color-bg);
-  box-shadow: 0 4px 32px rgb(0 0 0 / 10%);
+  background: var(--color-menu);
+  box-shadow: var(--shadow-popup);
 }
 
 .account {

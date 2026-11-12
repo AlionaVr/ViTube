@@ -11,6 +11,9 @@
 
   /* Dark values: YouTube's palette (yt-spec / yt-sys-color-baseline tokens, 2026). */
   --color-bg: light-dark(#fff, #0f0f0f);
+  /* In the dark, popups are lighter than the page: menus and popovers, then dialogs. */
+  --color-menu: light-dark(#fff, #282828);
+  --color-raised: light-dark(#fff, #212121);
   --color-surface: light-dark(#f8f8f8, #181818);
   --color-surface-hover: light-dark(#f0f0f0, #272727);
   --color-text: light-dark(#0f0f0f, #f1f1f1);
@@ -37,7 +40,14 @@
   --color-focus: #1c62b9;
   --color-link: light-dark(#065fd4, #3ea6ff);
   --color-link-hover-bg: light-dark(#def1ff, #263850);
+  /* Text on a --color-link button: the light blue of the dark theme needs dark text. */
+  --color-on-primary: light-dark(#fff, #0f0f0f);
   --color-brand: #e5232a;
+
+  /* YouTube's search box: a darker field and a grey button in the dark. */
+  --color-search-bg: light-dark(#fff, #121212);
+  --color-search-button: light-dark(#f8f8f8, #222);
+  --color-search-button-hover: light-dark(#f0f0f0, #222);
 }
 
 /* Picked in Appearance. */

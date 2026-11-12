@@ -10,7 +10,7 @@
   z-index: 20;
   min-width: max-content;
   border-radius: 12px;
-  background: var(--color-bg);
+  background: var(--color-menu);
   color: var(--color-text);
   box-shadow: var(--shadow-popup);
 }
