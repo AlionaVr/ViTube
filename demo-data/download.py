@@ -1,34 +1,29 @@
 #!/usr/bin/env python3
-"""Download the demo videos from videos.json and render their thumbnails. Safe to re-run."""
+"""Download the demo videos from videos.json. Safe to re-run: files with the right hash are kept."""
 
 import hashlib
 import json
-import os
-import shutil
-import subprocess
 import sys
 import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 VIDEOS = ROOT / "videos"
-THUMBNAILS = ROOT / "thumbnails"
 MAX_BYTES = 20 * 1024 * 1024
-# Static ffmpeg build, pinned by digest.
-FFMPEG = (
-    "mwader/static-ffmpeg:7.1"
-    "@sha256:a8090df5f5608daef387e1b2e93b98aaacb4d92153ad904e7d715c725724fca4"
-)
+# The seed container's user (uid 10001) reads the files through a read-only mount.
+FILE_MODE = 0o644
+DIR_MODE = 0o755
 
 
 def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def download(video: dict) -> Path:
+def download(video: dict) -> None:
     path = VIDEOS / video["file"]
     if path.exists() and sha256(path) == video["sha256"]:
-        return path
+        path.chmod(FILE_MODE)  # may come from a run under a strict umask
+        return
     url = video["url"]
     if not url.startswith("https://"):
         sys.exit(f"{video['file']}: only https URLs are allowed")
@@ -42,39 +37,16 @@ def download(video: dict) -> Path:
         sys.exit(f"{video['file']}: sha256 mismatch")
     part = path.with_suffix(".part")
     part.write_bytes(data)
+    part.chmod(FILE_MODE)
     part.replace(path)
-    return path
-
-
-def render_thumbnails(docker: str, video: dict, path: Path) -> None:
-    # Optional crop drops letterbox bars; the UI fills 16:9 with object-fit: cover.
-    crop = f"crop={video['crop']}," if "crop" in video else ""
-    for at in video["thumbnails_at"]:
-        out = THUMBNAILS / f"{path.stem}-{at:g}.jpg"
-        if out.exists() and out.stat().st_mtime >= path.stat().st_mtime:
-            continue
-        print(f"thumbnail {out.name}")
-        # No network, read-only rootfs and videos; writes only to thumbnails/. No shell is involved.
-        subprocess.run(  # noqa: S603
-            [docker, "run", "--rm", "--network", "none", "--read-only", "--cap-drop", "ALL",
-             "--security-opt", "no-new-privileges", "--user", f"{os.getuid()}:{os.getgid()}",
-             "-v", f"{VIDEOS}:/videos:ro", "-v", f"{THUMBNAILS}:/thumbnails", FFMPEG,
-             "-v", "error", "-y", "-ss", f"{at}", "-i", f"/videos/{path.name}",
-             "-vf", f"{crop}scale='min(640,iw)':-2", "-frames:v", "1", "-update", "1", "-q:v", "3",
-             f"/thumbnails/{out.name}"],
-            check=True,
-        )  # fmt: skip
 
 
 def main() -> None:
-    docker = shutil.which("docker")
-    if docker is None:
-        sys.exit("Docker is needed to render thumbnails")
     VIDEOS.mkdir(exist_ok=True)
-    THUMBNAILS.mkdir(exist_ok=True)
+    VIDEOS.chmod(DIR_MODE)  # mkdir's mode is cut by the umask
     for video in json.loads((ROOT / "videos.json").read_text())["videos"]:
-        render_thumbnails(docker, video, download(video))
-    print("demo data ready")
+        download(video)
+    print("demo videos ready")
 
 
 if __name__ == "__main__":

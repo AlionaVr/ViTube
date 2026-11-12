@@ -1,14 +1,14 @@
 # Demo data
 
-Three short open-licensed videos to upload in local development and, later, for the seed (upload → processing →
-playback).
-The files are not in git: `download.py` fetches them and renders thumbnails.
+Three short open-licensed videos: the seed uploads them (`backend/app/seed.py`), and they are handy for uploads in
+local development. The worker makes their thumbnails, as for any upload.
+The files are not in git: `download.py` fetches them, and `install.sh` runs it.
 
 ```bash
-python3 demo-data/download.py   # needs Docker for the thumbnails
+python3 demo-data/download.py
 ```
 
-It skips files that are already there. A thumbnail is rendered again only if its video is newer.
+It skips files that are already there.
 
 | File                         | Source                                                                         | License                                                         |
 |------------------------------|--------------------------------------------------------------------------------|-----------------------------------------------------------------|
@@ -21,8 +21,7 @@ CC BY needs attribution: keep the credit line from `description` when the seed u
 ## videos.json
 
 One entry per file: download `url`, `sha256`, size in `bytes`, `duration` (s), `title` and `description` for the seed,
-`author`, `license`, `thumbnails_at` (seconds) and an optional `crop` that drops letterbox bars. The times were
-picked by eye: no black frames, title cards or transitions.
+`author`, `license`.
 
 ## Checks
 
@@ -33,6 +32,3 @@ Each file was checked by hand once before its `sha256` was pinned:
 - `ffprobe`: H.264 video + AAC audio, expected duration.
 
 `download.py` accepts only bytes with the pinned hash. To add a video, repeat the checks, then add its entry.
-
-Thumbnails come from ffmpeg in a container with no network, a read-only root and read-only videos; it can write only
-to `thumbnails/`.

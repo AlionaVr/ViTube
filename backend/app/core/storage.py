@@ -26,7 +26,7 @@ FILE_CHUNK = 1024 * 1024
 
 
 class StorageSettings(BaseSettings):
-    """Only api and worker read them, so only they get the storage secret."""
+    """Only api, worker and seed read them, so only they get the storage secret."""
 
     s3_endpoint_url: str
     s3_access_key: str
@@ -90,7 +90,7 @@ class Storage:
         return size
 
     async def upload_file(self, key: str, path: Path, *, content_type: str) -> int:
-        return await self.upload(key, _read_chunks(path), content_type=content_type)
+        return await self.upload(key, read_chunks(path), content_type=content_type)
 
     async def download(self, key: str, path: Path) -> None:
         """Stream an object into a local file."""
@@ -111,7 +111,7 @@ class Storage:
                 log.exception("Could not abort the upload of %s", key)
 
 
-async def _read_chunks(path: Path) -> AsyncIterator[bytes]:
+async def read_chunks(path: Path) -> AsyncIterator[bytes]:
     async with await anyio.open_file(path, "rb") as file:
         while chunk := await file.read(FILE_CHUNK):
             yield chunk

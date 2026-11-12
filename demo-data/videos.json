@@ -11,8 +11,7 @@
       "author": "Blender Foundation",
       "source_page": "https://peach.blender.org/",
       "license": "CC BY 3.0",
-      "license_url": "https://creativecommons.org/licenses/by/3.0/",
-      "thumbnails_at": [5, 10, 15.25, 16.5, 20.5, 21.5, 25.25, 26.25]
+      "license_url": "https://creativecommons.org/licenses/by/3.0/"
     },
     {
       "file": "sintel-trailer.mp4",
@@ -25,9 +24,7 @@
       "author": "Blender Foundation",
       "source_page": "https://durian.blender.org/",
       "license": "CC BY 3.0",
-      "license_url": "https://creativecommons.org/licenses/by/3.0/",
-      "crop": "854:364:0:58",
-      "thumbnails_at": [7, 13, 14.5, 23, 29, 34, 38]
+      "license_url": "https://creativecommons.org/licenses/by/3.0/"
     },
     {
       "file": "flower.mp4",
@@ -40,8 +37,7 @@
       "author": "MDN Web Docs",
       "source_page": "https://github.com/mdn/shared-assets/tree/main/videos",
       "license": "CC0 1.0",
-      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
-      "thumbnails_at": [0.5, 2.5, 3.5, 4.75]
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/"
     }
   ]
 }

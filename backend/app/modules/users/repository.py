@@ -7,7 +7,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import locks
-from app.modules.users.models import User, UserStatus
+from app.modules.users.models import Role, User, UserStatus
 
 
 async def get_by_id(db: AsyncSession, user_id: UUID) -> User | None:
@@ -34,12 +34,12 @@ async def get_by_handle(db: AsyncSession, handle: str) -> User | None:
 
 
 async def insert_unless_taken(
-    db: AsyncSession, *, email: str, handle: str, password_hash: str
+    db: AsyncSession, *, email: str, handle: str, password_hash: str, role: Role = Role.USER
 ) -> User | None:
     """Insert a user. None if the email or handle is taken: no exception, no savepoint needed."""
     statement = (
         insert(User)
-        .values(email=email, handle=handle, password_hash=password_hash)
+        .values(email=email, handle=handle, password_hash=password_hash, role=role)
         .on_conflict_do_nothing()
         .returning(User)
     )
