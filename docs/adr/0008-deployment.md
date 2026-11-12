@@ -13,7 +13,7 @@ right away.
    internet. A failed download only warns; the site works without them.
 4. Runs `docker compose up -d --build --wait`:
     - services: nginx, api, worker, postgres, redis, minio;
-    - one-shot jobs: `migrate`, `minio-init`.
+    - one-shot jobs: `minio-perms`, `migrate`, `minio-init`.
 5. Runs the one-shot `seed` job (`docker compose run --rm --no-deps seed`): demo accounts and videos. Safe to re-run.
    *(Amended 2026-11-12: was part of `up`, but `up --wait` fails when a job that nothing depends on exits fast, even
    with code 0.)*
@@ -23,7 +23,10 @@ Only port 80 is exposed. All services have healthchecks, `restart: unless-stoppe
 
 Containers are hardened:
 
-- non-root users, `no-new-privileges`, all capabilities dropped (data services keep only what their entrypoint needs);
+- non-root users, `no-new-privileges`, all capabilities dropped. Postgres, Redis and MinIO start as their own
+  users; the one-shot `minio-perms` job (root with `CHOWN` only, no network) hands the MinIO volume to its user.
+  *(Amended 2026-11-13: data services started as root and kept the capabilities to chown their data and drop to
+  their user, incl. `DAC_READ_SEARCH` for Postgres.)*
 - read-only root FS for our containers;
 - networks: `edge` (nginx only, the published port), internal `web` (nginx ↔ api) and internal `data`
   (backend ↔ Postgres, Redis, MinIO). The worker and data have no internet access. *(Amended 2026-11-12: the api

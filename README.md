@@ -123,7 +123,7 @@ Browser ──:80──► nginx ─┬─ /             → React static files
                         └─ /media/*      → auth_request → minio
 api    ──► postgres, redis, minio; Google (sign-in only)
 worker (Celery + ffmpeg) ◄── redis; ──► minio, postgres
-one-shot jobs: migrate, minio-init, seed
+one-shot jobs: minio-perms, migrate, minio-init, seed
 ```
 
 Only nginx is published. The worker and the data services have no internet; the api reaches it for Google sign-in

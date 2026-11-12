@@ -66,7 +66,7 @@ Browser ──:80──► nginx ─┬─ /             → React static files
                         └─ /media/*      → auth_request → minio
 api    ──► postgres, redis, minio
 worker (Celery + ffmpeg) ◄── redis; ──► minio, postgres
-one-shot jobs: migrate, minio-init, seed
+one-shot jobs: minio-perms, migrate, minio-init, seed
 ```
 
 Backend layers per domain module: `router → service → repository → models`, with Pydantic `schemas` for input and
