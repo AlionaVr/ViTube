@@ -1,9 +1,10 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 
 import { ANNA, json, mockApi } from '../test/api'
 import { renderApp } from '../test/render'
+import { setTheme, THEME_KEY } from '../theme/theme'
 
 const signedIn = () =>
   mockApi({
@@ -12,6 +13,11 @@ const signedIn = () =>
   })
 
 const header = () => within(screen.getByRole('banner'))
+
+afterEach(() => {
+  setTheme('device')
+  localStorage.clear()
+})
 
 async function openMenu() {
   await userEvent.click(await screen.findByRole('button', { name: 'Account menu' }))
@@ -97,5 +103,73 @@ describe('header account area', () => {
     await waitFor(() =>
       expect(screen.queryByRole('button', { name: 'Sign out' })).not.toBeInTheDocument(),
     )
+  })
+
+  it('switches the theme on its Appearance page', async () => {
+    signedIn()
+    renderApp('/')
+    await openMenu()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Appearance: Device theme' }))
+
+    // The page replaces the menu, as on YouTube.
+    expect(screen.queryByRole('button', { name: 'Sign out' })).not.toBeInTheDocument()
+    expect(screen.getByText('Setting applies to this browser only')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Back' })).toHaveFocus()
+    expect(screen.getByRole('button', { name: 'Use device theme' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'Dark theme' }))
+
+    expect(document.documentElement.dataset.theme).toBe('dark')
+    expect(localStorage.getItem(THEME_KEY)).toBe('dark')
+    expect(screen.getByRole('button', { name: 'Dark theme' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(screen.getByRole('button', { name: 'Use device theme' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'Back' }))
+
+    expect(screen.getByRole('button', { name: 'Appearance: Dark' })).toHaveFocus()
+    expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument()
+  })
+
+  it('lets a guest switch the theme from Settings', async () => {
+    mockApi({ 'GET /api/auth/me': () => json(401, { detail: 'Sign in required' }) })
+    renderApp('/')
+
+    await userEvent.click(await header().findByRole('button', { name: 'Settings' }))
+    // The menu takes the focus, so the keyboard goes on from there.
+    expect(screen.getByRole('button', { name: 'Appearance: Device theme' })).toHaveFocus()
+    await userEvent.keyboard('{Enter}')
+    await userEvent.click(screen.getByRole('button', { name: 'Light theme' }))
+
+    expect(document.documentElement.dataset.theme).toBe('light')
+    expect(screen.getByRole('button', { name: 'Light theme' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+
+    await userEvent.keyboard('{Escape}')
+
+    expect(header().getByRole('button', { name: 'Settings' })).toHaveFocus()
+  })
+
+  it('opens on its first page again', async () => {
+    signedIn()
+    renderApp('/')
+    await openMenu()
+    await userEvent.click(screen.getByRole('button', { name: 'Appearance: Device theme' }))
+
+    await userEvent.keyboard('{Escape}')
+    await openMenu()
+
+    expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument()
   })
 })

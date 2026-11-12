@@ -4,6 +4,11 @@
   box-sizing: border-box;
 }
 
+/* YouTube's page scrollbar: a grey thumb, no track. */
+html {
+  scrollbar-color: var(--color-text-secondary) transparent;
+}
+
 body {
   margin: 0;
   font-family: var(--font-family);

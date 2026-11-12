@@ -45,7 +45,7 @@
 }
 
 .details textarea::placeholder {
-  color: var(--color-placeholder);
+  color: var(--color-text-secondary);
 }
 
 .counter {

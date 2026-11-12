@@ -7,6 +7,8 @@ import Avatar from '../components/Avatar'
 import Icon from '../components/Icon'
 import { canModerate } from '../moderation/roles'
 import styles from './AccountMenu.module.css'
+import menu from './headerMenu.module.css'
+import MenuPages from './MenuPages'
 
 /** The avatar in the header and the panel it opens (a disclosure: Tab moves through it). */
 export default function AccountMenu({ user }: { user: User }) {
@@ -51,35 +53,37 @@ export default function AccountMenu({ user }: { user: User }) {
 
       {open && (
         <div id={panelId} className={styles.panel}>
-          <div className={styles.account}>
-            <Avatar name={user.email} size={40} />
-            <div className={styles.names}>
-              <p className={styles.name}>{user.email}</p>
-              <p className={styles.handle}>@{user.handle}</p>
+          <MenuPages>
+            <div className={styles.account}>
+              <Avatar name={user.email} size={40} />
+              <div className={styles.names}>
+                <p className={styles.name}>{user.email}</p>
+                <p className={styles.handle}>@{user.handle}</p>
+              </div>
             </div>
-          </div>
-          <hr className={styles.divider} />
-          <button
-            type="button"
-            className={styles.item}
-            onClick={() => {
-              setOpen(false)
-              signOut.mutate()
-            }}
-          >
-            <Icon name="signOut" />
-            Sign out
-          </button>
-          {/* A staff tool gets its own group after Sign out, as YouTube Studio does. */}
-          {canModerate(user) && (
-            <>
-              <hr className={styles.divider} />
-              <Link to="/moderation" className={styles.item} onClick={() => setOpen(false)}>
-                <Icon name="shieldPerson" />
-                Moderation
-              </Link>
-            </>
-          )}
+            <hr className={menu.divider} />
+            <button
+              type="button"
+              className={menu.item}
+              onClick={() => {
+                setOpen(false)
+                signOut.mutate()
+              }}
+            >
+              <Icon name="signOut" />
+              Sign out
+            </button>
+            {/* A staff tool gets its own group after Sign out, as YouTube Studio does. */}
+            {canModerate(user) && (
+              <>
+                <hr className={menu.divider} />
+                <Link to="/moderation" className={menu.item} onClick={() => setOpen(false)}>
+                  <Icon name="shieldPerson" />
+                  Moderation
+                </Link>
+              </>
+            )}
+          </MenuPages>
         </div>
       )}
     </div>

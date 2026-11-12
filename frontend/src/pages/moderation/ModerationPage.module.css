@@ -373,7 +373,7 @@ a.meta:hover {
 }
 
 .handleBox:has(input:disabled) {
-  border-color: var(--color-divider);
+  border-color: var(--color-hover);
   color: var(--color-text-disabled);
 }
 

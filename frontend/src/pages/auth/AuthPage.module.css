@@ -1,11 +1,14 @@
-/* YouTube signs people in on Google's account pages: their palette, scoped to these pages. */
+/* YouTube signs people in on Google's account pages: their palette (Material 3), scoped to these pages. */
 .page {
-  --color-link: #0b57d0;
-  --color-text: #1f1f1f;
-  --color-text-secondary: #444746;
-  --color-outline: #747775;
-  --color-error: #b3261e;
-  --page-bg: #f0f4f9;
+  --color-link: light-dark(#0b57d0, #a8c7fa);
+  /* Text and ticks on the blue. */
+  --color-on-link: light-dark(#fff, #062e6f);
+  --color-text: light-dark(#1f1f1f, #e3e3e3);
+  --color-text-secondary: light-dark(#444746, #c4c7c5);
+  --color-error: light-dark(#b3261e, #f2b8b5);
+  --card-bg: light-dark(#fff, #0e0e0e);
+  --page-bg: light-dark(#f0f4f9, #1e1f20);
+  --field-label-bg: var(--card-bg);
 
   display: flex;
   align-items: center;
@@ -27,7 +30,7 @@
   padding: 36px;
   overflow: hidden; /* clips the progress bar to the round corners */
   border-radius: 28px;
-  background: #fff;
+  background: var(--card-bg);
 }
 
 .logo {
@@ -87,7 +90,7 @@
   cursor: pointer;
 }
 
-/* Google's checkbox: a 2px frame that fills blue with a white tick. */
+/* Google's checkbox: a 2px frame that fills blue with a tick. */
 .box {
   display: grid;
 }
@@ -119,7 +122,7 @@
 .box svg {
   width: 18px;
   height: 18px;
-  fill: #fff;
+  fill: var(--color-on-link);
   visibility: hidden;
   pointer-events: none;
 }
@@ -154,11 +157,11 @@
   padding: 0 24px;
   border: 0;
   background: var(--color-link);
-  color: #fff;
+  color: var(--color-on-link);
 }
 
 .primary:hover {
-  background: color-mix(in srgb, var(--color-link) 92%, #fff);
+  background: color-mix(in srgb, var(--color-link) 92%, var(--color-on-link));
   box-shadow:
     0 1px 2px rgb(0 0 0 / 30%),
     0 1px 3px 1px rgb(0 0 0 / 15%);
@@ -184,12 +187,12 @@
   outline-offset: 2px;
 }
 
-/* A request is on its way: a white veil over the card, and a bar sweeping along its top edge. */
+/* A request is on its way: a veil over the card, and a bar sweeping along its top edge. */
 .card[aria-busy='true']::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: rgb(255 255 255 / 50%);
+  background: color-mix(in srgb, var(--card-bg) 50%, transparent);
 }
 
 .progress {
@@ -198,7 +201,7 @@
   inset: 0 0 auto;
   height: 4px;
   overflow: hidden;
-  background: #d3e3fd;
+  background: light-dark(#d3e3fd, #0842a0);
 }
 
 .progress::before {
@@ -239,10 +242,10 @@
   }
 }
 
-/* ...and below 600px the card blends into a white page. */
+/* ...and below 600px the card blends into the page. */
 @media (max-width: 599px) {
   .page {
-    --page-bg: #fff;
+    --page-bg: var(--card-bg);
 
     align-items: flex-start;
     padding: 0;
