@@ -36,8 +36,8 @@ export const playlistKeys = {
 
 const firstPage = null as string | null
 
-export function usePlaylist(id: string) {
-  return useQuery({ queryKey: playlistKeys.detail(id), queryFn: () => getPlaylist(id) })
+export function usePlaylist(id: string, enabled = true) {
+  return useQuery({ queryKey: playlistKeys.detail(id), queryFn: () => getPlaylist(id), enabled })
 }
 
 /** Fills the Save button's bookmark. Under `all`: every tick in the Save dialog refreshes it. */
@@ -59,12 +59,13 @@ export function useWatchLater(enabled: boolean) {
   return useQuery({ ...watchLaterQuery, enabled })
 }
 
-export function usePlaylistItems(id: string) {
+export function usePlaylistItems(id: string, enabled = true) {
   return useInfiniteQuery({
     queryKey: playlistKeys.items(id),
     queryFn: ({ pageParam }) => listItems(id, pageParam),
     initialPageParam: firstPage,
     getNextPageParam: (page) => page.next_cursor,
+    enabled,
   })
 }
 

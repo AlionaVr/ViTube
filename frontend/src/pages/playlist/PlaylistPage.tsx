@@ -1,10 +1,6 @@
 import '@fontsource/roboto/700.css'
 
-import {
-  type InfiniteData,
-  type UseInfiniteQueryResult,
-  useQueryClient,
-} from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { type ReactNode, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 
@@ -28,6 +24,8 @@ import {
   useRemoveFromPlaylist,
   useWatchLater,
 } from '../../playlists/hooks'
+import { type ItemsQuery, videosOf } from '../../playlists/items'
+import { parseList } from '../../playlists/paths'
 import SaveDialog from '../../playlists/SaveDialog'
 import type { Playlist } from '../../playlists/types'
 import { VISIBILITY } from '../../playlists/visibility'
@@ -35,14 +33,12 @@ import buttons from '../../styles/buttons.module.css'
 import { useRateVideo } from '../../videos/hooks'
 import { channelUrl, watchUrl } from '../../videos/paths'
 import ShareDialog from '../../videos/ShareDialog'
-import type { Page, VideoSummary } from '../../videos/types'
+import type { VideoSummary } from '../../videos/types'
 import { useViewer } from '../../viewer/useViewer'
 import SignInToSee from '../feed/SignInToSee'
 import { PlaylistTools } from './OwnerTools'
 import { type ItemActions, type OpenDialog, RowMenu } from './RowMenu'
 import styles from './PlaylistPage.module.css'
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 function Missing() {
   return <EmptyState title="The playlist does not exist." />
@@ -58,10 +54,13 @@ type Head = Pick<
 
 function Header({
   playlist,
+  list,
   first,
   tools,
 }: {
   playlist: Head
+  /** Its `list=`, which the watch page plays. */
+  list: string
   first: VideoSummary | undefined
   tools?: ReactNode
 }) {
@@ -103,7 +102,7 @@ function Header({
       )}
       {tools}
       {first && (
-        <Link to={watchUrl(first.id)} className={`${buttons.pill} ${styles.playAll}`}>
+        <Link to={watchUrl(first.id, { list })} className={`${buttons.pill} ${styles.playAll}`}>
           <Icon name="play" />
           Play all
         </Link>
@@ -124,11 +123,21 @@ function HeaderSkeleton() {
   )
 }
 
-function Row({ video, number, menu }: { video: VideoSummary; number: number; menu?: ReactNode }) {
+function Row({
+  video,
+  number,
+  list,
+  menu,
+}: {
+  video: VideoSummary
+  number: number
+  list: string
+  menu?: ReactNode
+}) {
   return (
     <li className={styles.item}>
       <span className={styles.number}>{number}</span>
-      <Link to={watchUrl(video.id)} className={styles.row}>
+      <Link to={watchUrl(video.id, { list })} className={styles.row}>
         <div className={styles.thumbnail}>
           <Thumbnail
             src={video.thumbnail_url}
@@ -152,30 +161,16 @@ function Row({ video, number, menu }: { video: VideoSummary; number: number; men
   )
 }
 
-/** A playlist's or Liked videos' pages of rows. */
-type ItemsQuery = Pick<
-  UseInfiniteQueryResult<InfiniteData<Page<{ video: VideoSummary }>>>,
-  | 'data'
-  | 'isPending'
-  | 'refetch'
-  | 'fetchNextPage'
-  | 'hasNextPage'
-  | 'isFetchingNextPage'
-  | 'isFetchNextPageError'
->
-
-function videosOf(query: ItemsQuery): VideoSummary[] {
-  return query.data?.pages.flatMap((page) => page.items.map((item) => item.video)) ?? []
-}
-
 /** The numbered rows, loaded as the viewer scrolls; `menu` gives a row its ⋮. */
 function Items({
   query,
   videos,
+  list,
   menu,
 }: {
   query: ItemsQuery
   videos: VideoSummary[]
+  list: string
   menu?: (index: number, openDialog: OpenDialog) => ReactNode
 }) {
   const [dialog, setDialog] = useState<'save' | 'share' | null>(null)
@@ -206,6 +201,7 @@ function Items({
                 key={video.id}
                 video={video}
                 number={index + 1}
+                list={list}
                 menu={menu?.(index, openDialog)}
               />
             ))}
@@ -223,7 +219,8 @@ function Items({
   )
 }
 
-function PlaylistView({ id }: { id: string }) {
+/** `list`: WL for Watch later, else the id. */
+function PlaylistView({ id, list }: { id: string; list: string }) {
   const playlist = usePlaylist(id)
   const items = usePlaylistItems(id)
   const viewer = useViewer()
@@ -261,6 +258,7 @@ function PlaylistView({ id }: { id: string }) {
       {data ? (
         <Header
           playlist={data}
+          list={list}
           first={videos[0]}
           // Watch later can't be edited or deleted.
           tools={own && data.kind === 'user' && <PlaylistTools playlist={data} />}
@@ -271,6 +269,7 @@ function PlaylistView({ id }: { id: string }) {
       <Items
         query={items}
         videos={videos}
+        list={list}
         menu={
           data &&
           ((index, openDialog) => (
@@ -302,7 +301,7 @@ function WatchLater() {
       />
     )
   }
-  if (watchLater.data) return <PlaylistView id={watchLater.data.id} />
+  if (watchLater.data) return <PlaylistView id={watchLater.data.id} list="WL" />
   if (watchLater.isError) {
     return <ErrorState title="Can’t load Watch later" onRetry={() => void watchLater.refetch()} />
   }
@@ -352,6 +351,7 @@ function LikedView() {
             description: '',
             visibility: 'private',
           }}
+          list="LL"
           first={videos[0]}
         />
       ) : (
@@ -360,6 +360,7 @@ function LikedView() {
       <Items
         query={items}
         videos={videos}
+        list="LL"
         menu={(index, openDialog) => (
           <LikedMenu videoId={videos[index].id} openDialog={openDialog} />
         )}
@@ -387,9 +388,9 @@ function LikedVideos() {
 /** /playlist?list=<id>, as on YouTube. */
 export default function PlaylistPage() {
   const [params] = useSearchParams()
-  const id = params.get('list') ?? ''
-  if (id === 'WL') return <WatchLater />
-  if (id === 'LL') return <LikedVideos />
-  if (!UUID.test(id)) return <Missing />
-  return <PlaylistView key={id} id={id} />
+  const list = parseList(params.get('list'))
+  if (!list) return <Missing />
+  if (list.kind === 'watchLater') return <WatchLater />
+  if (list.kind === 'liked') return <LikedVideos />
+  return <PlaylistView key={list.id} id={list.id} list={list.id} />
 }

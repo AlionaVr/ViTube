@@ -19,6 +19,8 @@ interface PlayerProps {
   onTheaterToggle: () => void
   /** Shows the Next button (Shift+N). */
   onNext?: () => void
+  /** The video played to the end. */
+  onEnded?: () => void
   /** Called while the video plays, with the seconds played so far. Skipped parts don't count. */
   onPlayed?: (seconds: number) => void
   /** Where playback is: as it plays, and `urgent` on start, pause and end. */
@@ -56,6 +58,7 @@ export default function Player({
   theater,
   onTheaterToggle,
   onNext,
+  onEnded,
   onPlayed,
   onPosition,
 }: PlayerProps) {
@@ -272,7 +275,10 @@ export default function Player({
           reportPosition(event, false)
         }}
         onPause={(event) => reportPosition(event, true)}
-        onEnded={(event) => reportPosition(event, true)}
+        onEnded={(event) => {
+          reportPosition(event, true)
+          onEnded?.()
+        }}
       />
 
       {media.waiting && !media.error && (

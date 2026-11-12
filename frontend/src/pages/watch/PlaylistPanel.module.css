@@ -1,0 +1,108 @@
+/* YouTube's playlist panel above Up next: a framed box whose rows scroll inside it. */
+.panel {
+  margin-bottom: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.header {
+  padding: 12px 16px;
+  background: var(--color-surface);
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 28px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--color-text-secondary);
+}
+
+/* Rows measure their offset from here, to scroll the current one up. */
+.rows {
+  position: relative;
+  max-height: 400px;
+  margin: 0;
+  padding: 8px 0;
+  list-style: none;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+/* Like YouTube: the scrollbar shows only while the pointer is over the list. */
+.rows:hover {
+  scrollbar-color: var(--color-scrollbar) transparent;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px 4px 0;
+}
+
+.row:hover {
+  background: var(--color-hover);
+}
+
+.row[aria-current] {
+  background: var(--color-hover-strong);
+}
+
+.row:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+}
+
+.index {
+  flex: none;
+  width: 24px;
+  display: flex;
+  justify-content: center;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--color-text-secondary);
+}
+
+.thumbnail {
+  flex: none;
+  width: 100px;
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+}
+
+.rowTitle {
+  margin-bottom: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.channel {
+  margin: 0;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

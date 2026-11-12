@@ -8,6 +8,7 @@ import Player from './Player'
 interface Callbacks {
   onTheaterToggle?: () => void
   onNext?: () => void
+  onEnded?: () => void
   onPlayed?: (seconds: number) => void
 }
 
@@ -21,6 +22,7 @@ function renderPlayer(props: Callbacks = {}) {
         theater={false}
         onTheaterToggle={props.onTheaterToggle ?? (() => {})}
         onNext={props.onNext}
+        onEnded={props.onEnded}
         onPlayed={props.onPlayed}
       />
     </>,
@@ -101,6 +103,15 @@ describe('Player', () => {
 
     await userEvent.keyboard('{Shift>}N{/Shift}')
     expect(onNext).toHaveBeenCalledOnce()
+  })
+
+  it('tells the page when the video ends', () => {
+    const onEnded = vi.fn()
+    const video = renderPlayer({ onEnded })
+
+    fireEvent.ended(video)
+
+    expect(onEnded).toHaveBeenCalledOnce()
   })
 
   it('changes the playback speed from the settings menu', async () => {

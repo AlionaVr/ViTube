@@ -146,9 +146,14 @@ describe('PlaylistPage', () => {
       expect.stringMatching(/^1.*Video 1/),
       expect.stringMatching(/^2.*Video 2/),
     ])
+    // Played as a list, as on YouTube: the watch page shows it and goes through it.
+    expect(within(rows[1]).getByRole('link', { name: /Video 2/ })).toHaveAttribute(
+      'href',
+      `/watch?v=video-00002&list=${PLAYLIST.id}`,
+    )
     expect(screen.getByRole('link', { name: /Play all/ })).toHaveAttribute(
       'href',
-      '/watch?v=video-00001',
+      `/watch?v=video-00001&list=${PLAYLIST.id}`,
     )
   })
 
@@ -448,6 +453,10 @@ describe('PlaylistPage', () => {
         await screen.findByRole('heading', { level: 1, name: 'Watch later' }),
       ).toBeInTheDocument()
       expect(await screen.findByRole('heading', { name: 'Video 1' })).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: /Play all/ })).toHaveAttribute(
+        'href',
+        '/watch?v=video-00001&list=WL',
+      )
       expect(screen.getByRole('link', { name: 'Watch later' })).toHaveAttribute(
         'aria-current',
         'page',
@@ -497,7 +506,7 @@ describe('PlaylistPage', () => {
       expect(titles).toEqual(['Video 1', 'Video 2'])
       expect(screen.getByRole('link', { name: /Play all/ })).toHaveAttribute(
         'href',
-        '/watch?v=video-00001',
+        '/watch?v=video-00001&list=LL',
       )
       expect(screen.getByRole('link', { name: 'Liked videos' })).toHaveAttribute(
         'aria-current',

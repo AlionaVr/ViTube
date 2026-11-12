@@ -21,7 +21,9 @@ import { useViewer } from '../../viewer/useViewer'
 import Comments from './comments/Comments'
 import Description from './Description'
 import { TWO_COLUMNS } from './layout'
+import PlaylistPanel from './PlaylistPanel'
 import UpNext from './UpNext'
+import { type QueueNext, usePlaylistQueue } from './usePlaylistQueue'
 import VideoActions from './VideoActions'
 import styles from './WatchPage.module.css'
 
@@ -84,6 +86,7 @@ export default function WatchPage() {
   const navigate = useNavigate()
   const video = useVideo(id)
   const related = useRelatedVideos(id)
+  const queue = usePlaylistQueue(params.get('list') ?? '', id)
   const twoColumns = useMediaQuery(TWO_COLUMNS)
   const [theater, toggleTheater] = useStoredFlag('vitube:theater', false)
   const reportPlayed = useViewReport(id, video.data?.duration_sec ?? 0)
@@ -96,7 +99,19 @@ export default function WatchPage() {
   // The player starts where the viewer stopped, so it waits for that; a guest has nothing saved.
   const startKnown = viewer.status === 'guest' || (signedIn && !progress.isPending)
 
-  const next = related.data?.pages[0]?.items[0]
+  // In a list, Next and the end of the video go to its next video; once it's over, Next goes to
+  // Up next and nothing plays by itself. No Next while the list is still loading.
+  const listNext: QueueNext =
+    queue.status === 'ready' ? queue.next : { status: queue.status === 'none' ? 'end' : 'pending' }
+  const upNext = related.data?.pages[0]?.items[0]
+  const nextUrl =
+    listNext.status === 'video'
+      ? listNext.url
+      : listNext.status === 'end' && upNext
+        ? watchUrl(upNext.id)
+        : undefined
+  const autoplayUrl = listNext.status === 'video' ? listNext.url : undefined
+  const panel = queue.status === 'ready' && <PlaylistPanel queue={queue} />
   const notFound = video.error instanceof ApiError && video.error.status === 404
   const ready = video.data?.status === 'ready'
   // Restricted (ADR 0009): frozen for everyone who can open it.
@@ -119,7 +134,8 @@ export default function WatchPage() {
                   startAt={resumePosition(progress.data, video.data.duration_sec ?? 0)}
                   theater={theater}
                   onTheaterToggle={toggleTheater}
-                  onNext={next && (() => navigate(watchUrl(next.id)))}
+                  onNext={nextUrl === undefined ? undefined : () => void navigate(nextUrl)}
+                  onEnded={autoplayUrl === undefined ? undefined : () => void navigate(autoplayUrl)}
                   onPlayed={frozen ? undefined : reportPlayed}
                   onPosition={frozen ? undefined : recordPosition}
                 />
@@ -145,6 +161,7 @@ export default function WatchPage() {
             <Description video={video.data} />
             {!twoColumns && (
               <div className={styles.upNextInline}>
+                {panel}
                 <UpNext videoId={id} grid />
               </div>
             )}
@@ -166,6 +183,7 @@ export default function WatchPage() {
 
       {twoColumns && !notFound && (
         <aside className={styles.secondary}>
+          {panel}
           <UpNext videoId={id} />
         </aside>
       )}
