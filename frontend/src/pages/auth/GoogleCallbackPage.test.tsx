@@ -28,7 +28,7 @@ describe('Google callback page', () => {
   })
 
   it('goes back to sign in with the reason when the email is taken', async () => {
-    const taken = 'This email is already registered. Sign in with your password.'
+    const taken = 'This email is already registered with another sign-in method.'
     mockApi({
       'GET /api/auth/me': guest,
       'GET /api/auth/providers': () => json(200, { google: true }),

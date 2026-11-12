@@ -17,14 +17,13 @@ from app.modules.auth import service
 from app.modules.auth.config import get_auth_settings
 from app.modules.auth.cookies import SESSION_COOKIE, clear_session_cookies, set_session_cookies
 from app.modules.auth.deps import CurrentUser, Sessions
-from app.modules.auth.google import ISSUERS, account_from
+from app.modules.auth.google import account_from, id_token_rules
 from app.modules.auth.schemas import Credentials, NewAccount, Providers, UserOut
 from app.modules.auth.sessions import SessionStore
 from app.modules.users.models import User
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
-SIGNUP_PER_IP = RateLimit("signup_ip", limit=5, window=60 * 60)
 LOGIN_PER_IP = RateLimit("login_ip", limit=10, window=60)
 
 
@@ -42,7 +41,7 @@ async def start_session(
     status_code=status.HTTP_201_CREATED,
     response_model=UserOut,
     summary="Create an account and sign in",
-    dependencies=[Depends(SIGNUP_PER_IP.per_ip)],
+    dependencies=[Depends(service.SIGNUP_PER_IP.per_ip)],
 )
 async def signup(
     body: NewAccount, request: Request, response: Response, db: DbSession, sessions: Sessions
@@ -132,6 +131,7 @@ async def google_finish(
     request: Request,
     response: Response,
     db: DbSession,
+    redis: RedisClient,
     sessions: Sessions,
     google: Google,
 ) -> User:
@@ -139,7 +139,7 @@ async def google_finish(
         # Checks the state against the cookie, swaps the code (with the PKCE verifier) for
         # tokens, and verifies the ID token: Google's signature, issuer, audience, expiry, nonce.
         token = await google.authorize_access_token(
-            request, claims_options={"iss": {"values": ISSUERS}}
+            request, claims_options=id_token_rules(google.client_id)
         )
     except (OAuthError, JoseError) as error:
         raise DomainError("Signing in with Google failed or took too long. Try again.") from error
@@ -147,6 +147,7 @@ async def google_finish(
         raise BadGateway("Google can't be reached. Try again later.") from error
     if "userinfo" not in token:  # no ID token: never from Google with the openid scope
         raise DomainError("Google didn't confirm who you are. Try again.")
-    user = await service.google_sign_in(db, account_from(token["userinfo"]))
+    account = account_from(token["userinfo"])
+    user = await service.google_sign_in(db, redis, account, client_ip(request))
     await start_session(request, response, sessions, user)
     return user

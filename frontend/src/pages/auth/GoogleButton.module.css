@@ -4,7 +4,6 @@
 
   display: flex;
   gap: 10px;
-  justify-content: center;
   align-items: center;
   height: 40px;
   padding: 0 12px;
@@ -17,13 +16,34 @@
   line-height: 20px;
   letter-spacing: 0.25px;
   text-decoration: none;
+  transition:
+    background-color 0.218s,
+    box-shadow 0.218s;
 }
 
-/* Material's hover layer: the text color at 8%. */
+/* The G stays at the left edge; the label is centered in the rest, as on Google's button. */
+.label {
+  flex: 1;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Material's state layers: the text color at 8% on hover, 12% pressed or focused. */
 .button:hover {
   background: color-mix(in srgb, currentcolor 8%, var(--google-bg));
+  box-shadow:
+    0 1px 2px 0 rgb(60 64 67 / 30%),
+    0 1px 3px 1px rgb(60 64 67 / 15%);
 }
 
+.button:active,
+.button:focus-visible {
+  background: color-mix(in srgb, currentcolor 12%, var(--google-bg));
+}
+
+/* Kept, unlike Google's button: the ring shows keyboard focus, as on the card's other buttons. */
 .button:focus-visible {
   outline: 2px solid var(--color-link);
   outline-offset: 2px;
@@ -33,4 +53,10 @@
   flex-shrink: 0;
   width: 20px;
   height: 20px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button {
+    transition: none;
+  }
 }

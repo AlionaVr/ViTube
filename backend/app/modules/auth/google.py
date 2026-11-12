@@ -1,7 +1,6 @@
 """Sign-in with Google (ADR 0014): the OpenID Connect code flow with PKCE, through Authlib."""
 
 import hashlib
-import hmac
 from dataclasses import dataclass
 from typing import Any
 
@@ -51,6 +50,12 @@ def create_google(
     )
 
 
+def id_token_rules(client_id: str) -> dict[str, Any]:
+    """Claims checked besides the signature, expiry and nonce. The audience is named: Authlib
+    alone would also take a token for another client that lists ours as `azp`."""
+    return {"iss": {"values": ISSUERS}, "aud": {"essential": True, "value": client_id}}
+
+
 @dataclass(frozen=True)
 class GoogleAccount:
     sub: str  # the Google account's id, never reused
@@ -75,12 +80,10 @@ class GoogleStateMiddleware(SessionMiddleware):
     def __init__(self, app: ASGIApp) -> None:
         # Read when the app starts, not on import: the OpenAPI export imports the app without env.
         settings = get_auth_settings()
-        # A key of its own, derived from the session secret: no new secret to set.
-        key = hmac.new(
-            settings.session_secret.get_secret_value().encode(),
-            b"google-oauth-state",
-            hashlib.sha256,
-        ).hexdigest()
+        # A key of its own, derived from the session secret: no new secret to set. Not an HMAC
+        # under that secret: those name sessions in Redis, and a cookie picks their message.
+        secret = settings.session_secret.get_secret_value().encode()
+        key = hashlib.sha256(b"vitube google-oauth-state\0" + secret).hexdigest()
         super().__init__(
             app,
             secret_key=key,

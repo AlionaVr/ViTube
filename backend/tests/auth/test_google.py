@@ -370,11 +370,13 @@ async def test_code_google_refuses_is_a_400(
     "claims",
     [
         {"aud": "someone-else.apps.googleusercontent.com"},
+        # Another client's token that names ours as the authorized party: still not for us.
+        {"aud": "someone-else.apps.googleusercontent.com", "azp": CLIENT_ID},
         {"nonce": "nonce-of-another-sign-in"},
         {"iss": "https://accounts.example.com"},
         {"exp": int(time.time()) - 600},
     ],
-    ids=["other audience", "wrong nonce", "other issuer", "expired"],
+    ids=["other audience", "other audience, our azp", "wrong nonce", "other issuer", "expired"],
 )
 async def test_id_token_with_wrong_claims_is_refused(
     client: AsyncClient, db: AsyncSession, google: FakeGoogle, claims: dict[str, Any]
@@ -497,6 +499,24 @@ async def test_finish_is_limited_per_ip(
             assert (await finish(browser, "state-from-nowhere")).status_code == 400
 
         assert (await finish(browser, "state-from-nowhere")).status_code == 429
+
+
+async def test_new_google_accounts_count_as_sign_ups_per_ip(
+    app: FastAPI, db: AsyncSession, google: FakeGoogle
+) -> None:
+    async with client_from(app, "10.0.11.1") as browser:
+        for n in range(4):  # password sign-ups and Google sign-ups share the limit of 5
+            assert (await signup(browser, f"user{n}@example.com")).status_code == 201
+        google.claims = {"sub": SUB, "email": EMAIL, "email_verified": True}
+        assert (await sign_in(browser, google)).status_code == 200
+        # Signing in again to that account makes nothing new: not counted.
+        assert (await sign_in(browser, google)).status_code == 200
+
+        google.claims = {"sub": OTHER_SUB, "email": "ben@gmail.com", "email_verified": True}
+        response = await sign_in(browser, google)
+
+    assert response.status_code == 429
+    assert await user_count(db) == 5
 
 
 # --- On and off ---

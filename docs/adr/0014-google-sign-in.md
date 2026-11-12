@@ -27,9 +27,10 @@ owns it.
     - New `sub` and a taken email: 409, nothing linked or changed. Linking by email would let someone who signed up
       a victim's address with a password first share the victim's account later (pre-hijacking).
     - The stored email isn't updated when it changes at Google.
+- **Limits.** `finish` counts as a sign-in per IP; a new account also counts as a sign-up per IP (ADR 0005).
 - **State cookie.** Authlib keeps the flow's state in Starlette's `SessionMiddleware`. Its key is derived from
-  `SESSION_SECRET` with HMAC, so there is no new secret. It lives only during one sign-in; the user's session is
-  still the Redis one.
+  `SESSION_SECRET` (SHA-256 with a label, not the HMAC that names sessions in Redis), so there is no new secret. It
+  lives only during one sign-in; the user's session is still the Redis one.
 - **Network.** The api joins `oauth-egress`, a network with internet access (ADR 0008).
 - **Off by default.** While `GOOGLE_CLIENT_ID` is empty, `/api/auth/providers` says so and the web app shows no
   Google button.

@@ -43,7 +43,7 @@ Prefix the commands below with `sudo` if your user is not in the `docker` group 
 > Passwords from `.env` are saved into the database and storage on the first start.
 > To change them, run `docker compose down -v` first, or the services can't log in.
 
-Other OS: install Docker with Compose 2.39 or newer yourself, then run `./install.sh`.
+Other OS: install Docker Engine 28 or newer with Compose 2.39 or newer yourself, then run `./install.sh`.
 
 ## Demo data
 

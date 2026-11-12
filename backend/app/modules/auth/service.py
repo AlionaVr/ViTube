@@ -23,9 +23,11 @@ LOGIN_PER_EMAIL_AND_IP = RateLimit("login_email_ip", limit=5, window=15 * 60)
 # Per account from all IPs: caps guessing spread over many IPs. Each IP adds at most 5,
 # so locking an account out takes 20+ IPs (ADR 0005).
 LOGIN_PER_EMAIL = RateLimit("login_email", limit=100, window=15 * 60)
+# New accounts per IP, made with a password or with Google.
+SIGNUP_PER_IP = RateLimit("signup_ip", limit=5, window=60 * 60)
 
-
-GOOGLE_EMAIL_TAKEN = "This email is already registered. Sign in with your password."
+# The account that has the email may use a password or another Google account.
+GOOGLE_EMAIL_TAKEN = "This email is already registered with another sign-in method."
 
 BLOCKED = {
     UserStatus.BANNED: "This account is banned",
@@ -67,12 +69,13 @@ async def signup(db: AsyncSession, email: str, password: str) -> User:
     return user
 
 
-async def google_sign_in(db: AsyncSession, account: GoogleAccount) -> User:
+async def google_sign_in(db: AsyncSession, redis: Redis, account: GoogleAccount, ip: str) -> User:
     """Sign in with Google; the first time, sign up. The account is found by Google's id, never
     by email: password sign-up doesn't verify emails, so the same email doesn't prove the same
     person (pre-hijacking, ADR 0014). A taken email is refused and nothing is linked."""
     user = await users.get_by_google_sub(db, account.sub)
     if user is None:
+        await SIGNUP_PER_IP.hit(redis, ip)  # a new account, as with a password
         user = await _insert_user(db, account.email, google_sub=account.sub)
         # None: the email is taken, or a parallel first sign-in of this account made the user.
         user = user or await users.get_by_google_sub(db, account.sub)
