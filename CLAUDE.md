@@ -54,6 +54,8 @@ FastAPI + PostgreSQL + MinIO + Celery + React. Deployed with `./install.sh` (Doc
   changing it.
 - **Verify before done.**
     - Never call a task done without proof: run tests, check logs, show it works.
+    - Before handing a UI step to the user, look at it on the stack in a real browser (a headless Chrome screenshot),
+      menus and dialogs open: jsdom lays nothing out, so a clipped menu passes every test.
     - While developing, run the tests of the changed modules and of the modules that import them, plus lint and
       type checks (frontend: `npx vitest related --run <changed files>`). Run the full suites once before the PR,
       and after a rebase onto `main` or a change to a shared contract (visibility rules, auth deps, models and
