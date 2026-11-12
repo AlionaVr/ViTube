@@ -4,7 +4,12 @@
 
 A YouTube clone built with AI: FastAPI, PostgreSQL, React, MinIO, Celery.
 
-> Work in progress. Demo accounts and the config reference will be added as stages land.
+- Home feed with categories, search with suggestions, channels with subscriptions and a subscriptions feed.
+- Upload with progress; a worker converts the video and makes a thumbnail. Studio lists your videos.
+- Watch page: player with seeking, likes, comments with replies, Up next, Save to playlists and Watch later,
+  reports.
+- Public, unlisted and private videos; a private video can be shared with chosen people.
+- Moderation: reports, hidden videos, banned and terminated accounts, an audit log.
 
 ## Quick start
 
@@ -18,10 +23,12 @@ git clone <repo-url> vitube && cd vitube
 The script:
 1. installs Docker Engine and the compose plugin, if missing;
 2. creates `.env` with random secrets (an existing `.env` is kept);
-3. builds and starts the stack, then waits until the site answers;
-4. prints the site and API docs URLs.
+3. downloads the demo videos;
+4. builds and starts the stack, then waits until the site answers;
+5. adds the [demo data](#demo-data);
+6. prints the site and API docs URLs, the demo logins and their password.
 
-Re-running it is safe: it applies new code and migrations.
+Re-running it is safe: it applies new code and migrations, and adds demo data that is missing.
 
 Prefix the commands below with `sudo` if your user is not in the `docker` group (the script prints the right form).
 
@@ -36,6 +43,70 @@ Prefix the commands below with `sudo` if your user is not in the `docker` group 
 > To change them, run `docker compose down -v` first, or the services can't log in.
 
 Other OS: install Docker with Compose 2.39 or newer yourself, then run `./install.sh`.
+
+## Demo data
+
+A fresh site comes with channels, videos, likes, comments, subscriptions, playlists and one report to moderate.
+All demo accounts share one password: `DEMO_PASSWORD` in `.env`, random for each install. `install.sh` prints it.
+
+| Account | Channel | Role | On the site |
+|---|---|---|---|
+| `admin@example.com` | @admin | admin | Moderation with the Accounts and Audit log tabs |
+| `moderator@example.com` | @moderator | moderator | Moderation: a spam comment reported under Sintel |
+| `openmovies@example.com` | @open-movies | user | Big Buck Bunny and Sintel trailers |
+| `nature@example.com` | @nature-clips | user | Flower opening |
+| `anna@example.com` | @anna | user | Subscriptions, likes, comments, the public playlist "Open movies" |
+| `ben@example.com` | @ben | user | Comments and replies, Watch later |
+
+The videos are three short open-licensed clips: sources and licenses are in [demo-data/](demo-data/README.md).
+They are not in git: `install.sh` downloads them and checks their hashes. Without internet the site still works,
+and a later `./install.sh` adds them. The worker processes them like any upload.
+
+The seed is the one-shot job `seed` (code: [backend/app/seed.py](backend/app/seed.py)); `install.sh` runs it with
+`docker compose run --rm --no-deps seed`. A re-run adds only what is missing. It never changes the role or password
+of an existing account, and what a moderator removed stays removed. If someone signed up with a demo email first,
+the seed stops and says so.
+
+Updating a deployment made before the seed: add `DEMO_PASSWORD=<random, 16+ chars>` to `.env` (for example
+`openssl rand -hex 16`), then run `./install.sh` again.
+
+## Configuration
+
+`.env` holds the settings; `install.sh` creates it from [.env.example](.env.example), with a random value for each
+`change-me`.
+
+| Variable | Default | |
+|---|---|---|
+| `HTTP_PORT` | 80 | host port of the site |
+| `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | `vitube`, random, `vitube` | DB superuser: only migrations use it |
+| `POSTGRES_APP_PASSWORD` | random | `vitube_app`, the DB role of the app: data only ([ADR 0010](docs/adr/0010-db-roles.md)) |
+| `REDIS_PASSWORD` | random | sessions, rate limits, the task queue |
+| `SESSION_SECRET` | random | 32+ chars |
+| `COOKIE_SECURE` | false | true when served over HTTPS: cookies then go over HTTPS only |
+| `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD` | `vitube`, random | storage admin: only the setup job uses it |
+| `MINIO_APP_PASSWORD` | random | storage user of the app: objects in the bucket only |
+| `S3_BUCKET` | `vitube` | |
+| `DEMO_PASSWORD` | random | password of the demo accounts, set when they are created; 16+ chars |
+| `MAX_UPLOAD_SIZE_MB` | 1024 | file size; checked in the browser, nginx and the API |
+| `MAX_VIDEO_DURATION_SEC` | 1800 | longer videos fail with a reason |
+| `MAX_VIDEO_HEIGHT` | 720 | taller videos are downscaled |
+
+After a change, run `./install.sh` again.
+
+## Architecture
+
+```
+Browser ──:80──► nginx ─┬─ /             → React static files
+                        ├─ /api/*, /docs → api (FastAPI)
+                        └─ /media/*      → auth_request → minio
+api    ──► postgres, redis, minio
+worker (Celery + ffmpeg) ◄── redis; ──► minio, postgres
+one-shot jobs: migrate, minio-init, seed
+```
+
+Only nginx is published; the backend and the data services have no internet. Each backend module is layered
+`router → service → repository → models`, and one access policy decides who may watch a video. The plan, the DB
+schema and the reasons for each decision: [docs/plan.md](docs/plan.md), [docs/adr/](docs/adr/README.md).
 
 ## Local development
 
@@ -62,15 +133,8 @@ env file `.env.local`.
 
 Signed in, click **Create** in the header, then pick or drop a video file. The upload starts at once; fill in the
 details meanwhile. The worker converts the video to MP4 (H.264/AAC) and makes a thumbnail; the dialog shows the
-progress and plays the result. A new video is private until you choose Unlisted or Public.
-
-Limits, in `.env` (optional; these are the defaults):
-
-| Variable | Default | |
-|---|---|---|
-| `MAX_UPLOAD_SIZE_MB` | 1024 | file size; checked in the browser, nginx and the API |
-| `MAX_VIDEO_DURATION_SEC` | 1800 | longer videos fail with a reason |
-| `MAX_VIDEO_HEIGHT` | 720 | taller videos are downscaled |
+progress and plays the result. A new video is private until you choose Unlisted or Public. Size, length and height
+limits: see [Configuration](#configuration).
 
 Share a private video with someone (API only for now): `POST /api/videos/<id>/access` with `{"handle": "..."}`;
 `DELETE /api/videos/<id>/access/<handle>` takes it back. Changes apply to their next request.
@@ -104,11 +168,11 @@ HTTPS only.
 
 Calling the API with curl: POST, PUT, PATCH and DELETE need an `Origin` header with the site's address (CSRF
 protection, [ADR 0005](docs/adr/0005-server-sessions.md)). Once signed in, also send the `csrf_token` cookie's value
-in `X-CSRF-Token`:
+in `X-CSRF-Token`. With a demo account (put in `DEMO_PASSWORD` from `.env`):
 
 ```bash
 curl -c jar -b jar -H 'Origin: http://localhost' -H 'Content-Type: application/json' \
-  -d '{"email":"anna@example.com","password":"correct horse"}' http://localhost/api/auth/login
+  -d '{"email":"anna@example.com","password":"<DEMO_PASSWORD>"}' http://localhost/api/auth/login
 curl -b jar -H 'Origin: http://localhost' -H "X-CSRF-Token: $(awk '$6=="csrf_token"{print $7}' jar)" \
   -X POST http://localhost/api/auth/logout
 ```
@@ -117,4 +181,5 @@ curl -b jar -H 'Origin: http://localhost' -H "X-CSRF-Token: $(awk '$6=="csrf_tok
 
 - Plan and requirements: [docs/plan.md](docs/plan.md)
 - Architecture decisions: [docs/adr/](docs/adr/README.md)
+- Demo videos: [demo-data/README.md](demo-data/README.md)
 - AI tooling: [CLAUDE.md](CLAUDE.md), [.claude/](.claude/)

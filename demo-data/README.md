@@ -1,8 +1,8 @@
 # Demo data
 
-Three short open-licensed videos to upload in local development and, later, for the seed (upload → processing →
-playback). The worker makes their thumbnails, as for any upload.
-The files are not in git: `download.py` fetches them.
+Three short open-licensed videos: the seed uploads them (`backend/app/seed.py`), and they are handy for uploads in
+local development. The worker makes their thumbnails, as for any upload.
+The files are not in git: `download.py` fetches them, and `install.sh` runs it.
 
 ```bash
 python3 demo-data/download.py
