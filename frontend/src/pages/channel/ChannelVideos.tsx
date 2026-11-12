@@ -9,7 +9,9 @@ import ErrorState from '../../components/ErrorState'
 import Spinner from '../../components/Spinner'
 import VideoCard, { VideoCardSkeleton } from '../../components/VideoCard'
 import { useInfiniteScroll } from '../../hooks/useInfiniteScroll'
+import buttons from '../../styles/buttons.module.css'
 import grid from '../../styles/grid.module.css'
+import UploadDialog from '../../upload/UploadDialog'
 import type { Page, VideoSummary } from '../../videos/types'
 import type { ChannelTab } from './ChannelPage'
 import styles from './ChannelVideos.module.css'
@@ -20,6 +22,30 @@ const SORTS: Chip<VideoSort>[] = [
   { id: 'oldest', label: 'Oldest' },
 ]
 const SKELETON_CARDS = 8
+
+/** The owner's empty tab, as YouTube's: an invitation to upload, not the visitors' "no content". */
+function CreateContent() {
+  const [uploading, setUploading] = useState(false)
+  return (
+    <>
+      <EmptyState
+        title="Create content on any device"
+        action={
+          <button
+            type="button"
+            className={`${buttons.pill} ${buttons.primary}`}
+            onClick={() => setUploading(true)}
+          >
+            Upload videos
+          </button>
+        }
+      >
+        Videos you upload will appear here.
+      </EmptyState>
+      {uploading && <UploadDialog onClose={() => setUploading(false)} />}
+    </>
+  )
+}
 
 /** The Videos tab in the order of the chosen chip: public videos, or all of them for the owner. */
 export default function ChannelVideos() {
@@ -36,7 +62,11 @@ export default function ChannelVideos() {
   const items = pages.flatMap((page) => page.items)
 
   if (videos.isSuccess && items.length === 0) {
-    return <EmptyState title="This channel doesn’t have any content" />
+    return view === 'own' ? (
+      <CreateContent />
+    ) : (
+      <EmptyState title="This channel doesn’t have any content" />
+    )
   }
   return (
     <div className={grid.container}>

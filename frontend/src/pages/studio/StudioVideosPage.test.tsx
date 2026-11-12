@@ -191,9 +191,7 @@ describe('StudioVideosPage', () => {
     renderApp('/studio/videos')
 
     expect(await screen.findByText('No content available')).toBeInTheDocument()
-    const buttons = screen.getAllByRole('button', { name: 'Upload videos' })
-    expect(buttons).toHaveLength(2) // by the heading and in the empty list
-    await userEvent.click(buttons[1])
+    await userEvent.click(screen.getByRole('button', { name: 'Upload videos' })) // by the heading only
     expect(screen.getByRole('dialog', { name: 'Upload videos' })).toBeInTheDocument()
   })
 
@@ -292,15 +290,46 @@ describe('StudioVideosPage', () => {
       expect(screen.getByRole('dialog', { name: 'Video details' })).toBeInTheDocument()
     })
 
-    it('closes without saving on Cancel', async () => {
+    it('asks before dropping unsaved changes on Cancel', async () => {
       const fetch = mockEdit(() => json(200, {}))
+      const confirm = vi
+        .spyOn(window, 'confirm')
+        .mockReturnValueOnce(false)
+        .mockReturnValueOnce(true)
       const dialog = await openEdit()
 
       await userEvent.type(dialog.getByRole('textbox', { name: 'Description' }), ' More.')
       await userEvent.click(dialog.getByRole('button', { name: 'Cancel' }))
+      expect(confirm).toHaveBeenCalledWith('Discard unsaved changes?')
+      expect(screen.getByRole('dialog', { name: 'Video details' })).toBeInTheDocument()
 
+      await userEvent.click(dialog.getByRole('button', { name: 'Cancel' }))
       expect(screen.queryByRole('dialog', { name: 'Video details' })).not.toBeInTheDocument()
       expect(fetch.mock.calls.some(([request]) => request.method === 'PATCH')).toBe(false)
+    })
+
+    it('closes at once when nothing changed', async () => {
+      mockEdit(() => json(200, {}))
+      const confirm = vi.spyOn(window, 'confirm')
+      const dialog = await openEdit()
+
+      await userEvent.click(dialog.getByRole('button', { name: 'Close' }))
+
+      expect(screen.queryByRole('dialog', { name: 'Video details' })).not.toBeInTheDocument()
+      expect(confirm).not.toHaveBeenCalled()
+    })
+
+    it('copies the video link', async () => {
+      const user = userEvent.setup() // provides a clipboard, as a secure page has
+      mockEdit(() => json(200, {}))
+      const dialog = await openEdit()
+
+      await user.click(dialog.getByRole('button', { name: 'Copy video link' }))
+
+      expect(await navigator.clipboard.readText()).toBe(
+        `${window.location.origin}/watch?v=${own(1).id}`,
+      )
+      expect(dialog.getByText('Link copied')).toBeInTheDocument()
     })
   })
 

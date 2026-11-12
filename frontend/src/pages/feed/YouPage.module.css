@@ -60,7 +60,11 @@
   line-height: 28px;
 }
 
-/* One row of cards; the rest scrolls sideways (View all opens the whole list). */
+.rowFrame {
+  position: relative;
+}
+
+/* One row of cards; the arrows page the rest (View all opens the whole list). */
 .row {
   display: grid;
   grid-auto-flow: column;
@@ -68,7 +72,26 @@
   gap: 16px 8px;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
-  padding-bottom: 8px;
+  scrollbar-width: none;
+}
+
+/* YouTube's round arrows over the thumbnails' middle (210px wide: 118px tall). */
+.arrow {
+  position: absolute;
+  top: 59px;
+  z-index: 1;
+  translate: 0 -50%;
+  border-radius: 50%;
+  background: var(--color-menu);
+  box-shadow: var(--shadow-popup);
+}
+
+.left {
+  left: -20px;
+}
+
+.right {
+  right: -20px;
 }
 
 .row > * {
@@ -94,5 +117,17 @@
 
   .row {
     grid-auto-columns: 160px;
+  }
+
+  .arrow {
+    top: 45px;
+  }
+
+  .left {
+    left: -8px;
+  }
+
+  .right {
+    right: -8px;
   }
 }

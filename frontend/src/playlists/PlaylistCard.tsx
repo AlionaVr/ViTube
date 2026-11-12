@@ -1,24 +1,20 @@
 import { Link } from 'react-router'
 
 import Icon from '../components/Icon'
-import VisibilityBadge from '../components/VisibilityBadge'
 import { formatVideoCount } from '../lib/format'
 import styles from './PlaylistCard.module.css'
-import type { Playlist, Visibility } from './types'
+import type { Playlist } from './types'
 
 /** YouTube's playlist card: a cover on a stack, the count on it, the title, `lines` of detail. */
 export default function PlaylistCard({
   playlist,
   url,
   lines = [],
-  visibility,
 }: {
   /** A stored playlist, or Liked videos. */
   playlist: Pick<Playlist, 'title' | 'thumbnail_url' | 'video_count'>
   url: string
   lines?: string[]
-  /** On the owner's own channel, which lists every visibility: marks what isn't public. */
-  visibility?: Visibility
 }) {
   return (
     <article className={styles.card}>
@@ -46,7 +42,6 @@ export default function PlaylistCard({
           {line}
         </p>
       ))}
-      {visibility && <VisibilityBadge visibility={visibility} />}
       <Link to={url} className={styles.full}>
         View full playlist
       </Link>

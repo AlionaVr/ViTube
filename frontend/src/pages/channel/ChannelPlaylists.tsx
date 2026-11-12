@@ -5,6 +5,7 @@ import ErrorState from '../../components/ErrorState'
 import Spinner from '../../components/Spinner'
 import { useInfiniteScroll } from '../../hooks/useInfiniteScroll'
 import { useChannelPlaylists, useMyChannelPlaylists } from '../../playlists/hooks'
+import { playlistLines } from '../../playlists/lines'
 import PlaylistCard, { PlaylistCardSkeleton } from '../../playlists/PlaylistCard'
 import { playlistUrl } from '../../playlists/paths'
 import grid from '../../styles/grid.module.css'
@@ -46,7 +47,12 @@ export default function ChannelPlaylists() {
                 key={playlist.id}
                 playlist={playlist}
                 url={playlistUrl(playlist)}
-                visibility={view === 'own' ? playlist.visibility : undefined}
+                // The owner's tab lists every visibility: each card says which, as /feed/playlists.
+                lines={
+                  view === 'own'
+                    ? playlistLines(playlist.visibility, playlist.updated_at)
+                    : undefined
+                }
               />
             ))}
           </div>

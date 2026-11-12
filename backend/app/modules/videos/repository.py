@@ -199,7 +199,8 @@ async def count_open_drafts(db: AsyncSession, owner_id: UUID, *, within: timedel
 
 async def lock(db: AsyncSession, video_id: UUID) -> None:
     """FOR NO KEY UPDATE until the commit: shares of one video run one at a time, so a count of
-    its grants holds until the insert. Ratings and reports (KEY SHARE on it) don't wait."""
+    its grants holds until the insert. Only FK checks (KEY SHARE) pass; counter updates (views,
+    ratings, comments) and reports wait the few queries of a share."""
     await db.execute(select(Video.id).where(Video.id == video_id).with_for_update(key_share=True))
 
 

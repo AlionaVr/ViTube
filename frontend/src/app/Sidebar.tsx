@@ -40,7 +40,7 @@ const LIBRARY: NavItem[] = [
   { to: '/feed/playlists', label: 'Playlists', icon: 'playlists' },
   { to: '/playlist?list=WL', label: 'Watch later', icon: 'watchLater' },
   { to: '/playlist?list=LL', label: 'Liked videos', icon: 'like', activeIcon: 'likeFill' },
-  // Studio, as on YouTube: all of the user's videos; the channel tab shows only public ones.
+  // Studio, as on YouTube: every video of the user, drafts and failed ones too.
   { to: '/studio/videos', label: 'Your videos', icon: 'yourVideos' },
 ]
 

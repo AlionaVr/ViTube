@@ -5,13 +5,16 @@ import { Link } from 'react-router'
 
 import type { User } from '../../api/client'
 import Avatar from '../../components/Avatar'
+import IconButton from '../../components/IconButton'
 import ErrorState from '../../components/ErrorState'
 import VideoCard, { VideoCardSkeleton } from '../../components/VideoCard'
 import { useHistory } from '../../history/hooks'
 import { NARROW_HEADER, useMediaQuery } from '../../hooks/useMediaQuery'
+import { useScrollArrows } from '../../hooks/useScrollArrows'
 import { useLiked, useLikedItems } from '../../liked/hooks'
 import { LIKED_VIDEOS } from '../../liked/paths'
 import { useMyPlaylists, usePlaylistItems, useWatchLater } from '../../playlists/hooks'
+import { playlistLines } from '../../playlists/lines'
 import PlaylistCard, { PlaylistCardSkeleton } from '../../playlists/PlaylistCard'
 import { playlistUrl } from '../../playlists/paths'
 import type { Playlist } from '../../playlists/types'
@@ -46,6 +49,7 @@ function Shelf<T>({
   children: (items: T[]) => ReactNode
 }) {
   const { items } = loaded
+  const { row, canScroll, scrollBy } = useScrollArrows<HTMLDivElement>(items?.length)
   // Nothing to show yet, nothing to show at all: an empty shelf is left out.
   if (items?.length === 0) return null
   return (
@@ -61,8 +65,21 @@ function Shelf<T>({
       {loaded.isError ? (
         <ErrorState title={`Can’t load ${title.toLowerCase()}`} onRetry={loaded.retry} />
       ) : (
-        <div className={styles.row} aria-busy={!items}>
-          {items ? children(items.slice(0, SHELF_SIZE)) : skeleton}
+        // As on YouTube: arrows page the row, no scrollbar.
+        <div className={styles.rowFrame}>
+          <div ref={row} className={styles.row} aria-busy={!items}>
+            {items ? children(items.slice(0, SHELF_SIZE)) : skeleton}
+          </div>
+          {canScroll.left && (
+            <div className={`${styles.arrow} ${styles.left}`}>
+              <IconButton icon="chevronLeft" label="Previous" onClick={() => scrollBy(-1)} />
+            </div>
+          )}
+          {canScroll.right && (
+            <div className={`${styles.arrow} ${styles.right}`}>
+              <IconButton icon="chevronRight" label="Next" onClick={() => scrollBy(1)} />
+            </div>
+          )}
         </div>
       )}
     </section>
@@ -70,11 +87,11 @@ function Shelf<T>({
 }
 
 function videoCards(videos: VideoSummary[]) {
-  return videos.map((video) => <VideoCard key={video.id} video={video} />)
+  return videos.map((video) => <VideoCard key={video.id} video={video} compact />)
 }
 
 const videoSkeletons = Array.from({ length: SKELETON_CARDS }, (_, i) => (
-  <VideoCardSkeleton key={i} />
+  <VideoCardSkeleton key={i} compact />
 ))
 
 function HistoryShelf() {
@@ -99,6 +116,7 @@ function HistoryShelf() {
 interface Card {
   playlist: Pick<Playlist, 'title' | 'thumbnail_url' | 'video_count'>
   url: string
+  lines: string[]
 }
 
 function PlaylistsShelf() {
@@ -108,8 +126,16 @@ function PlaylistsShelf() {
   const items: Card[] | undefined =
     mine.data && liked.data
       ? [
-          { playlist: { ...liked.data, title: LIKED_VIDEOS.title }, url: LIKED_VIDEOS.url },
-          ...mine.data.pages[0].items.map((playlist) => ({ playlist, url: playlistUrl(playlist) })),
+          {
+            playlist: { ...liked.data, title: LIKED_VIDEOS.title },
+            url: LIKED_VIDEOS.url,
+            lines: playlistLines('private', liked.data.updated_at),
+          },
+          ...mine.data.pages[0].items.map((playlist) => ({
+            playlist,
+            url: playlistUrl(playlist),
+            lines: playlistLines(playlist.visibility, playlist.updated_at),
+          })),
         ]
       : undefined
   return (
@@ -129,8 +155,8 @@ function PlaylistsShelf() {
       ))}
     >
       {(playlists) =>
-        playlists.map(({ playlist, url }) => (
-          <PlaylistCard key={url} playlist={playlist} url={url} />
+        playlists.map(({ playlist, url, lines }) => (
+          <PlaylistCard key={url} playlist={playlist} url={url} lines={lines} />
         ))
       }
     </Shelf>

@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
-
+import { useScrollArrows } from '../hooks/useScrollArrows'
 import IconButton from './IconButton'
 import styles from './ChipBar.module.css'
 
@@ -23,32 +22,7 @@ export default function ChipBar<T extends string>({
   onSelect,
   label,
 }: ChipBarProps<T>) {
-  const row = useRef<HTMLDivElement>(null)
-  const [canScroll, setCanScroll] = useState({ left: false, right: false })
-
-  useEffect(() => {
-    const element = row.current
-    if (!element) return
-    const update = () =>
-      setCanScroll({
-        left: element.scrollLeft > 0,
-        right: element.scrollLeft + element.clientWidth < element.scrollWidth - 1,
-      })
-    // Fires once right away, then on every resize (the guide opening changes the width).
-    const observer = new ResizeObserver(update)
-    observer.observe(element)
-    element.addEventListener('scroll', update, { passive: true })
-    return () => {
-      observer.disconnect()
-      element.removeEventListener('scroll', update)
-    }
-  }, [chips.length])
-
-  const scrollBy = (direction: -1 | 1) =>
-    row.current?.scrollBy({
-      left: direction * row.current.clientWidth * 0.8,
-      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
-    })
+  const { row, canScroll, scrollBy } = useScrollArrows<HTMLDivElement>(chips.length)
 
   return (
     <div className={styles.bar}>

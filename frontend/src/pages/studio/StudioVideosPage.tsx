@@ -11,6 +11,7 @@ import Spinner from '../../components/Spinner'
 import Thumbnail from '../../components/Thumbnail'
 import { useInfiniteScroll } from '../../hooks/useInfiniteScroll'
 import { formatDate, formatExact } from '../../lib/format'
+import { VISIBILITY } from '../../playlists/visibility'
 import buttons from '../../styles/buttons.module.css'
 import EditDetailsDialog from '../../upload/EditDetailsDialog'
 import SharePrivatelyDialog from '../../upload/SharePrivatelyDialog'
@@ -18,7 +19,6 @@ import UploadDialog from '../../upload/UploadDialog'
 import { useMyVideos } from '../../videos/hooks'
 import { watchUrl } from '../../videos/paths'
 import type { OwnVideo, VideoStatus } from '../../videos/types'
-import { VISIBILITY_LABELS } from '../../videos/visibility'
 import { useViewer } from '../../viewer/useViewer'
 import styles from './StudioVideosPage.module.css'
 
@@ -54,7 +54,7 @@ export default function StudioVideosPage() {
       <title>Channel content - ViTube</title>
       <div className={styles.top}>
         <h1 className={styles.heading}>Channel content</h1>
-        {/* Opens the header's Create dialog: the new draft joins this list. */}
+        {/* The header's Create dialog: the new draft joins this list. */}
         <button
           type="button"
           className={`${buttons.pill} ${buttons.primary}`}
@@ -72,20 +72,7 @@ export default function StudioVideosPage() {
       ) : !videos.data ? (
         <ErrorState title="Can’t load your videos" onRetry={() => void videos.refetch()} />
       ) : items.length === 0 ? (
-        <EmptyState
-          title="No content available"
-          action={
-            <button
-              type="button"
-              className={`${buttons.pill} ${buttons.primary}`}
-              onClick={() => setUploading(true)}
-            >
-              Upload videos
-            </button>
-          }
-        >
-          Videos you upload will appear here.
-        </EmptyState>
+        <EmptyState title="No content available">Videos you upload will appear here.</EmptyState>
       ) : (
         <>
           <VideoTable label="Videos">
@@ -217,7 +204,16 @@ function VideoRow({ video, ...actions }: { video: OwnVideo } & RowActions) {
         </div>
       </td>
       {/* As in Studio: a draft (no file yet, or its upload was cut off) shows as such here. */}
-      <td>{video.status === 'uploading' ? 'Draft' : VISIBILITY_LABELS[video.visibility]}</td>
+      <td>
+        {video.status === 'uploading' ? (
+          'Draft'
+        ) : (
+          <span className={styles.withIcon}>
+            <Icon name={VISIBILITY[video.visibility].icon} size={18} />
+            {VISIBILITY[video.visibility].label}
+          </span>
+        )}
+      </td>
       {/* Studio's column; the one restriction here is a moderator's (ADR 0009). */}
       <td>{video.is_hidden ? 'Hidden by a moderator' : 'None'}</td>
       <td>

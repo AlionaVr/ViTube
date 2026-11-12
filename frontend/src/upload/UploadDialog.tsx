@@ -7,7 +7,6 @@ import Spinner from '../components/Spinner'
 import { useModalDialog } from '../hooks/useModalDialog'
 import buttons from '../styles/buttons.module.css'
 import { videoKeys } from '../videos/hooks'
-import { watchUrl } from '../videos/paths'
 import type { OwnVideo } from '../videos/types'
 import { updateVideo } from './api'
 import { detailsOf } from './details'
@@ -15,6 +14,7 @@ import DetailsFields from './DetailsFields'
 import { formatLimits } from './format'
 import styles from './UploadDialog.module.css'
 import { type Transfer, useUpload } from './useUpload'
+import VideoLink from './VideoLink'
 import VideoScreen from './VideoScreen'
 
 /** YouTube Studio's "Upload videos" modal. Mounted while open; closing unmounts it. */
@@ -142,15 +142,7 @@ function Details({
     mutationFn: () => updateVideo(video.id, details),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: videoKeys.mine }),
   })
-  const link = `${window.location.origin}${watchUrl(video.id)}`
   const [copied, setCopied] = useState(false)
-  // No clipboard API on plain-HTTP sites other than localhost: no button then.
-  const canCopy = typeof navigator.clipboard?.writeText === 'function'
-
-  async function copyLink() {
-    await navigator.clipboard.writeText(link)
-    setCopied(true)
-  }
 
   function submit(event: FormEvent) {
     event.preventDefault()
@@ -167,12 +159,7 @@ function Details({
           <Preview video={video} transfer={transfer} />
           <dl className={styles.facts}>
             <dt>Video link</dt>
-            <dd className={styles.linkRow}>
-              <a href={link} target="_blank" rel="noreferrer">
-                {link}
-              </a>
-              {canCopy && <IconButton icon="copy" label="Copy video link" onClick={copyLink} />}
-            </dd>
+            <VideoLink id={video.id} onCopied={() => setCopied(true)} />
             <dt>Filename</dt>
             <dd>{fileName}</dd>
           </dl>

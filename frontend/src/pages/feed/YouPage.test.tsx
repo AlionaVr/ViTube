@@ -41,6 +41,7 @@ describe('YouPage', () => {
     expect(await shelf('History').findByText(summary(1).title)).toBeInTheDocument()
     expect(await shelf('Playlists').findByText('Liked videos')).toBeInTheDocument()
     expect(shelf('Playlists').getByText('Watch later')).toBeInTheDocument()
+    expect(shelf('Playlists').getAllByText(/^Private • Playlist$/)).toHaveLength(3)
     expect(await shelf('Watch later').findByText(summary(4).title)).toBeInTheDocument()
     expect(await shelf('Liked videos').findByText(summary(3).title)).toBeInTheDocument()
     const viewAll = ['History', 'Playlists', 'Watch later', 'Liked videos'].map((name) =>

@@ -14,18 +14,25 @@ interface VideoCardProps {
   showChannel?: boolean
   /** On the owner's own channel, which lists every visibility: marks what isn't public. */
   visibility?: Visibility
+  /** A shelf's narrow card (the You page): no avatar, smaller type. */
+  compact?: boolean
 }
 
 /** A card in a video grid. The title link is the one tab stop to the video. */
-export default function VideoCard({ video, showChannel = true, visibility }: VideoCardProps) {
+export default function VideoCard({
+  video,
+  showChannel = true,
+  visibility,
+  compact,
+}: VideoCardProps) {
   const { channel } = video
   return (
-    <article className={styles.card}>
+    <article className={compact ? `${styles.card} ${styles.compact}` : styles.card}>
       <Link to={watchUrl(video.id)} tabIndex={-1} aria-hidden="true">
         <Thumbnail src={video.thumbnail_url} durationSec={video.duration_sec} videoId={video.id} />
       </Link>
       <div className={styles.details}>
-        {showChannel && (
+        {showChannel && !compact && (
           <Link to={channelUrl(channel.handle)} tabIndex={-1} aria-hidden="true">
             <Avatar name={channel.name} src={channel.avatar_url} size={36} />
           </Link>
@@ -52,12 +59,18 @@ export default function VideoCard({ video, showChannel = true, visibility }: Vid
 }
 
 /** Same geometry as the card, so nothing jumps when data arrives. */
-export function VideoCardSkeleton({ showChannel = true }: { showChannel?: boolean }) {
+export function VideoCardSkeleton({
+  showChannel = true,
+  compact,
+}: {
+  showChannel?: boolean
+  compact?: boolean
+}) {
   return (
-    <div className={styles.card} aria-hidden="true">
+    <div className={compact ? `${styles.card} ${styles.compact}` : styles.card} aria-hidden="true">
       <div className={styles.ghostThumbnail} />
       <div className={styles.details}>
-        {showChannel && <div className={styles.ghostAvatar} />}
+        {showChannel && !compact && <div className={styles.ghostAvatar} />}
         <div className={styles.meta}>
           <div className={styles.ghostLine} />
           <div className={`${styles.ghostLine} ${styles.ghostShort}`} />
