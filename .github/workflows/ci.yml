@@ -80,6 +80,12 @@ jobs:
           procs=$(for c in $(docker compose ps -q); do docker top "$c" -o pid,uid,args; done)
           echo "$procs"
           ! echo "$procs" | awk '$2 == "0"' | grep .
+      - name: Only nginx reaches the api (it alone sets X-Forwarded-For)
+        run: |
+          docker compose exec -T nginx wget -q -O /dev/null http://api:8000/api/health
+          docker compose exec -T worker python -c "
+          import errno, socket
+          assert socket.socket().connect_ex(('api', 8000)) == errno.ECONNREFUSED"
       - uses: astral-sh/setup-uv@v10.3.3
         with:
           enable-cache: true

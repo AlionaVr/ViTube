@@ -28,8 +28,9 @@ COPY alembic alembic
 COPY app app
 USER 10001:10001
 EXPOSE 8000
-# Trusts X-Forwarded-For from any peer: only nginx (network "web") and our own services reach the api.
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]
+# The host comes from UVICORN_HOST (compose.yaml): the api's address on nginx's network, so the only
+# peer, and the only one trusted with X-Forwarded-For, is nginx. Without it uvicorn binds 127.0.0.1.
+CMD ["uvicorn", "app.main:app", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]
 
 # The worker: the app plus ffmpeg. Only this image carries it: less to attack in the api.
 # ffmpeg goes in before the code, so code changes keep this layer cached. Command: compose.yaml.

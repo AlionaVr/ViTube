@@ -207,10 +207,16 @@ services:
     init: true  # PID 1 that forwards signals and reaps child processes
     # Uploads hold at most 32 × 16 MiB (ADR 0006); the rest is the app. A leak can't take the host.
     mem_limit: 1g
-    # oauth-egress: the token and keys endpoints of Google sign-in (ADR 0014)
-    networks: [ web, data, oauth-egress ]
+    networks:
+      web:
+        aliases: [ api-web ]  # a name for the api's address on "web" only
+      data: { }
+      oauth-egress: { }  # the token and keys endpoints of Google sign-in (ADR 0014)
     environment:
       <<: [ *backend-env, *storage-env ]
+      # Listens on "web" only: nginx alone can connect, so it alone sets X-Forwarded-For.
+      # Neighbours on "data" and "oauth-egress" get "connection refused".
+      UVICORN_HOST: api-web
       SESSION_SECRET: ${SESSION_SECRET:?}  # only the api handles sessions
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       # Sign-in with Google, off while the client id is empty (README)
@@ -231,7 +237,7 @@ services:
         - CMD
         - python
         - -c
-        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=2)
+        - import urllib.request; urllib.request.urlopen('http://api-web:8000/api/health', timeout=2)
       interval: 10s
       timeout: 3s
       retries: 5
