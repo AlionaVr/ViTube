@@ -138,6 +138,7 @@ describe('moderation page', () => {
     await userEvent.click(dialog.getByRole('button', { name: 'Hide' }))
 
     expect(await screen.findByText('No open reports')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Video hidden')
     const hideCall = fetch.mock.calls.find(([request]) => request.method === 'POST')
     expect(await hideCall?.[0].json()).toEqual({ reason: 'violent' })
   })
@@ -175,6 +176,7 @@ describe('moderation page', () => {
     )
 
     expect(await screen.findByText('No open reports')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Reports dismissed')
     expect(fetch.mock.calls.some(([request]) => request.url.endsWith('/dismiss'))).toBe(true)
   })
 
@@ -217,6 +219,7 @@ describe('moderation page', () => {
     await userEvent.click(within(list).getByRole('button', { name: 'Restore “Video ccccccccccc”' }))
 
     expect(await screen.findByText('No hidden videos')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Video restored')
   })
 
   it('says why a restore failed', async () => {
@@ -262,6 +265,7 @@ describe('moderation page', () => {
     await userEvent.click(dialog.getByRole('button', { name: 'Delete' }))
 
     expect(await screen.findByText('No open reports')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Comment deleted')
     expect(fetch.mock.calls.some(([request]) => request.method === 'DELETE')).toBe(true)
   })
 
@@ -324,12 +328,16 @@ describe('moderation page', () => {
     const dialog = within(screen.getByRole('dialog', { name: 'Restrict account' }))
     expect(dialog.getByRole('radio', { name: /^Ban/ })).toBeChecked()
     await userEvent.click(dialog.getByRole('radio', { name: /^Terminate channel/ }))
-    await userEvent.type(dialog.getByRole('textbox'), 'Scam channel')
+    await userEvent.type(
+      dialog.getByRole('textbox', { name: 'Reason for the audit log' }),
+      'Scam channel',
+    )
     await userEvent.click(dialog.getByRole('button', { name: 'Terminate' }))
 
     await waitFor(() =>
       expect(screen.queryByRole('dialog', { name: 'Restrict account' })).not.toBeInTheDocument(),
     )
+    expect(screen.getByRole('status')).toHaveTextContent('@user-owner123’s channel terminated')
     const call = fetch.mock.calls.find(([request]) => request.method === 'PUT')
     expect(await call?.[0].json()).toEqual({ status: 'terminated', reason: 'Scam channel' })
   })
@@ -367,6 +375,7 @@ describe('moderation page', () => {
     await userEvent.click(list.getByRole('button', { name: 'Reinstate @user-spammer1' }))
 
     expect(await screen.findByText('No restricted accounts')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('@user-spammer1 reinstated')
     const call = fetch.mock.calls.find(([request]) => request.method === 'PUT')
     expect(await call?.[0].json()).toEqual({ status: 'active', reason: '' })
   })

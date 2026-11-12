@@ -276,55 +276,11 @@ a.meta:hover {
   color: var(--color-text);
 }
 
-/* Admin: the ⋮ menu, the restrict dialog, the accounts list */
+/* Admin: the restrict dialog, the accounts list */
 
-.menu {
-  padding: 8px 0;
-}
-
-.menuItem {
-  width: 100%;
-  height: 40px;
-  padding: 0 24px 0 16px;
-  display: flex;
-  align-items: center;
-  border: none;
-  background: none;
-  color: var(--color-text);
-  font: inherit;
-  font-size: 14px;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.menuItem:hover,
-.menuItem:focus-visible {
-  outline: none;
-  background: var(--color-hover-strong);
-}
-
+/* Room for the field's label, which sits on its top border. */
 .reasonField {
-  margin-top: 12px;
-  display: block;
-}
-
-.reasonField textarea {
-  width: 100%;
-  margin-top: 4px;
-  padding: 8px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  background: none;
-  color: var(--color-text);
-  font: inherit;
-  font-size: 14px;
-  line-height: 20px;
-  resize: vertical;
-}
-
-.reasonField textarea:focus {
-  outline: none;
-  border-color: var(--color-link);
+  margin-top: 24px;
 }
 
 .filters {

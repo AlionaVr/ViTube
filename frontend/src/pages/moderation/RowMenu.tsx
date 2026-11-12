@@ -1,7 +1,7 @@
-import type { Account } from '../../moderation/api'
 import IconButton from '../../components/IconButton'
+import MenuChoices from '../../components/Menu'
 import Popover from '../../components/Popover'
-import styles from './ModerationPage.module.css'
+import type { Account } from '../../moderation/api'
 
 /** ⋮ on a row, like Studio's options: what admins do about the account behind it. */
 export default function RowMenu({
@@ -21,19 +21,10 @@ export default function RowMenu({
       )}
     >
       {(close) => (
-        <div className={styles.menu}>
-          <button
-            type="button"
-            role="menuitem"
-            className={styles.menuItem}
-            onClick={() => {
-              close()
-              onRestrict()
-            }}
-          >
-            Restrict @{account.handle}
-          </button>
-        </div>
+        <MenuChoices
+          choices={[{ icon: 'block', label: `Restrict @${account.handle}`, onSelect: onRestrict }]}
+          close={close}
+        />
       )}
     </Popover>
   )

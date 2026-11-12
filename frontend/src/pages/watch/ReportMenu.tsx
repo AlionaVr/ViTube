@@ -1,7 +1,8 @@
 import { useState } from 'react'
 
-import Icon, { type IconName } from '../../components/Icon'
+import { type IconName } from '../../components/Icon'
 import IconButton from '../../components/IconButton'
+import MenuChoices from '../../components/Menu'
 import Popover, { type TriggerProps } from '../../components/Popover'
 import SignInGate from '../../components/SignInGate'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
@@ -9,7 +10,6 @@ import type { ReportTarget } from '../../moderation/api'
 import { useViewer } from '../../viewer/useViewer'
 import { TWO_COLUMNS } from './layout'
 import ReportDialog from './ReportDialog'
-import styles from './ReportMenu.module.css'
 
 interface ReportMenuProps {
   target: ReportTarget
@@ -50,20 +50,10 @@ export default function ReportMenu({ target, owner, icon, label, className }: Re
           trigger={(props) => trigger({ ...props, disabled: viewer.status === 'loading' })}
         >
           {(close) => (
-            <div className={styles.menu}>
-              <button
-                type="button"
-                role="menuitem"
-                className={styles.item}
-                onClick={() => {
-                  close()
-                  setReporting(true)
-                }}
-              >
-                <Icon name="flag" />
-                Report
-              </button>
-            </div>
+            <MenuChoices
+              choices={[{ icon: 'flag', label: 'Report', onSelect: () => setReporting(true) }]}
+              close={close}
+            />
           )}
         </Popover>
       )}

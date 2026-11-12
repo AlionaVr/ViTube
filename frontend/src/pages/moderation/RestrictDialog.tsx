@@ -2,6 +2,7 @@ import { useState } from 'react'
 
 import type { Account } from '../../moderation/api'
 import Dialog from '../../components/Dialog'
+import { TextAreaField } from '../../components/TextField'
 import { useSetStatus } from '../../moderation/hooks'
 import buttons from '../../styles/buttons.module.css'
 import choices from '../../styles/choices.module.css'
@@ -71,15 +72,15 @@ function RestrictForm({ target, onDone }: { target: Account; onDone: () => void 
           </label>
         ))}
       </fieldset>
-      <label className={styles.reasonField}>
-        <span className={choices.legend}>Reason for the audit log</span>
-        <textarea
+      <div className={styles.reasonField}>
+        <TextAreaField
+          label="Reason for the audit log"
           value={reason}
           maxLength={REASON_MAX}
-          rows={2}
+          hint={`${reason.length}/${REASON_MAX}`}
           onChange={(event) => setReason(event.target.value)}
         />
-      </label>
+      </div>
       {restrict.isError && (
         <p className={styles.error} role="alert">
           {restrict.error.message}
