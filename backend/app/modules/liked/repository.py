@@ -9,15 +9,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.reactions.models import LIKE, VideoReaction
 from app.modules.users.models import User
-from app.modules.videos.access import watchable
+from app.modules.videos.access import interactable
 from app.modules.videos.models import Video
 
 LikedRow = Row[VideoReaction, Video, User]
+NEWEST = (VideoReaction.rated_at.desc(), VideoReaction.target_id.desc())
 
 
 def _liked_by(user: User) -> tuple[ColumnElement[bool], ...]:
-    """The user's likes of videos they may watch now: the list and its count agree."""
-    return VideoReaction.user_id == user.id, VideoReaction.value == LIKE, watchable(user)
+    """The user's likes they may still take back: every row's "Remove" works, and the list
+    and its count agree."""
+    return VideoReaction.user_id == user.id, VideoReaction.value == LIKE, interactable(user)
 
 
 async def list_liked(
@@ -34,15 +36,17 @@ async def list_liked(
         query = query.where(
             tuple_(VideoReaction.rated_at, VideoReaction.target_id) < tuple_(*before)
         )
-    order = (VideoReaction.rated_at.desc(), VideoReaction.target_id.desc())
-    return (await db.execute(query.order_by(*order).limit(limit))).all()
+    return (await db.execute(query.order_by(*NEWEST).limit(limit))).all()
 
 
-async def count_liked(db: AsyncSession, user: User) -> int:
+async def newest_liked(db: AsyncSession, user: User) -> tuple[datetime, Video, int] | None:
+    """The newest like, its video and the count of all: one statement, so they agree."""
     query = (
-        select(func.count())
-        .select_from(VideoReaction)
+        select(VideoReaction.rated_at, Video, func.count().over())
         .join(Video, Video.id == VideoReaction.target_id)
         .where(*_liked_by(user))
+        .order_by(*NEWEST)
+        .limit(1)
     )
-    return await db.scalar(query) or 0
+    row = (await db.execute(query)).first()
+    return (row[0], row[1], row[2]) if row else None

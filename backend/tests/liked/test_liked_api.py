@@ -173,11 +173,17 @@ async def test_owner_and_moderator_keep_a_liked_video_that_turned_private(
 
 
 @pytest.mark.parametrize("restriction", ["hidden", "terminated"])
-async def test_restricted_video_leaves_the_list_for_all_but_moderators(
-    viewer: AsyncClient, moderator: AsyncClient, video: Video, db: AsyncSession, restriction: str
+async def test_restricted_video_leaves_every_list_its_owners_and_moderators_too(
+    viewer: AsyncClient,
+    owner: AsyncClient,
+    moderator: AsyncClient,
+    video: Video,
+    db: AsyncSession,
+    restriction: str,
 ) -> None:
-    await rated(viewer, video, "like")
-    await rated(moderator, video, "like")
+    """Its rating is frozen (ADR 0009): a row there could not be removed."""
+    for client in (viewer, owner, moderator):
+        await rated(client, video, "like")
 
     if restriction == "hidden":
         await hide_directly(db, video)
@@ -186,8 +192,10 @@ async def test_restricted_video_leaves_the_list_for_all_but_moderators(
         await db.execute(terminate.values(status=UserStatus.TERMINATED))
         await db.commit()
 
-    assert await liked(viewer) == []
-    assert await liked(moderator) == [video.public_id]
+    # A terminated owner can't sign in any more.
+    signed_in = (viewer, owner, moderator) if restriction == "hidden" else (viewer, moderator)
+    for client in signed_in:
+        assert await liked(client) == []
 
 
 async def test_video_no_longer_ready_is_not_listed_even_to_owner_or_moderator(

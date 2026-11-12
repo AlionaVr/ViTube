@@ -2,6 +2,7 @@
 
 - `can_view` (videos/access.py): may this viewer open this one video?
 - `viewable` (videos/access.py): the same as a SQL condition, for lists (playlists).
+- `interactable` (videos/access.py): `can_interact` as a SQL condition, for Liked videos.
 - `LISTED` (videos/repository.py): may the video appear in public lists? The same for every
   viewer, the owner too.
 - `LISTED_SQL` (videos/models.py): the condition of the partial indexes; LISTED must imply it.
@@ -18,7 +19,7 @@ from sqlalchemy import ColumnElement, TextClause, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.users.models import Role, User, UserStatus
-from app.modules.videos.access import can_view, viewable
+from app.modules.videos.access import can_interact, can_view, interactable, viewable
 from app.modules.videos.models import LISTED_SQL, Video, VideoAccess, VideoStatus, Visibility
 from app.modules.videos.repository import LISTED
 from tests.videos.factories import make_user, make_video
@@ -127,6 +128,19 @@ async def test_viewable_is_can_view_as_sql(
         video.id for state, video in videos.items() if expected(judged_as(viewer, state), *state)
     }
     assert allowed == oracle
+
+
+@pytest.mark.parametrize("viewer", list(Viewer))
+async def test_interactable_is_can_interact_as_sql(
+    db: AsyncSession,
+    videos: dict[State, Video],
+    viewers: dict[Viewer, User | None],
+    viewer: Viewer,
+) -> None:
+    user = viewers[viewer]
+    allowed = {video.id for video in videos.values() if await can_interact(db, user, video)}
+
+    assert await ids_where(db, interactable(user)) == allowed
 
 
 async def test_a_grant_on_another_video_opens_nothing_here(

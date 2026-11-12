@@ -391,7 +391,8 @@ describe('PlaylistPage', () => {
     })
 
     /** A server whose list and count follow ratings; `fail`: the rating request fails. */
-    function mockRatings(fail = false) {
+    /** `held`: the rating answers only when it resolves. */
+    function mockRatings({ fail = false, held = Promise.resolve() } = {}) {
       let items = [likedItem(1), likedItem(2)]
       const sent: unknown[] = []
       mockApi({
@@ -400,6 +401,7 @@ describe('PlaylistPage', () => {
         'GET /api/me/liked/items': () => json(200, page(items)),
         'PUT /api/videos/video-00001/rating': async (request) => {
           sent.push(await request.json())
+          await held
           if (fail) return json(500, { detail: 'Internal Server Error' })
           items = items.filter((each) => each.video.id !== 'video-00001')
           return json(200, { like_count: 0, my_rating: 'none' })
@@ -408,20 +410,26 @@ describe('PlaylistPage', () => {
       return { sent }
     }
 
-    it('takes the like back from the ⋮ menu', async () => {
-      const { sent } = mockRatings()
+    it('takes the like back from the ⋮ menu, the row at once', async () => {
+      let answer = () => {}
+      const held = new Promise<void>((resolve) => (answer = resolve))
+      const { sent } = mockRatings({ held })
       renderApp('/playlist?list=LL')
 
       await choose(0, 'Remove from Liked videos')
 
-      expect(await screen.findByRole('status')).toHaveTextContent('Removed from Liked videos')
+      // Gone before the server answers, as on YouTube; the count follows.
       expect(await rowTitles()).toEqual(['Video 2'])
       expect(screen.getByText('1 video')).toBeInTheDocument()
+      expect(screen.queryByRole('status')).not.toBeInTheDocument()
+      answer()
+      expect(await screen.findByRole('status')).toHaveTextContent('Removed from Liked videos')
+      expect(await rowTitles()).toEqual(['Video 2'])
       expect(sent).toEqual([{ rating: 'none' }])
     })
 
-    it('keeps the video and says so when the like can’t be taken back', async () => {
-      mockRatings(true)
+    it('brings the video back and says so when the like can’t be taken back', async () => {
+      mockRatings({ fail: true })
       renderApp('/playlist?list=LL')
 
       await choose(0, 'Remove from Liked videos')
@@ -448,6 +456,10 @@ describe('PlaylistPage', () => {
 
       expect(
         await screen.findByRole('heading', { name: 'Enjoy your favorite videos' }),
+      ).toBeInTheDocument()
+      // YouTube's words on the You page for a guest.
+      expect(
+        screen.getByText('Sign in to access videos that you’ve liked or saved'),
       ).toBeInTheDocument()
       const urls = fetch.mock.calls.map(([request]) => new URL(request.url).pathname)
       expect(urls.filter((url) => url.startsWith('/api/me/liked'))).toEqual([])

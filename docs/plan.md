@@ -75,7 +75,7 @@ One access policy, `can_view(user, video)`, is used everywhere.
 | `users`           | email, handle (citext, unique), password_hash, role, status (active / banned / terminated), avatar, banner, history_paused                           |
 | `videos`          | public_id (11 chars), owner, title, description, visibility, status, is_hidden, duration, counters, `search_vector` (GIN), title trigram (GIN)       |
 | `video_access`    | (video, user); only the owner grants                                                                                                                 |
-| `video_reactions` | (user, video), value ±1                                                                                                                              |
+| `video_reactions` | (user, video), value ±1, rated_at; Liked videos read from it ([ADR 0013](adr/0013-liked-videos.md))                                                  |
 | `comments`        | video, author, parent (replies), is_deleted                                                                                                          |
 | `subscriptions`   | (subscriber, channel), check: not self                                                                                                               |
 | `playlists`       | owner, title, visibility, kind = user / watch_later                                                                                                  |

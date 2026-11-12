@@ -1,6 +1,10 @@
 import '@fontsource/roboto/700.css'
 
-import type { InfiniteData, UseInfiniteQueryResult } from '@tanstack/react-query'
+import {
+  type InfiniteData,
+  type UseInfiniteQueryResult,
+  useQueryClient,
+} from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router'
 
@@ -15,7 +19,7 @@ import Thumbnail from '../../components/Thumbnail'
 import { useInfiniteScroll } from '../../hooks/useInfiniteScroll'
 import { useToast } from '../../hooks/useToast'
 import { formatTimeAgo, formatUpdated, formatVideoCount, formatViews } from '../../lib/format'
-import { useLiked, useLikedItems } from '../../liked/hooks'
+import { dropLiked, useLiked, useLikedItems } from '../../liked/hooks'
 import { LIKED_VIDEOS } from '../../liked/paths'
 import {
   useMoveInPlaylist,
@@ -283,13 +287,16 @@ function WatchLater() {
 /** ⋮ on a liked video: removing it takes the like back, as on YouTube. */
 function LikedMenu({ videoId }: { videoId: string }) {
   const rate = useRateVideo(videoId)
+  const queryClient = useQueryClient()
   const toast = useToast()
-  // The promise waits for the list to refetch, so the row leaves as the toast shows.
+  // The row leaves at once; the refetch after the rating brings it back if that failed.
   const remove = () =>
-    void rate.mutateAsync('none').then(
-      () => toast(`Removed from ${LIKED_VIDEOS.title}`),
-      () => toast(NOT_CHANGED),
-    )
+    void dropLiked(queryClient, videoId)
+      .then(() => rate.mutateAsync('none'))
+      .then(
+        () => toast(`Removed from ${LIKED_VIDEOS.title}`),
+        () => toast(NOT_CHANGED),
+      )
   return <ItemMenu title={LIKED_VIDEOS.title} actions={{ remove }} />
 }
 
@@ -335,7 +342,7 @@ function LikedVideos() {
       <SignInToSee
         icon="like"
         title="Enjoy your favorite videos"
-        text="Sign in to see the videos you liked"
+        text="Sign in to access videos that you’ve liked or saved"
       />
     )
   }

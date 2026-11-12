@@ -17,17 +17,16 @@ PAGE_SIZE = 100  # as YouTube loads a playlist
 
 async def get_liked(db: AsyncSession, user: User) -> LikedOut:
     """The cover and the last change come from the newest like, as on a playlist's first video."""
-    count = await liked.count_liked(db, user)
-    newest = await liked.list_liked(db, user, before=None, limit=1)
-    if not newest:
+    newest = await liked.newest_liked(db, user)
+    if newest is None:
         return LikedOut(
-            video_count=count, thumbnail_url=None, updated_at=None, owner=ChannelSummary.of(user)
+            video_count=0, thumbnail_url=None, updated_at=None, owner=ChannelSummary.of(user)
         )
-    reaction, video, _ = newest[0]
+    liked_at, video, count = newest
     return LikedOut(
         video_count=count,
         thumbnail_url=MEDIA_PREFIX + video.thumbnail_key,
-        updated_at=reaction.rated_at,
+        updated_at=liked_at,
         owner=ChannelSummary.of(user),
     )
 

@@ -12,13 +12,16 @@ first, a cover, a count, a card on the Playlists page. ViTube already stores eac
   `rated_at DESC, video_id DESC`, keyset paging. Liking adds a video, taking the like back removes it, a like
   after a dislike or after "none" puts it on top.
 - `GET /api/me/liked` gives what the header and the card show: the count, the cover and the date of the newest
-  like. The client adds the title "Liked videos" and "Private".
-- The list and the count apply the view policy (`watchable`: ready and `viewable`) when they are read, as the
-  history and playlists do (ADR 0012): a video that turns private or hidden leaves both and comes back with
-  access. A lost video gives no hint that it still exists (ADR 0004), so the count is not of all likes.
+  like, from one statement (`count(*) OVER ()`), so they agree. The client adds the title "Liked videos" and
+  "Private".
+- The list and the count show only the likes the user may still take back (`interactable`, the SQL twin of
+  `can_interact`), read when they are read, as the history and playlists apply theirs (ADR 0012): a video that
+  turns private leaves both and comes back with access. A hidden video or a terminated channel freezes its
+  ratings (ADR 0009), so it leaves the list for its owner and moderators too: a row there could not be removed.
+  A lost video gives no hint that it still exists (ADR 0004), so the count is not of all likes.
 - Index `(user_id, rated_at, video_id)` serves the list; its `user_id` prefix also serves the cascade from
-  `users`, so it replaces `ix_video_reactions_user_id`. Not partial (`WHERE value = 1`): asyncpg sends the value
-  as a parameter, and a generic plan can't use a partial index for it.
+  `users`, so it replaces `ix_video_reactions_user_id`. Not partial (`WHERE value = 1`): the cascade would then
+  need the old index as well, two indexes to update on every rating instead of one.
 - Guests have no Liked videos (401).
 
 **Alternatives.**
