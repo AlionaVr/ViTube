@@ -201,6 +201,83 @@ describe('StudioVideosPage', () => {
     expect(await screen.findByRole('link', { name: 'Video 1' })).toBeInTheDocument()
   })
 
+  describe('Edit details', () => {
+    /** The list answers with the video as it is now: an edit shows once it is saved. */
+    function mockEdit(patch: (request: Request) => Response) {
+      let video = own(1, { visibility: 'private' })
+      const fetch = mockApi({
+        ...SIGNED_IN,
+        'GET /api/me/videos': () => json(200, page([video])),
+        [`PATCH /api/videos/${video.id}`]: async (request) => {
+          const changes = (await request.clone().json()) as object
+          const response = await patch(request)
+          if (response.ok) video = { ...video, ...changes }
+          return response
+        },
+      })
+      return fetch
+    }
+
+    async function openEdit() {
+      renderApp('/studio/videos')
+      await screen.findByRole('link', { name: 'Video 1' })
+      await userEvent.click(rowOf('Video 1').getByRole('button', { name: 'Options for Video 1' }))
+      await userEvent.click(screen.getByRole('menuitem', { name: 'Edit details' }))
+      return within(screen.getByRole('dialog', { name: 'Video details' }))
+    }
+
+    it('saves only what changed, says so and shows it in the row', async () => {
+      const fetch = mockEdit(() => json(200, {}))
+      const dialog = await openEdit()
+
+      const save = dialog.getByRole('button', { name: 'Save' })
+      expect(save).toBeDisabled() // nothing changed yet
+      const title = dialog.getByRole('textbox', { name: 'Title (required)' })
+      await userEvent.clear(title)
+      await userEvent.type(title, 'Sintel')
+      await userEvent.click(dialog.getByRole('radio', { name: /Public/ }))
+      await userEvent.click(save)
+
+      expect(await screen.findByRole('status')).toHaveTextContent('Changes saved')
+      expect(screen.queryByRole('dialog', { name: 'Video details' })).not.toBeInTheDocument()
+      const patch = fetch.mock.calls.find(([request]) => request.method === 'PATCH')![0]
+      expect(await patch.json()).toEqual({ title: 'Sintel', visibility: 'public' })
+      expect(await screen.findByRole('link', { name: 'Sintel' })).toBeInTheDocument()
+      expect(rowOf('Sintel').getByText('Public')).toBeInTheDocument()
+    })
+
+    it('needs a title', async () => {
+      mockEdit(() => json(200, {}))
+      const dialog = await openEdit()
+
+      await userEvent.clear(dialog.getByRole('textbox', { name: 'Title (required)' }))
+
+      expect(dialog.getByRole('button', { name: 'Save' })).toBeDisabled()
+    })
+
+    it('stays open with the reason when saving fails', async () => {
+      mockEdit(() => json(422, { detail: 'Title is too long' }))
+      const dialog = await openEdit()
+
+      await userEvent.type(dialog.getByRole('textbox', { name: 'Description' }), ' More.')
+      await userEvent.click(dialog.getByRole('button', { name: 'Save' }))
+
+      expect(await dialog.findByRole('alert')).toHaveTextContent('Title is too long')
+      expect(screen.getByRole('dialog', { name: 'Video details' })).toBeInTheDocument()
+    })
+
+    it('closes without saving on Cancel', async () => {
+      const fetch = mockEdit(() => json(200, {}))
+      const dialog = await openEdit()
+
+      await userEvent.type(dialog.getByRole('textbox', { name: 'Description' }), ' More.')
+      await userEvent.click(dialog.getByRole('button', { name: 'Cancel' }))
+
+      expect(screen.queryByRole('dialog', { name: 'Video details' })).not.toBeInTheDocument()
+      expect(fetch.mock.calls.some(([request]) => request.method === 'PATCH')).toBe(false)
+    })
+  })
+
   it('is where Your videos in the guide leads', async () => {
     mockApi({ ...SIGNED_IN, 'GET /api/me/videos': () => json(200, page([])) })
     renderApp('/studio/videos')

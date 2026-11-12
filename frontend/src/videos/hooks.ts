@@ -5,6 +5,7 @@ import { getVideo, listCategories, listMyVideos, listRelated, listVideos, rateVi
 import type { Category, Rating, Video, VideoStatus } from './types'
 
 export const videoKeys = {
+  all: ['videos'] as const,
   feed: (category: Category | null) => ['videos', 'feed', category] as const,
   categories: ['videos', 'categories'] as const,
   detail: (id: string) => ['videos', 'detail', id] as const,

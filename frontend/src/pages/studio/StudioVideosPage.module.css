@@ -124,6 +124,12 @@
   min-width: 0;
 }
 
+/* The ⋮ sits at the top right of the video cell, level with the title. */
+.menu {
+  flex: none;
+  margin: -8px -8px 0 0;
+}
+
 .title {
   display: -webkit-box;
   -webkit-box-orient: vertical;

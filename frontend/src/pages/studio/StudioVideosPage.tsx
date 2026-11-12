@@ -1,13 +1,17 @@
-import type { ReactNode } from 'react'
+import { type ReactNode, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router'
 
 import EmptyState from '../../components/EmptyState'
 import ErrorState from '../../components/ErrorState'
 import Icon from '../../components/Icon'
+import IconButton from '../../components/IconButton'
+import MenuChoices from '../../components/Menu'
+import Popover from '../../components/Popover'
 import Spinner from '../../components/Spinner'
 import Thumbnail from '../../components/Thumbnail'
 import { useInfiniteScroll } from '../../hooks/useInfiniteScroll'
 import { formatDate, formatExact } from '../../lib/format'
+import EditDetailsDialog from '../../upload/EditDetailsDialog'
 import { useMyVideos } from '../../videos/hooks'
 import { watchUrl } from '../../videos/paths'
 import type { OwnVideo, VideoStatus } from '../../videos/types'
@@ -28,6 +32,7 @@ export default function StudioVideosPage() {
   const viewer = useViewer()
   const location = useLocation()
   const videos = useMyVideos(viewer.status === 'authenticated')
+  const [editing, setEditing] = useState<OwnVideo | null>(null)
   const sentinel = useInfiniteScroll<HTMLDivElement>(
     () => void videos.fetchNextPage(),
     videos.hasNextPage && !videos.isFetchingNextPage && !videos.isFetchNextPageError,
@@ -57,7 +62,7 @@ export default function StudioVideosPage() {
         <>
           <VideoTable label="Videos">
             {items.map((video) => (
-              <VideoRow key={video.id} video={video} />
+              <VideoRow key={video.id} video={video} onEdit={() => setEditing(video)} />
             ))}
           </VideoTable>
           <div ref={sentinel} />
@@ -74,6 +79,7 @@ export default function StudioVideosPage() {
           )}
         </>
       )}
+      {editing && <EditDetailsDialog video={editing} onClose={() => setEditing(null)} />}
     </div>
   )
 }
@@ -125,7 +131,27 @@ function VideoTable({
   )
 }
 
-function VideoRow({ video }: { video: OwnVideo }) {
+/** Studio's ⋮ on a row, always shown here (not only on hover). */
+function RowMenu({ video, onEdit }: { video: OwnVideo; onEdit: () => void }) {
+  const label = `Options for ${video.title}`
+  return (
+    <Popover
+      label={label}
+      role="menu"
+      align="end"
+      trigger={(props) => <IconButton icon="moreVert" label={label} {...props} />}
+    >
+      {(close) => (
+        <MenuChoices
+          choices={[{ icon: 'edit', label: 'Edit details', onSelect: onEdit }]}
+          close={close}
+        />
+      )}
+    </Popover>
+  )
+}
+
+function VideoRow({ video, onEdit }: { video: OwnVideo; onEdit: () => void }) {
   const url = watchUrl(video.id)
   return (
     <tr className={styles.row}>
@@ -144,6 +170,9 @@ function VideoRow({ video }: { video: OwnVideo }) {
               {video.title}
             </Link>
             {video.description && <p className={styles.description}>{video.description}</p>}
+          </div>
+          <div className={styles.menu}>
+            <RowMenu video={video} onEdit={onEdit} />
           </div>
         </div>
       </td>
