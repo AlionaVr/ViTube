@@ -153,7 +153,7 @@ describe('ChannelPage', () => {
     expect(within(card).getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/login')
   })
 
-  it('shows no Subscribe on your own channel', async () => {
+  it('shows Manage videos instead of Subscribe on your own channel', async () => {
     const own = channel({ handle: ANNA.handle, name: ANNA.handle })
     mockApi({
       ...SIGNED_IN,
@@ -165,6 +165,18 @@ describe('ChannelPage', () => {
 
     await screen.findByRole('button', { name: 'Account menu' }) // the viewer is known
     expect(screen.queryByRole('button', { name: /Subscribe/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Manage videos' })).toHaveAttribute(
+      'href',
+      '/studio/videos',
+    )
+  })
+
+  it('shows Manage videos to no one but the owner', async () => {
+    mockChannel()
+    await openChannel()
+
+    expect(await screen.findByRole('button', { name: 'Subscribe' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Manage videos' })).not.toBeInTheDocument()
   })
 
   it('shows "not available" for an unknown channel', async () => {

@@ -14,6 +14,15 @@ interface NavItem {
   label: string
   icon: IconName
   activeIcon?: IconName
+  /** A channel: active on its tabs too, whatever the case of the handle. */
+  channel?: boolean
+}
+
+/** Whether the path is the channel at `url` or one of its tabs; handles are case-insensitive. */
+function onChannel(pathname: string, url: string) {
+  const here = pathname.toLowerCase()
+  const channel = url.toLowerCase()
+  return here === channel || here.startsWith(`${channel}/`)
 }
 
 const HOME: NavItem = { to: '/', label: 'Home', icon: 'home', activeIcon: 'homeFill' }
@@ -44,7 +53,7 @@ function NavItems({ items, onNavigate }: NavProps & { items: NavItem[] }) {
   const { pathname, search } = useLocation()
   return items.map((item) => {
     // Compare the query too: Watch later and Liked videos share a path.
-    const active = item.to === pathname + search
+    const active = item.channel ? onChannel(pathname, item.to) : item.to === pathname + search
     return (
       <Link
         key={item.to}
@@ -70,7 +79,6 @@ function SubscriptionList({ onNavigate }: NavProps) {
   if (!channels.length) return null
   const shown = open ? channels : channels.slice(0, SHOWN_SUBSCRIPTIONS)
   const hidden = channels.length - SHOWN_SUBSCRIPTIONS
-  const here = pathname.toLowerCase() // handles are case-insensitive
   return (
     <section className={styles.section}>
       <h2 className={styles.heading}>
@@ -81,7 +89,7 @@ function SubscriptionList({ onNavigate }: NavProps) {
       </h2>
       {shown.map((channel) => {
         const url = channelUrl(channel.handle)
-        const active = here === url.toLowerCase() || here.startsWith(`${url.toLowerCase()}/`)
+        const active = onChannel(pathname, url)
         return (
           <Link
             key={channel.handle}
@@ -127,7 +135,18 @@ export function GuideContent({ onNavigate }: NavProps) {
               You
               <Icon name="chevronRight" size={20} />
             </Link>
-            <NavItems items={LIBRARY} onNavigate={onNavigate} />
+            <NavItems
+              items={[
+                {
+                  to: channelUrl(viewer.user.handle),
+                  label: 'My channel',
+                  icon: 'account',
+                  channel: true,
+                },
+                ...LIBRARY,
+              ]}
+              onNavigate={onNavigate}
+            />
           </section>
           <SubscriptionList onNavigate={onNavigate} />
         </>

@@ -56,3 +56,16 @@
 .name {
   font-weight: 500;
 }
+
+.channelLink {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-link);
+}
+
+.channelLink:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}

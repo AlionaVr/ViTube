@@ -13,6 +13,7 @@ import ModerationNotice from '../../components/ModerationNotice'
 import { NARROW_HEADER, useMediaQuery } from '../../hooks/useMediaQuery'
 import { formatSubscribers, formatVideoCount } from '../../lib/format'
 import { isAdmin } from '../../moderation/roles'
+import buttons from '../../styles/buttons.module.css'
 import { useViewer } from '../../viewer/useViewer'
 import RestrictDialog from '../moderation/RestrictDialog'
 import RowMenu from '../moderation/RowMenu'
@@ -48,6 +49,12 @@ function Header({ channel }: { channel: Channel }) {
           <div className={styles.actions}>
             {viewer.status !== 'loading' && !own && !channel.is_terminated && (
               <SubscribeButton channel={channel} />
+            )}
+            {/* As on YouTube; no "Customize channel": channels can't be edited yet. */}
+            {own && (
+              <Link to="/studio/videos" className={`${buttons.pill} ${buttons.tonal}`}>
+                Manage videos
+              </Link>
             )}
             {admin && <RowMenu account={channel} onRestrict={() => setRestricting(true)} />}
           </div>

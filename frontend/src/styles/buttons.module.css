@@ -1,4 +1,5 @@
 /* YouTube's pill buttons. Combine .pill with one look: tonal, filled, primary, text or link. */
+/* :not(:disabled), not :enabled: a link styled as a pill has hover too. */
 
 .pill {
   height: 36px;
@@ -46,11 +47,11 @@
   color: var(--color-text);
 }
 
-.tonal:hover:enabled {
+.tonal:hover:not(:disabled) {
   background: var(--color-hover-strong);
 }
 
-.tonal:active:enabled {
+.tonal:active:not(:disabled) {
   background: var(--color-hover-active);
 }
 
@@ -59,7 +60,7 @@
   color: var(--color-bg);
 }
 
-.filled:hover:enabled {
+.filled:hover:not(:disabled) {
   background: var(--color-filled-hover);
 }
 
@@ -68,7 +69,7 @@
   color: var(--color-on-primary);
 }
 
-.primary:hover:enabled {
+.primary:hover:not(:disabled) {
   background: var(--color-primary-hover);
 }
 
@@ -82,7 +83,7 @@
   color: var(--color-text);
 }
 
-.text:hover:enabled {
+.text:hover:not(:disabled) {
   background: var(--color-hover-strong);
 }
 
@@ -91,6 +92,6 @@
   color: var(--color-link);
 }
 
-.link:hover:enabled {
+.link:hover:not(:disabled) {
   background: var(--color-link-hover-bg);
 }

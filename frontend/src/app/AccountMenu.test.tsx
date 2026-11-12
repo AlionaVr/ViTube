@@ -3,7 +3,9 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { ANNA, json, mockApi } from '../test/api'
+import { channel } from '../test/channels'
 import { renderApp } from '../test/render'
+import { page } from '../test/videos'
 import { setTheme, THEME_KEY } from '../theme/theme'
 
 const signedIn = () =>
@@ -43,6 +45,21 @@ describe('header account area', () => {
     expect(screen.getByText(ANNA.email)).toBeInTheDocument()
     expect(screen.getByText(`@${ANNA.handle}`)).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Sign in' })).not.toBeInTheDocument()
+  })
+
+  it('leads to your channel and closes', async () => {
+    mockApi({
+      'GET /api/auth/me': () => json(200, ANNA),
+      [`GET /api/channels/${ANNA.handle}`]: () => json(200, channel({ handle: ANNA.handle })),
+      [`GET /api/channels/${ANNA.handle}/videos`]: () => json(200, page([])),
+    })
+    const router = renderApp('/')
+
+    await openMenu()
+    await userEvent.click(screen.getByRole('link', { name: 'View your channel' }))
+
+    expect(router.state.location.pathname).toBe(`/@${ANNA.handle}`)
+    expect(screen.queryByRole('link', { name: 'View your channel' })).not.toBeInTheDocument()
   })
 
   it('leads moderators to the moderation page', async () => {
