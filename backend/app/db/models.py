@@ -4,6 +4,7 @@ from app.db.base import Base
 from app.modules.audit.models import AuditEntry
 from app.modules.channels.models import Subscription
 from app.modules.comments.models import Comment
+from app.modules.history.models import HistoryEntry
 from app.modules.moderation import models as moderation_indexes  # noqa: F401  # registers indexes
 from app.modules.playlists.models import Playlist, PlaylistItem
 from app.modules.reactions.models import CommentReaction, VideoReaction
@@ -16,6 +17,7 @@ __all__ = [
     "Base",
     "Comment",
     "CommentReaction",
+    "HistoryEntry",
     "Playlist",
     "PlaylistItem",
     "Report",

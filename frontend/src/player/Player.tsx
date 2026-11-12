@@ -19,6 +19,8 @@ interface PlayerProps {
   onNext?: () => void
   /** Called while the video plays, with the seconds played so far. Skipped parts don't count. */
   onPlayed?: (seconds: number) => void
+  /** Where playback is: as it plays, and `urgent` on start, pause and end. */
+  onPosition?: (seconds: number, urgent: boolean) => void
 }
 
 /** The icon or text that flashes in the middle after an action. */
@@ -52,6 +54,7 @@ export default function Player({
   onTheaterToggle,
   onNext,
   onPlayed,
+  onPosition,
 }: PlayerProps) {
   const root = useRef<HTMLDivElement>(null)
   const video = useRef<HTMLVideoElement>(null)
@@ -142,6 +145,10 @@ export default function Player({
   function reportPlayed(event: SyntheticEvent<HTMLVideoElement>) {
     const element = event.currentTarget
     if (onPlayed && !element.paused) onPlayed(playedSeconds(element.played))
+  }
+
+  function reportPosition(event: SyntheticEvent<HTMLVideoElement>, urgent: boolean) {
+    onPosition?.(event.currentTarget.currentTime, urgent)
   }
 
   function changeRate(rate: number) {
@@ -251,8 +258,16 @@ export default function Player({
         playsInline
         onClick={togglePlay}
         onDoubleClick={toggleFullscreen}
-        onPlaying={reportPlayed}
-        onTimeUpdate={reportPlayed}
+        onPlaying={(event) => {
+          reportPlayed(event)
+          reportPosition(event, true)
+        }}
+        onTimeUpdate={(event) => {
+          reportPlayed(event)
+          reportPosition(event, false)
+        }}
+        onPause={(event) => reportPosition(event, true)}
+        onEnded={(event) => reportPosition(event, true)}
       />
 
       {media.waiting && !media.error && (

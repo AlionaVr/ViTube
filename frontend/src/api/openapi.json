@@ -2696,6 +2696,108 @@
         }
       }
     },
+    "/api/me/history": {
+      "get": {
+        "tags": [
+          "history"
+        ],
+        "summary": "Your watch history, last watched first",
+        "description": "Only the videos you may still watch.",
+        "operationId": "list_history_api_me_history_get",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "next_cursor of the last page",
+              "title": "Cursor"
+            },
+            "description": "next_cursor of the last page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_HistoryItem_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me/history/{public_id}": {
+      "put": {
+        "tags": [
+          "history"
+        ],
+        "summary": "Save where playback is",
+        "description": "Puts the video on top of your history. Send on start, pause and end, and every 10 s while playing.",
+        "operationId": "save_position_api_me_history__public_id__put",
+        "parameters": [
+          {
+            "name": "public_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{11}$",
+              "description": "Public video id",
+              "title": "Public Id"
+            },
+            "description": "Public video id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PositionIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/health": {
       "get": {
         "tags": [
@@ -3116,6 +3218,25 @@
         ],
         "title": "HideIn"
       },
+      "HistoryItem": {
+        "properties": {
+          "video": {
+            "$ref": "#/components/schemas/VideoSummary"
+          },
+          "watched_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Watched At",
+            "description": "When this viewer last watched it"
+          }
+        },
+        "type": "object",
+        "required": [
+          "video",
+          "watched_at"
+        ],
+        "title": "HistoryItem"
+      },
       "ItemMove": {
         "properties": {
           "before": {
@@ -3407,6 +3528,34 @@
           "next_cursor"
         ],
         "title": "Page[CommentOut]"
+      },
+      "Page_HistoryItem_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "Page[HistoryItem]"
       },
       "Page_ModeratedVideo_": {
         "properties": {
@@ -3852,6 +4001,22 @@
         "type": "object",
         "title": "PlaylistUpdate",
         "description": "Changes only the given fields; null leaves a field as it is."
+      },
+      "PositionIn": {
+        "properties": {
+          "position_sec": {
+            "type": "integer",
+            "maximum": 2147483647.0,
+            "minimum": 0.0,
+            "title": "Position Sec",
+            "description": "Where playback is, in whole seconds; past the end: the end"
+          }
+        },
+        "type": "object",
+        "required": [
+          "position_sec"
+        ],
+        "title": "PositionIn"
       },
       "Rating": {
         "type": "string",

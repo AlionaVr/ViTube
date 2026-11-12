@@ -857,6 +857,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/me/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Your watch history, last watched first
+         * @description Only the videos you may still watch.
+         */
+        get: operations["list_history_api_me_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/me/history/{public_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Save where playback is
+         * @description Puts the video on top of your history. Send on start, pause and end, and every 10 s while playing.
+         */
+        put: operations["save_position_api_me_history__public_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -1064,6 +1104,16 @@ export interface components {
             /** @description The rule the video breaks */
             reason: components["schemas"]["ReportReason"];
         };
+        /** HistoryItem */
+        HistoryItem: {
+            video: components["schemas"]["VideoSummary"];
+            /**
+             * Watched At
+             * Format: date-time
+             * @description When this viewer last watched it
+             */
+            watched_at: string;
+        };
         /** ItemMove */
         ItemMove: {
             /**
@@ -1188,6 +1238,13 @@ export interface components {
         Page_CommentOut_: {
             /** Items */
             items: components["schemas"]["CommentOut"][];
+            /** Next Cursor */
+            next_cursor: string | null;
+        };
+        /** Page[HistoryItem] */
+        Page_HistoryItem_: {
+            /** Items */
+            items: components["schemas"]["HistoryItem"][];
             /** Next Cursor */
             next_cursor: string | null;
         };
@@ -1333,6 +1390,14 @@ export interface components {
             /** Description */
             description?: string | null;
             visibility?: components["schemas"]["Visibility"] | null;
+        };
+        /** PositionIn */
+        PositionIn: {
+            /**
+             * Position Sec
+             * @description Where playback is, in whole seconds; past the end: the end
+             */
+            position_sec: number;
         };
         /**
          * Rating
@@ -3405,6 +3470,72 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Page_AuditEntryOut_"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_history_api_me_history_get: {
+        parameters: {
+            query?: {
+                /** @description next_cursor of the last page */
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_HistoryItem_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_position_api_me_history__public_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Public video id */
+                public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PositionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

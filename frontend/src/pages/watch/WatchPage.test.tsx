@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { ANNA, json, mockApi } from '../../test/api'
 import { channel } from '../../test/channels'
@@ -35,6 +35,7 @@ function mockWatch(video: Video = VIDEO, viewer = SIGNED_IN) {
     },
     [`POST ${base}/views/start`]: () => json(204),
     [`POST ${base}/views`]: () => json(204),
+    [`PUT /api/me/history/${video.id}`]: () => json(204),
     [`PUT ${base}/rating`]: async (request) => {
       const { rating } = (await request.json()) as { rating: Rating }
       return json(200, {
@@ -43,6 +44,28 @@ function mockWatch(video: Video = VIDEO, viewer = SIGNED_IN) {
       })
     },
   })
+}
+
+// A body reads once; waitFor asks again and again.
+const positions = new WeakMap<Request, Promise<number>>()
+
+/** Positions saved to the history, in order. */
+function savedPositions(fetch: ReturnType<typeof mockApi>): Promise<number[]> {
+  const saves = fetch.mock.calls
+    .map(([request]) => request)
+    .filter((request) => request.method === 'PUT' && request.url.includes('/api/me/history/'))
+  return Promise.all(
+    saves.map((request) => {
+      if (!positions.has(request)) {
+        const body = request.json() as Promise<{ position_sec: number }>
+        positions.set(
+          request,
+          body.then((saved) => saved.position_sec),
+        )
+      }
+      return positions.get(request)!
+    }),
+  )
 }
 
 async function openWatch(video: Video = VIDEO) {
@@ -90,6 +113,43 @@ describe('WatchPage', () => {
         'POST /api/videos/video-00001/views',
       ]),
     )
+  })
+
+  it('saves the position to the history on start and pause, and every 10 s while playing', async () => {
+    const now = vi.spyOn(Date, 'now').mockReturnValue(1_000_000)
+    const fetch = mockWatch()
+    await openWatch()
+    // The player autoplays from the start.
+    await waitFor(async () => expect(await savedPositions(fetch)).toEqual([0]))
+
+    const video = document.querySelector('video')!
+    video.currentTime = 4
+    now.mockReturnValue(1_010_000)
+    video.currentTime = 12.7
+    video.currentTime = 13
+    video.pause()
+    await waitFor(async () => expect(await savedPositions(fetch)).toEqual([0, 12, 13]))
+    now.mockRestore()
+  })
+
+  it('saves the last position when the tab closes', async () => {
+    const fetch = mockWatch()
+    await openWatch()
+    await waitFor(async () => expect(await savedPositions(fetch)).toEqual([0]))
+
+    document.querySelector('video')!.currentTime = 7
+    window.dispatchEvent(new Event('pagehide'))
+    await waitFor(async () => expect(await savedPositions(fetch)).toEqual([0, 7]))
+    expect(fetch.mock.calls.at(-1)![0].keepalive).toBe(true)
+  })
+
+  it('keeps no history for a guest', async () => {
+    const fetch = mockWatch(VIDEO, GUEST)
+    await openWatch()
+    const calls = () => fetch.mock.calls.map(([request]) => new URL(request.url).pathname)
+    await waitFor(() => expect(calls()).toContain('/api/videos/video-00001/views/start'))
+    document.querySelector('video')!.pause()
+    expect(await savedPositions(fetch)).toEqual([])
   })
 
   it('sets off fireworks for a like, not for taking it back', async () => {

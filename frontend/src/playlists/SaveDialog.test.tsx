@@ -20,6 +20,7 @@ function mockSave(handlers: Record<string, (request: Request) => Response | Prom
     [`GET ${base}/related`]: () => json(200, page([])),
     [`GET ${base}/comments`]: () => json(200, page([])),
     [`POST ${base}/views/start`]: () => json(204),
+    [`PUT /api/me/history/${VIDEO.id}`]: () => json(204),
     [`GET /api/channels/${VIDEO.channel.handle}`]: () => json(200, channel()),
     'GET /api/me/subscriptions': () => json(200, page([])),
     [`GET ${base}/saved`]: () => json(200, { saved: false }),
@@ -34,11 +35,13 @@ async function openSave() {
   return screen.getByRole('dialog', { name: 'Save video to...' })
 }
 
+/** Playlist writes only: the page saves the watch history too. */
 const requests = (fetch: ReturnType<typeof mockApi>, method: string) =>
   fetch.mock.calls
     .map(([request]) => request)
     .filter((request) => request.method === method)
     .map((request) => new URL(request.url).pathname)
+    .filter((path) => path.startsWith('/api/playlists/'))
 
 describe('SaveDialog', () => {
   it('asks a guest to sign in', async () => {

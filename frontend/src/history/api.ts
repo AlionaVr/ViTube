@@ -1,0 +1,22 @@
+// Watch history API: the player saves where it is; the viewer reads their history.
+import { api, unwrap } from '../api/client'
+import type { components } from '../api/schema'
+import type { Page } from '../videos/types'
+
+export type HistoryItem = components['schemas']['HistoryItem']
+
+/** Puts the video on top of the history. `keepalive`: the request outlives a closing tab. */
+export async function savePosition(id: string, seconds: number, keepalive = false): Promise<void> {
+  await unwrap(
+    api.PUT('/api/me/history/{public_id}', {
+      params: { path: { public_id: id } },
+      body: { position_sec: seconds },
+      keepalive,
+    }),
+  )
+}
+
+/** Last watched first. Throws ApiError 401 for a guest. */
+export function listHistory(cursor: string | null): Promise<Page<HistoryItem>> {
+  return unwrap(api.GET('/api/me/history', { params: { query: { cursor } } }))
+}

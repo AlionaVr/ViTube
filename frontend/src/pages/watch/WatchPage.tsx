@@ -6,6 +6,7 @@ import { useNavigate, useSearchParams } from 'react-router'
 import { ApiError } from '../../api/client'
 import ErrorState from '../../components/ErrorState'
 import Icon from '../../components/Icon'
+import { useHistoryRecorder } from '../../history/useHistoryRecorder'
 import ModerationNotice from '../../components/ModerationNotice'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { useStoredFlag } from '../../hooks/useStoredFlag'
@@ -14,6 +15,7 @@ import { useRelatedVideos, useVideo } from '../../videos/hooks'
 import { watchUrl } from '../../videos/paths'
 import type { Video } from '../../videos/types'
 import { useViewReport } from '../../views/useViewReport'
+import { useViewer } from '../../viewer/useViewer'
 import Comments from './comments/Comments'
 import Description from './Description'
 import { TWO_COLUMNS } from './layout'
@@ -83,6 +85,8 @@ export default function WatchPage() {
   const twoColumns = useMediaQuery(TWO_COLUMNS)
   const [theater, toggleTheater] = useStoredFlag('vitube:theater', false)
   const reportPlayed = useViewReport(id, video.data?.duration_sec ?? 0)
+  const viewer = useViewer()
+  const recordPosition = useHistoryRecorder(id, viewer.status === 'authenticated')
 
   const next = related.data?.pages[0]?.items[0]
   const notFound = video.error instanceof ApiError && video.error.status === 404
@@ -107,6 +111,7 @@ export default function WatchPage() {
                 onTheaterToggle={toggleTheater}
                 onNext={next && (() => navigate(watchUrl(next.id)))}
                 onPlayed={frozen ? undefined : reportPlayed}
+                onPosition={frozen ? undefined : recordPosition}
               />
             ) : (
               <NotReady video={video.data} />
