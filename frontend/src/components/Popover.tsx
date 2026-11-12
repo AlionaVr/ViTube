@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useId, useRef, useState } from 'react'
+import { type ReactNode, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 
 import styles from './Popover.module.css'
 
@@ -18,7 +18,22 @@ interface PopoverProps {
   children: (close: () => void) => ReactNode
 }
 
-/** A small card under its button. Closes on a click outside or Escape; focus moves in and back. */
+const GAP = 8 // between the button and the card, and the card and the window's edge
+
+/** Where the card goes: under its button, or over it when the window has no room below. */
+function place(panel: HTMLElement, button: HTMLElement, align: 'start' | 'end') {
+  const box = button.getBoundingClientRect()
+  const { offsetWidth: width, offsetHeight: height } = panel
+  const below = box.bottom + GAP
+  const fits = below + height <= window.innerHeight || box.top - GAP - height < 0
+  const left = align === 'end' ? box.right - width : box.left
+  const maxLeft = document.documentElement.clientWidth - width - GAP
+  panel.style.top = `${fits ? below : box.top - GAP - height}px`
+  panel.style.left = `${Math.max(GAP, Math.min(left, maxLeft))}px`
+}
+
+/** A small card under its button. Closes on a click outside or Escape; focus moves in and back.
+ * The card opens in the top layer: no scrolling box (a table, a dialog) can clip it. */
 export default function Popover({
   label,
   role = 'dialog',
@@ -50,6 +65,22 @@ export default function Popover({
     return () => document.removeEventListener('pointerdown', onPointerDown)
   }, [open])
 
+  // Before paint: the card shows where it belongs, and follows its button while anything scrolls.
+  useLayoutEffect(() => {
+    const card = panel.current
+    const button = root.current
+    if (!open || !card || !button) return
+    card.showPopover?.() // no Popover API (old browsers): fixed in the page, still unclipped
+    const follow = () => place(card, button, align)
+    follow()
+    window.addEventListener('scroll', follow, true)
+    window.addEventListener('resize', follow)
+    return () => {
+      window.removeEventListener('scroll', follow, true)
+      window.removeEventListener('resize', follow)
+    }
+  }, [open, align])
+
   const close = () => setOpen(false)
 
   return (
@@ -73,7 +104,8 @@ export default function Popover({
         <div
           ref={panel}
           id={id}
-          className={align === 'end' ? `${styles.panel} ${styles.end}` : styles.panel}
+          popover="manual"
+          className={styles.panel}
           role={role}
           aria-label={label}
         >
