@@ -1,6 +1,6 @@
 import '@fontsource/roboto/700.css'
 
-import type { ReactNode } from 'react'
+import { type ReactNode, useLayoutEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 
 import { ApiError } from '../../api/client'
@@ -21,7 +21,9 @@ import { useViewer } from '../../viewer/useViewer'
 import Comments from './comments/Comments'
 import Description from './Description'
 import { TWO_COLUMNS } from './layout'
+import PlaylistPanel from './PlaylistPanel'
 import UpNext from './UpNext'
+import { type QueueNext, usePlaylistQueue } from './usePlaylistQueue'
 import VideoActions from './VideoActions'
 import styles from './WatchPage.module.css'
 
@@ -78,13 +80,37 @@ function InfoSkeleton() {
   )
 }
 
+/** The player's height as `--player-height` on the page: the playlist panel ends with it. */
+function usePlayerHeight() {
+  const page = useRef<HTMLDivElement>(null)
+  const box = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const player = box.current
+    if (!player) return
+    // Straight to the style, not to state: a resize mustn't render the whole page again.
+    const observer = new ResizeObserver(() =>
+      page.current?.style.setProperty('--player-height', `${player.offsetHeight}px`),
+    )
+    observer.observe(player)
+    return () => observer.disconnect()
+  }, [])
+  return { page, box }
+}
+
 export default function WatchPage() {
   const [params] = useSearchParams()
   const id = params.get('v') ?? ''
   const navigate = useNavigate()
   const video = useVideo(id)
   const related = useRelatedVideos(id)
+  const queue = usePlaylistQueue(
+    params.get('list') ?? '',
+    id,
+    params.get('shuffle'),
+    Number(params.get('index')),
+  )
   const twoColumns = useMediaQuery(TWO_COLUMNS)
+  const { page, box } = usePlayerHeight()
   const [theater, toggleTheater] = useStoredFlag('vitube:theater', false)
   const reportPlayed = useViewReport(id, video.data?.duration_sec ?? 0)
   const viewer = useViewer()
@@ -96,19 +122,31 @@ export default function WatchPage() {
   // The player starts where the viewer stopped, so it waits for that; a guest has nothing saved.
   const startKnown = viewer.status === 'guest' || (signedIn && !progress.isPending)
 
-  const next = related.data?.pages[0]?.items[0]
+  // In a list, Next and the end of the video go to its next video; once it's over, Next goes to
+  // Up next and nothing plays by itself. No Next while the list is still loading.
+  const listNext: QueueNext =
+    queue.status === 'ready' ? queue.next : { status: queue.status === 'none' ? 'end' : 'pending' }
+  const upNext = related.data?.pages[0]?.items[0]
+  const nextUrl =
+    listNext.status === 'video'
+      ? listNext.url
+      : listNext.status === 'end' && upNext
+        ? watchUrl(upNext.id)
+        : undefined
+  const autoplayUrl = listNext.status === 'video' ? listNext.url : undefined
+  const panel = queue.status === 'ready' && <PlaylistPanel queue={queue} />
   const notFound = video.error instanceof ApiError && video.error.status === 404
   const ready = video.data?.status === 'ready'
   // Restricted (ADR 0009): frozen for everyone who can open it.
   const frozen = !!video.data && (video.data.is_hidden || video.data.channel_terminated)
 
   return (
-    <div className={theater ? `${styles.watch} ${styles.theater}` : styles.watch}>
+    <div ref={page} className={theater ? `${styles.watch} ${styles.theater}` : styles.watch}>
       <title>{video.data ? `${video.data.title} - ViTube` : 'ViTube'}</title>
 
       {/* One place in the tree for the player, so theater mode doesn't restart the video. */}
       <div className={styles.player}>
-        <div className={styles.playerBox}>
+        <div ref={box} className={styles.playerBox}>
           {video.data &&
             (video.data.media_url && video.data.thumbnail_url ? (
               startKnown && (
@@ -119,7 +157,8 @@ export default function WatchPage() {
                   startAt={resumePosition(progress.data, video.data.duration_sec ?? 0)}
                   theater={theater}
                   onTheaterToggle={toggleTheater}
-                  onNext={next && (() => navigate(watchUrl(next.id)))}
+                  onNext={nextUrl === undefined ? undefined : () => void navigate(nextUrl)}
+                  onEnded={autoplayUrl === undefined ? undefined : () => void navigate(autoplayUrl)}
                   onPlayed={frozen ? undefined : reportPlayed}
                   onPosition={frozen ? undefined : recordPosition}
                 />
@@ -145,6 +184,7 @@ export default function WatchPage() {
             <Description video={video.data} />
             {!twoColumns && (
               <div className={styles.upNextInline}>
+                {panel}
                 <UpNext videoId={id} grid />
               </div>
             )}
@@ -166,6 +206,7 @@ export default function WatchPage() {
 
       {twoColumns && !notFound && (
         <aside className={styles.secondary}>
+          {panel}
           <UpNext videoId={id} />
         </aside>
       )}

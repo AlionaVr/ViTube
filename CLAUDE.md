@@ -27,7 +27,8 @@ FastAPI + PostgreSQL + MinIO + Celery + React. Deployed with `./install.sh` (Doc
 
 - **Plan first.**
     - A new stage starts in its own worktree (`.claude/worktrees/<name>`, branch `feat/<name>` from `main`) before
-      planning, even read-only exploring: other sessions work in the main checkout and other worktrees.
+      planning, even read-only exploring: other sessions work in the main checkout and other worktrees. Creating it
+      is the first tool call; the session-start reads of `tasks/` go through its `tasks` link.
     - Use plan mode for any task with 3+ steps or an architectural choice.
     - Write the plan to `tasks/todo.md` as checkboxes; check in before building; tick items as you go.
     - If something goes sideways, stop and re-plan. Don't push on.

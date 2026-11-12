@@ -115,15 +115,34 @@
   color: var(--color-text-secondary);
 }
 
-.playAll {
-  width: 100%;
+.play {
   margin-top: 24px;
+  display: flex;
+  gap: 8px;
+}
+
+.playAll,
+.shuffle {
+  flex: 1;
+}
+
+.playAll {
   background: #fff;
   color: #0f0f0f;
 }
 
 .playAll:hover {
   background: #d9d9d9;
+}
+
+/* Translucent white on the colored panel, as its round buttons. */
+.shuffle {
+  background: rgb(255 255 255 / 0.1);
+  color: #fff;
+}
+
+.shuffle:hover {
+  background: rgb(255 255 255 / 0.2);
 }
 
 .owner:focus-visible,
@@ -230,7 +249,8 @@
     height: auto;
   }
 
-  .cover {
+  .cover,
+  .play {
     max-width: 360px;
   }
 }

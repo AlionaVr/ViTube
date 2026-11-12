@@ -1,11 +1,7 @@
 import '@fontsource/roboto/700.css'
 
-import {
-  type InfiniteData,
-  type UseInfiniteQueryResult,
-  useQueryClient,
-} from '@tanstack/react-query'
-import type { ReactNode } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { type ReactNode, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 
 import { ApiError } from '../../api/client'
@@ -28,18 +24,22 @@ import {
   useRemoveFromPlaylist,
   useWatchLater,
 } from '../../playlists/hooks'
+import { firstPageOf, type ItemsQuery, videosOf } from '../../playlists/items'
+import { parseList } from '../../playlists/paths'
+import { newSeed, shuffled } from '../../playlists/queue'
+import SaveDialog from '../../playlists/SaveDialog'
 import type { Playlist } from '../../playlists/types'
 import { VISIBILITY } from '../../playlists/visibility'
 import buttons from '../../styles/buttons.module.css'
 import { useRateVideo } from '../../videos/hooks'
 import { channelUrl, watchUrl } from '../../videos/paths'
-import type { Page, VideoSummary } from '../../videos/types'
+import ShareDialog from '../../videos/ShareDialog'
+import type { VideoSummary } from '../../videos/types'
 import { useViewer } from '../../viewer/useViewer'
 import SignInToSee from '../feed/SignInToSee'
-import { type ItemActions, ItemMenu, PlaylistTools } from './OwnerTools'
+import { PlaylistTools } from './OwnerTools'
+import { type ItemActions, type OpenDialog, RowMenu } from './RowMenu'
 import styles from './PlaylistPage.module.css'
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 function Missing() {
   return <EmptyState title="The playlist does not exist." />
@@ -55,14 +55,21 @@ type Head = Pick<
 
 function Header({
   playlist,
-  first,
+  list,
+  firstPage,
   tools,
 }: {
   playlist: Head
-  first: VideoSummary | undefined
+  /** Its `list=`, which the watch page plays. */
+  list: string
+  /** Play all starts here; Shuffle mixes it, as the watch page does. */
+  firstPage: VideoSummary[]
   tools?: ReactNode
 }) {
+  // One per visit, so the link can open in a new tab too.
+  const [seed] = useState(newSeed)
   const { label, icon } = VISIBILITY[playlist.visibility]
+  const first = firstPage[0]
   const { owner } = playlist
   return (
     <header className={styles.header}>
@@ -100,10 +107,19 @@ function Header({
       )}
       {tools}
       {first && (
-        <Link to={watchUrl(first.id)} className={`${buttons.pill} ${styles.playAll}`}>
-          <Icon name="play" />
-          Play all
-        </Link>
+        <div className={styles.play}>
+          <Link to={watchUrl(first.id, { list })} className={`${buttons.pill} ${styles.playAll}`}>
+            <Icon name="play" />
+            Play all
+          </Link>
+          <Link
+            to={watchUrl(shuffled(firstPage, seed)[0].id, { list, shuffle: seed, index: 1 })}
+            className={`${buttons.pill} ${styles.shuffle}`}
+          >
+            <Icon name="shuffle" />
+            Shuffle
+          </Link>
+        </div>
       )}
     </header>
   )
@@ -121,11 +137,21 @@ function HeaderSkeleton() {
   )
 }
 
-function Row({ video, number, menu }: { video: VideoSummary; number: number; menu?: ReactNode }) {
+function Row({
+  video,
+  number,
+  list,
+  menu,
+}: {
+  video: VideoSummary
+  number: number
+  list: string
+  menu?: ReactNode
+}) {
   return (
     <li className={styles.item}>
       <span className={styles.number}>{number}</span>
-      <Link to={watchUrl(video.id)} className={styles.row}>
+      <Link to={watchUrl(video.id, { list })} className={styles.row}>
         <div className={styles.thumbnail}>
           <Thumbnail
             src={video.thumbnail_url}
@@ -149,32 +175,26 @@ function Row({ video, number, menu }: { video: VideoSummary; number: number; men
   )
 }
 
-/** A playlist's or Liked videos' pages of rows. */
-type ItemsQuery = Pick<
-  UseInfiniteQueryResult<InfiniteData<Page<{ video: VideoSummary }>>>,
-  | 'data'
-  | 'isPending'
-  | 'refetch'
-  | 'fetchNextPage'
-  | 'hasNextPage'
-  | 'isFetchingNextPage'
-  | 'isFetchNextPageError'
->
-
-function videosOf(query: ItemsQuery): VideoSummary[] {
-  return query.data?.pages.flatMap((page) => page.items.map((item) => item.video)) ?? []
-}
-
 /** The numbered rows, loaded as the viewer scrolls; `menu` gives a row its ⋮. */
 function Items({
   query,
   videos,
+  list,
   menu,
 }: {
   query: ItemsQuery
   videos: VideoSummary[]
-  menu?: (index: number) => ReactNode
+  list: string
+  menu?: (index: number, openDialog: OpenDialog) => ReactNode
 }) {
+  const [dialog, setDialog] = useState<'save' | 'share' | null>(null)
+  // Kept on close, so a closing dialog doesn't lose its video.
+  const [videoId, setVideoId] = useState('')
+  const openDialog: OpenDialog = (kind, id) => {
+    setVideoId(id)
+    setDialog(kind)
+  }
+  const close = () => setDialog(null)
   const sentinel = useInfiniteScroll<HTMLDivElement>(
     () => void query.fetchNextPage(),
     query.hasNextPage && !query.isFetchingNextPage && !query.isFetchNextPageError,
@@ -191,7 +211,13 @@ function Items({
         <>
           <ol className={styles.list}>
             {videos.map((video, index) => (
-              <Row key={video.id} video={video} number={index + 1} menu={menu?.(index)} />
+              <Row
+                key={video.id}
+                video={video}
+                number={index + 1}
+                list={list}
+                menu={menu?.(index, openDialog)}
+              />
             ))}
           </ol>
           <div ref={sentinel} />
@@ -201,11 +227,14 @@ function Items({
           )}
         </>
       )}
+      <SaveDialog videoId={videoId} open={dialog === 'save'} onClose={close} />
+      <ShareDialog videoId={videoId} open={dialog === 'share'} onClose={close} />
     </section>
   )
 }
 
-function PlaylistView({ id }: { id: string }) {
+/** `list`: WL for Watch later, else the id. */
+function PlaylistView({ id, list }: { id: string; list: string }) {
   const playlist = usePlaylist(id)
   const items = usePlaylistItems(id)
   const viewer = useViewer()
@@ -243,7 +272,8 @@ function PlaylistView({ id }: { id: string }) {
       {data ? (
         <Header
           playlist={data}
-          first={videos[0]}
+          list={list}
+          firstPage={firstPageOf(items)}
           // Watch later can't be edited or deleted.
           tools={own && data.kind === 'user' && <PlaylistTools playlist={data} />}
         />
@@ -253,10 +283,18 @@ function PlaylistView({ id }: { id: string }) {
       <Items
         query={items}
         videos={videos}
+        list={list}
         menu={
-          own && data
-            ? (index) => <ItemMenu title={data.title} actions={actionsFor(index, data.title)} />
-            : undefined
+          data &&
+          ((index, openDialog) => (
+            <RowMenu
+              videoId={videos[index].id}
+              title={data.title}
+              watchLater={data.kind === 'watch_later'}
+              actions={own ? actionsFor(index, data.title) : undefined}
+              openDialog={openDialog}
+            />
+          ))
         }
       />
     </div>
@@ -277,7 +315,7 @@ function WatchLater() {
       />
     )
   }
-  if (watchLater.data) return <PlaylistView id={watchLater.data.id} />
+  if (watchLater.data) return <PlaylistView id={watchLater.data.id} list="WL" />
   if (watchLater.isError) {
     return <ErrorState title="Can’t load Watch later" onRetry={() => void watchLater.refetch()} />
   }
@@ -285,7 +323,7 @@ function WatchLater() {
 }
 
 /** ⋮ on a liked video: removing it takes the like back, as on YouTube. */
-function LikedMenu({ videoId }: { videoId: string }) {
+function LikedMenu({ videoId, openDialog }: { videoId: string; openDialog: OpenDialog }) {
   const rate = useRateVideo(videoId)
   const queryClient = useQueryClient()
   const toast = useToast()
@@ -297,7 +335,14 @@ function LikedMenu({ videoId }: { videoId: string }) {
         () => toast(`Removed from ${LIKED_VIDEOS.title}`),
         () => toast(NOT_CHANGED),
       )
-  return <ItemMenu title={LIKED_VIDEOS.title} actions={{ remove }} />
+  return (
+    <RowMenu
+      videoId={videoId}
+      title={LIKED_VIDEOS.title}
+      actions={{ remove }}
+      openDialog={openDialog}
+    />
+  )
 }
 
 function LikedView() {
@@ -320,7 +365,8 @@ function LikedView() {
             description: '',
             visibility: 'private',
           }}
-          first={videos[0]}
+          list="LL"
+          firstPage={firstPageOf(items)}
         />
       ) : (
         <HeaderSkeleton />
@@ -328,7 +374,10 @@ function LikedView() {
       <Items
         query={items}
         videos={videos}
-        menu={(index) => <LikedMenu videoId={videos[index].id} />}
+        list="LL"
+        menu={(index, openDialog) => (
+          <LikedMenu videoId={videos[index].id} openDialog={openDialog} />
+        )}
       />
     </div>
   )
@@ -353,9 +402,9 @@ function LikedVideos() {
 /** /playlist?list=<id>, as on YouTube. */
 export default function PlaylistPage() {
   const [params] = useSearchParams()
-  const id = params.get('list') ?? ''
-  if (id === 'WL') return <WatchLater />
-  if (id === 'LL') return <LikedVideos />
-  if (!UUID.test(id)) return <Missing />
-  return <PlaylistView key={id} id={id} />
+  const list = parseList(params.get('list'))
+  if (!list) return <Missing />
+  if (list.kind === 'watchLater') return <WatchLater />
+  if (list.kind === 'liked') return <LikedVideos />
+  return <PlaylistView key={list.id} id={list.id} list={list.id} />
 }

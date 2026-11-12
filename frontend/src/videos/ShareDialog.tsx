@@ -1,9 +1,9 @@
 import { useRef, useState } from 'react'
 
-import Dialog from '../../components/Dialog'
-import IconButton from '../../components/IconButton'
-import buttons from '../../styles/buttons.module.css'
-import { watchUrl } from '../../videos/paths'
+import Dialog from '../components/Dialog'
+import IconButton from '../components/IconButton'
+import buttons from '../styles/buttons.module.css'
+import { watchUrl } from './paths'
 import styles from './ShareDialog.module.css'
 
 interface ShareDialogProps {
