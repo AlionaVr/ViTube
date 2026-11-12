@@ -5,6 +5,7 @@ import { listHistory } from './api'
 export const historyKeys = {
   all: ['history'] as const,
   list: ['history', 'list'] as const,
+  progress: (videoId: string) => ['history', 'progress', videoId] as const,
 }
 
 const firstPage = null as string | null

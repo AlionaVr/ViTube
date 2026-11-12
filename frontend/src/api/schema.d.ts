@@ -877,6 +877,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/me/history/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Where you stopped in these videos
+         * @description Saved positions by public id, for the progress bars on thumbnails. Videos you haven't watched are left out.
+         */
+        get: operations["get_progress_api_me_history_progress_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/me/history/{public_id}": {
         parameters: {
             query?: never;
@@ -3501,6 +3521,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Page_HistoryItem_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_progress_api_me_history_progress_get: {
+        parameters: {
+            query: {
+                /** @description Public video ids */
+                v: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: number;
+                    };
                 };
             };
             /** @description Validation Error */

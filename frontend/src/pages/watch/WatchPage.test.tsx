@@ -14,7 +14,11 @@ const SIGNED_IN = { 'GET /api/auth/me': () => json(200, ANNA) }
 const GUEST = { 'GET /api/auth/me': () => json(401, { detail: 'Sign in required' }) }
 
 /** The API of one watch page; the rating and new comments behave like the server's. */
-function mockWatch(video: Video = VIDEO, viewer = SIGNED_IN) {
+function mockWatch(
+  video: Video = VIDEO,
+  viewer = SIGNED_IN,
+  progress: Record<string, number> = {},
+) {
   const base = `/api/videos/${video.id}`
   const owner = `/api/channels/${video.channel.handle}`
   const subscribed = (is_subscribed: boolean) => () =>
@@ -36,6 +40,7 @@ function mockWatch(video: Video = VIDEO, viewer = SIGNED_IN) {
     [`POST ${base}/views/start`]: () => json(204),
     [`POST ${base}/views`]: () => json(204),
     [`PUT /api/me/history/${video.id}`]: () => json(204),
+    'GET /api/me/history/progress': () => json(200, progress),
     [`PUT ${base}/rating`]: async (request) => {
       const { rating } = (await request.json()) as { rating: Rating }
       return json(200, {
@@ -80,7 +85,8 @@ describe('WatchPage', () => {
   it('shows the video, its channel, description and Up next', async () => {
     mockWatch()
     await openWatch()
-    expect(screen.getByRole('region', { name: 'Video player' })).toBeInTheDocument()
+    // The player waits for where the viewer stopped.
+    expect(await screen.findByRole('region', { name: 'Video player' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Open Movie Club' })).toHaveAttribute(
       'href',
       '/@openmovieclub',
@@ -141,6 +147,21 @@ describe('WatchPage', () => {
     window.dispatchEvent(new Event('pagehide'))
     await waitFor(async () => expect(await savedPositions(fetch)).toEqual([0, 7]))
     expect(fetch.mock.calls.at(-1)![0].keepalive).toBe(true)
+  })
+
+  it('starts where the viewer stopped', async () => {
+    mockWatch(VIDEO, SIGNED_IN, { [VIDEO.id]: 20 })
+    await openWatch()
+    await screen.findByRole('region', { name: 'Video player' })
+    expect(document.querySelector('video')!.getAttribute('src')).toBe(`${VIDEO.media_url}#t=20`)
+  })
+
+  it('starts over a video the viewer saw to the end', async () => {
+    // 33 s long: the last 5 s count as the end.
+    mockWatch(VIDEO, SIGNED_IN, { [VIDEO.id]: 28 })
+    await openWatch()
+    await screen.findByRole('region', { name: 'Video player' })
+    expect(document.querySelector('video')!.getAttribute('src')).toBe(VIDEO.media_url)
   })
 
   it('keeps no history for a guest', async () => {

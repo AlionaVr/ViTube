@@ -114,7 +114,12 @@ function Row({ item, number, menu }: { item: PlaylistItem; number: number; menu?
       <span className={styles.number}>{number}</span>
       <Link to={watchUrl(video.id)} className={styles.row}>
         <div className={styles.thumbnail}>
-          <Thumbnail src={video.thumbnail_url} durationSec={video.duration_sec} compact />
+          <Thumbnail
+            src={video.thumbnail_url}
+            durationSec={video.duration_sec}
+            videoId={video.id}
+            compact
+          />
         </div>
         <div className={styles.rowText}>
           <h3 className={styles.rowTitle} title={video.title}>

@@ -11,7 +11,12 @@ export default function CompactVideoCard({ video }: { video: VideoSummary }) {
   return (
     <Link to={watchUrl(video.id)} className={styles.card}>
       <div className={styles.thumbnail}>
-        <Thumbnail src={video.thumbnail_url} durationSec={video.duration_sec} compact />
+        <Thumbnail
+          src={video.thumbnail_url}
+          durationSec={video.duration_sec}
+          videoId={video.id}
+          compact
+        />
       </div>
       <div className={styles.meta}>
         <h3 className={styles.title} title={video.title}>

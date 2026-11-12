@@ -6,6 +6,7 @@ import { useNavigate, useSearchParams } from 'react-router'
 import { ApiError } from '../../api/client'
 import ErrorState from '../../components/ErrorState'
 import Icon from '../../components/Icon'
+import { resumePosition, useWatchProgress } from '../../history/progress'
 import { useHistoryRecorder } from '../../history/useHistoryRecorder'
 import ModerationNotice from '../../components/ModerationNotice'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
@@ -87,6 +88,10 @@ export default function WatchPage() {
   const reportPlayed = useViewReport(id, video.data?.duration_sec ?? 0)
   const viewer = useViewer()
   const recordPosition = useHistoryRecorder(id, viewer.status === 'authenticated')
+  const progress = useWatchProgress(id)
+  // The player starts where the viewer stopped, so it waits for that; a guest has nothing saved.
+  const startKnown =
+    viewer.status === 'guest' || (viewer.status === 'authenticated' && !progress.isPending)
 
   const next = related.data?.pages[0]?.items[0]
   const notFound = video.error instanceof ApiError && video.error.status === 404
@@ -103,16 +108,19 @@ export default function WatchPage() {
         <div className={styles.playerBox}>
           {video.data &&
             (video.data.media_url && video.data.thumbnail_url ? (
-              <Player
-                key={video.data.id}
-                src={video.data.media_url}
-                poster={video.data.thumbnail_url}
-                theater={theater}
-                onTheaterToggle={toggleTheater}
-                onNext={next && (() => navigate(watchUrl(next.id)))}
-                onPlayed={frozen ? undefined : reportPlayed}
-                onPosition={frozen ? undefined : recordPosition}
-              />
+              startKnown && (
+                <Player
+                  key={video.data.id}
+                  src={video.data.media_url}
+                  poster={video.data.thumbnail_url}
+                  startAt={resumePosition(progress.data, video.data.duration_sec ?? 0)}
+                  theater={theater}
+                  onTheaterToggle={toggleTheater}
+                  onNext={next && (() => navigate(watchUrl(next.id)))}
+                  onPlayed={frozen ? undefined : reportPlayed}
+                  onPosition={frozen ? undefined : recordPosition}
+                />
+              )
             ) : (
               <NotReady video={video.data} />
             ))}

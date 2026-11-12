@@ -32,6 +32,11 @@ async def save_position(
     await db.commit()
 
 
+async def progress(db: AsyncSession, user: User, public_ids: list[str]) -> dict[str, int]:
+    """No access check: only the user's own rows, for ids they already have."""
+    return await history.positions(db, user.id, public_ids)
+
+
 async def list_history(db: AsyncSession, user: User, cursor: str | None) -> Page[HistoryItem]:
     before = decode_cursor(cursor, tuple[AwareDatetime, UUID]) if cursor else None
     rows = await history.list_entries(db, user, before=before, limit=PAGE_SIZE + 1)

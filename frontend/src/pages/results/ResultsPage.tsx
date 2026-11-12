@@ -20,7 +20,7 @@ function Result({ video }: { video: SearchResult }) {
   return (
     <article className={styles.result}>
       <Link to={watchUrl(video.id)} className={styles.thumbnail} tabIndex={-1} aria-hidden="true">
-        <Thumbnail src={video.thumbnail_url} durationSec={video.duration_sec} />
+        <Thumbnail src={video.thumbnail_url} durationSec={video.duration_sec} videoId={video.id} />
       </Link>
       <div className={styles.details}>
         <h3 className={styles.title}>

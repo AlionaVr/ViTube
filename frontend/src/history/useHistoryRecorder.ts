@@ -1,6 +1,8 @@
+import { type QueryClient, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef } from 'react'
 
 import { savePosition } from './api'
+import { historyKeys } from './hooks'
 
 /** While playing, a save at most this often; start, pause and end save at once. */
 const SAVE_EVERY_MS = 10_000
@@ -12,11 +14,16 @@ interface Watch {
   sentAt: number
 }
 
-function save(watch: Watch, keepalive: boolean) {
-  if (watch.latest === null || watch.latest === watch.sent) return
-  watch.sent = watch.latest
+function save(watch: Watch, keepalive: boolean, queryClient: QueryClient) {
+  const { videoId, latest } = watch
+  if (latest === null || latest === watch.sent) return
+  watch.sent = latest
   watch.sentAt = Date.now()
-  savePosition(watch.videoId, watch.latest, keepalive).catch(() => {}) // a lost save is retried by the next one
+  savePosition(videoId, latest, keepalive).then(
+    // The thumbnails' progress bars move with it, without a refetch.
+    () => queryClient.setQueryData(historyKeys.progress(videoId), latest),
+    () => {}, // a lost save is retried by the next one
+  )
 }
 
 /**
@@ -28,17 +35,18 @@ export function useHistoryRecorder(
   enabled: boolean,
 ): (seconds: number, urgent: boolean) => void {
   const watch = useRef<Watch | null>(null)
+  const queryClient = useQueryClient()
 
   useEffect(() => {
     const flush = () => {
-      if (watch.current) save(watch.current, true)
+      if (watch.current) save(watch.current, true, queryClient)
     }
     window.addEventListener('pagehide', flush)
     return () => {
       window.removeEventListener('pagehide', flush)
       flush() // the video this effect was for
     }
-  }, [videoId])
+  }, [videoId, queryClient])
 
   return (seconds, urgent) => {
     if (!enabled || !Number.isFinite(seconds)) return
@@ -47,6 +55,6 @@ export function useHistoryRecorder(
     }
     const current = watch.current
     current.latest = Math.floor(seconds)
-    if (urgent || Date.now() - current.sentAt >= SAVE_EVERY_MS) save(current, false)
+    if (urgent || Date.now() - current.sentAt >= SAVE_EVERY_MS) save(current, false, queryClient)
   }
 }

@@ -13,6 +13,8 @@ import VolumeControl from './VolumeControl'
 interface PlayerProps {
   src: string
   poster: string
+  /** Seconds to start at; read once, when the player mounts. */
+  startAt?: number
   theater: boolean
   onTheaterToggle: () => void
   /** Shows the Next button (Shift+N). */
@@ -50,6 +52,7 @@ function playedSeconds(played: TimeRanges): number {
 export default function Player({
   src,
   poster,
+  startAt,
   theater,
   onTheaterToggle,
   onNext,
@@ -59,6 +62,8 @@ export default function Player({
   const root = useRef<HTMLDivElement>(null)
   const video = useRef<HTMLVideoElement>(null)
   const media = useMediaState(video)
+  // Kept from the mount: a later startAt would change src and reload the video.
+  const [start] = useState(startAt)
   const [fullscreen, setFullscreen] = useState(false)
   const [active, setActive] = useState(true)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -252,7 +257,7 @@ export default function Player({
       <video
         ref={video}
         className={styles.video}
-        src={src}
+        src={start ? `${src}#t=${start}` : src} // a media fragment: the browser starts there
         poster={poster}
         preload="metadata"
         playsInline

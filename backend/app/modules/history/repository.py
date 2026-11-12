@@ -28,6 +28,16 @@ async def save_position(db: AsyncSession, user_id: UUID, video_id: UUID, positio
     await db.execute(statement)
 
 
+async def positions(db: AsyncSession, user_id: UUID, public_ids: Sequence[str]) -> dict[str, int]:
+    """Saved positions of the given videos the user watched, by public id."""
+    query = (
+        select(Video.public_id, HistoryEntry.position_sec)
+        .join(Video, Video.id == HistoryEntry.video_id)
+        .where(HistoryEntry.user_id == user_id, Video.public_id.in_(public_ids))
+    )
+    return {public_id: position for public_id, position in await db.execute(query)}
+
+
 async def list_entries(
     db: AsyncSession, user: User, *, before: tuple[datetime, UUID] | None, limit: int
 ) -> Sequence[HistoryRow]:

@@ -16,6 +16,11 @@ export async function savePosition(id: string, seconds: number, keepalive = fals
   )
 }
 
+/** Saved positions by video id; videos never watched are left out. At most 100 ids. */
+export function getProgress(ids: string[]): Promise<Record<string, number>> {
+  return unwrap(api.GET('/api/me/history/progress', { params: { query: { v: ids } } }))
+}
+
 /** Last watched first. Throws ApiError 401 for a guest. */
 export function listHistory(cursor: string | null): Promise<Page<HistoryItem>> {
   return unwrap(api.GET('/api/me/history', { params: { query: { cursor } } }))

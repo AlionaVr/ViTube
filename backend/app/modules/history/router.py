@@ -7,7 +7,7 @@ from app.core.redis import RedisClient
 from app.db.session import DbSession
 from app.modules.auth.deps import CurrentUser
 from app.modules.history import service
-from app.modules.history.schemas import HistoryItem, PositionIn
+from app.modules.history.schemas import HistoryItem, PositionIn, VideoIds
 from app.modules.videos.schemas import PublicId
 
 router = APIRouter(prefix="/api/me/history", tags=["history"])
@@ -23,6 +23,17 @@ async def list_history(
     user: CurrentUser, db: DbSession, cursor: Cursor = None
 ) -> Page[HistoryItem]:
     return await service.list_history(db, user, cursor)
+
+
+@router.get(
+    "/progress",
+    response_model=dict[str, int],
+    summary="Where you stopped in these videos",
+    description="Saved positions by public id, for the progress bars on thumbnails. Videos you"
+    " haven't watched are left out.",
+)
+async def get_progress(user: CurrentUser, db: DbSession, v: VideoIds) -> dict[str, int]:
+    return await service.progress(db, user, v)
 
 
 @router.put(

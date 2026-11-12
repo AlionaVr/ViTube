@@ -19,7 +19,7 @@ export default function VideoCard({ video, showChannel = true }: VideoCardProps)
   return (
     <article className={styles.card}>
       <Link to={watchUrl(video.id)} tabIndex={-1} aria-hidden="true">
-        <Thumbnail src={video.thumbnail_url} durationSec={video.duration_sec} />
+        <Thumbnail src={video.thumbnail_url} durationSec={video.duration_sec} videoId={video.id} />
       </Link>
       <div className={styles.details}>
         {showChannel && (

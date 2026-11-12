@@ -1,8 +1,8 @@
-import { act, screen, within } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 
-import { json, mockApi } from '../test/api'
+import { ANNA, json, mockApi } from '../test/api'
 import { intersectAll } from '../test/observers'
 import { renderApp } from '../test/render'
 import { page, summary } from '../test/videos'
@@ -31,6 +31,44 @@ describe('HomePage', () => {
     )
     expect(within(card).getByText(/^2\.3M views • 3 days ago$/)).toBeInTheDocument()
     expect(within(card).getByText('0:33')).toBeInTheDocument()
+  })
+
+  it('shows how much of each video the viewer watched, asked for in one request', async () => {
+    const fetch = mockApi({
+      'GET /api/auth/me': () => json(200, ANNA),
+      'GET /api/me/subscriptions': () => json(200, page([])),
+      ...NO_CATEGORIES,
+      'GET /api/videos': () => json(200, page([1, 2, 3].map((n) => summary(n)))),
+      // Each is 33 s long.
+      'GET /api/me/history/progress': () => json(200, { 'video-00001': 11, 'video-00003': 33 }),
+    })
+    renderApp('/')
+    await screen.findByRole('link', { name: 'Video 1' })
+
+    const watched = () =>
+      screen
+        .queryAllByRole('progressbar', { name: 'Watched', hidden: true })
+        .map((bar) => bar.getAttribute('aria-valuenow'))
+    await waitFor(() => expect(watched()).toEqual(['33', '100']))
+    expect(within(cards()[1]).queryByRole('progressbar', { hidden: true })).toBeNull()
+    const asked = fetch.mock.calls
+      .map(([request]) => new URL(request.url))
+      .filter((url) => url.pathname === '/api/me/history/progress')
+      .map((url) => url.searchParams.getAll('v'))
+    expect(asked).toEqual([['video-00001', 'video-00002', 'video-00003']])
+  })
+
+  it('asks a guest for no progress', async () => {
+    const fetch = mockApi({
+      ...ME,
+      ...NO_CATEGORIES,
+      'GET /api/videos': () => json(200, page([summary(1)])),
+    })
+    renderApp('/')
+    await screen.findByRole('link', { name: 'Video 1' })
+    const paths = fetch.mock.calls.map(([request]) => new URL(request.url).pathname)
+    expect(paths).not.toContain('/api/me/history/progress')
+    expect(screen.queryByRole('progressbar', { hidden: true })).toBeNull()
   })
 
   it('loads the next page by its cursor when the end of the grid comes into view', async () => {

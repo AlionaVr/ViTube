@@ -2749,6 +2749,61 @@
         }
       }
     },
+    "/api/me/history/progress": {
+      "get": {
+        "tags": [
+          "history"
+        ],
+        "summary": "Where you stopped in these videos",
+        "description": "Saved positions by public id, for the progress bars on thumbnails. Videos you haven't watched are left out.",
+        "operationId": "get_progress_api_me_history_progress_get",
+        "parameters": [
+          {
+            "name": "v",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{11}$"
+              },
+              "minItems": 1,
+              "maxItems": 100,
+              "description": "Public video ids",
+              "title": "V"
+            },
+            "description": "Public video ids"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "integer"
+                  },
+                  "title": "Response Get Progress Api Me History Progress Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/me/history/{public_id}": {
       "put": {
         "tags": [

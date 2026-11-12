@@ -277,3 +277,38 @@ async def test_video_no_longer_ready_is_not_listed_even_to_owner_or_moderator(
     assert await listed(owner) == []
     assert await listed(moderator) == []
     assert await row_count(db) == 2
+
+
+# --- Progress on thumbnails ---
+
+
+async def progress(client: AsyncClient, *ids: str) -> dict[str, int]:
+    response = await client.get("/api/me/history/progress", params={"v": list(ids)})
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+async def test_progress_gives_saved_positions_of_watched_videos_only(
+    owner: AsyncClient, viewer: AsyncClient, video: Video, db: AsyncSession
+) -> None:
+    watched, unseen = await make_video(db, await make_user(db, "anna")), "unknown0001"
+    await save(viewer, video, 4)
+    await save(viewer, watched, 10)
+    await save(owner, video, 7)
+
+    assert await progress(viewer, video.public_id, watched.public_id, unseen) == {
+        video.public_id: 4,
+        watched.public_id: 10,
+    }
+    assert await progress(owner, video.public_id, watched.public_id) == {video.public_id: 7}
+
+
+async def test_progress_needs_a_signed_in_user(guest: AsyncClient, video: Video) -> None:
+    response = await guest.get("/api/me/history/progress", params={"v": video.public_id})
+    assert response.status_code == 401
+
+
+@pytest.mark.parametrize("ids", [[], ["bad"], [f"video{n:06d}" for n in range(101)]])
+async def test_progress_refuses_no_bad_or_too_many_ids(owner: AsyncClient, ids: list[str]) -> None:
+    response = await owner.get("/api/me/history/progress", params={"v": ids})
+    assert response.status_code == 422

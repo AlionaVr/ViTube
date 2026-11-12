@@ -1,8 +1,17 @@
 from datetime import datetime
+from typing import Annotated
 
-from pydantic import BaseModel, Field
+from fastapi import Query
+from pydantic import BaseModel, Field, StringConstraints
 
-from app.modules.videos.schemas import VideoSummary
+from app.modules.videos.schemas import PUBLIC_ID_PATTERN, VideoSummary
+
+MAX_PROGRESS_IDS = 100  # a page of the longest list, a playlist
+
+VideoIds = Annotated[
+    list[Annotated[str, StringConstraints(pattern=PUBLIC_ID_PATTERN)]],
+    Query(min_length=1, max_length=MAX_PROGRESS_IDS, description="Public video ids"),
+]
 
 
 class PositionIn(BaseModel):
