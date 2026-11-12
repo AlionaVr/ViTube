@@ -70,6 +70,13 @@ def viewable(user: User | None) -> ColumnElement[bool]:
     return or_(Video.owner_id == user.id, open_to_all, and_(allowed, granted))
 
 
+def watchable(user: User | None) -> ColumnElement[bool]:
+    """Videos a personal list (playlist, history, likes) shows: ready ones the user may watch.
+    Rows of the others stay: the video may come back, and a lost one must not show that it
+    still exists (ADR 0004)."""
+    return and_(Video.status == VideoStatus.READY, viewable(user))
+
+
 async def get_viewable(db: AsyncSession, user: User | None, public_id: str) -> Video:
     """The video, or NotFound: others never learn that a private video exists (no 403)."""
     video = await videos.get_by_public_id(db, public_id)

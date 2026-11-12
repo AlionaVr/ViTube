@@ -8,7 +8,6 @@ from collections.abc import Mapping, Sequence
 from uuid import UUID
 
 from sqlalchemy import (
-    ColumnElement,
     Row,
     case,
     delete,
@@ -25,15 +24,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.playlists.models import Playlist, PlaylistItem, PlaylistKind
 from app.modules.users.models import User
-from app.modules.videos.access import viewable
-from app.modules.videos.models import Video, VideoStatus, Visibility
+from app.modules.videos.access import watchable
+from app.modules.videos.models import Video, Visibility
 
 ItemRow = Row[PlaylistItem, Video, User]
-
-
-def _watchable(viewer: User | None) -> tuple[ColumnElement[bool], ColumnElement[bool]]:
-    """Items a viewer sees: ready videos they may watch (videos never leave ready)."""
-    return Video.status == VideoStatus.READY, viewable(viewer)
 
 
 async def insert_playlist(
@@ -175,7 +169,7 @@ async def list_items(
         select(PlaylistItem, Video, User)
         .join(Video, Video.id == PlaylistItem.video_id)
         .join(User, User.id == Video.owner_id)
-        .where(PlaylistItem.playlist_id == playlist_id, *_watchable(viewer))
+        .where(PlaylistItem.playlist_id == playlist_id, watchable(viewer))
     )
     if after is not None:
         query = query.where(PlaylistItem.position > after)
@@ -232,7 +226,7 @@ async def first_videos(
     first = (
         select(PlaylistItem.video_id)
         .join(Video, Video.id == PlaylistItem.video_id)
-        .where(PlaylistItem.playlist_id == Playlist.id, *_watchable(viewer))
+        .where(PlaylistItem.playlist_id == Playlist.id, watchable(viewer))
         .order_by(PlaylistItem.position)
         .limit(1)
         .correlate(Playlist)
