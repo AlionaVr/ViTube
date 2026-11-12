@@ -4,7 +4,11 @@ them: views, likes, comments, subscriptions, playlists and one report (ADR 0008)
 install.sh runs it after the stack is up: docker compose run --rm --no-deps seed. Each step finds
 its row by a natural key first (an account by email, a video by owner and title, a comment by
 author and text), so a re-run changes nothing or goes on from where a failed run stopped. An
-uploaded video is never uploaded again, and nothing a moderator removed comes back.
+uploaded video is never uploaded again, and nothing a moderator removed comes back. Each step acts
+as its account the way the API does, so a banned or terminated account does nothing.
+
+The keys are what people see, so a re-run doesn't know what they changed: a demo video or playlist
+whose owner renamed it is made again, and a like or subscription a demo account took back returns.
 """
 
 import asyncio
@@ -13,13 +17,12 @@ import logging
 import sys
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass
-from functools import partial
 from pathlib import Path
-from typing import Any
+from typing import Any, Concatenate
 from uuid import UUID
 
 from pydantic import Field, SecretStr
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from redis.asyncio import Redis
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -44,7 +47,7 @@ from app.modules.reports import service as report_service
 from app.modules.reports.models import ReportReason
 from app.modules.reports.schemas import ReportIn
 from app.modules.users import repository as users
-from app.modules.users.models import Role, User
+from app.modules.users.models import Role, User, UserStatus
 from app.modules.videos import repository as videos
 from app.modules.videos import service as video_service
 from app.modules.videos.models import Category, Video, VideoStatus, Visibility
@@ -61,6 +64,7 @@ DONE = (VideoStatus.READY, VideoStatus.FAILED)
 class SeedSettings(BaseSettings):
     """Only the seed reads them."""
 
+    model_config = SettingsConfigDict(hide_input_in_errors=True)  # a short password isn't printed
     demo_password: SecretStr = Field(min_length=16)  # refuses "change-me" from .env.example
     demo_data_dir: Path = Path("/demo-data")
 
@@ -199,6 +203,48 @@ async def ensure_accounts(db: AsyncSession, password: str) -> None:
             )
 
 
+class Actors:
+    """Service calls as the demo accounts, each read the way the API reads a signed-in user for a
+    write (auth.deps): with the account's write lock, in the transaction of the write."""
+
+    def __init__(self, db: AsyncSession, redis: Redis, ids: Mapping[str, UUID]) -> None:
+        self.db = db
+        self.redis = redis
+        self.ids = ids  # by handle
+
+    async def active(self, handle: str, what: str) -> User | None:
+        """The account, with its write lock until the next commit: a ban waits for the step under
+        way, and no step commits after a ban (ADR 0005). None if it is restricted: skip the step."""
+        user = await users.get_for_write(self.db, self.ids[handle])
+        if user is None or user.status is not UserStatus.ACTIVE:
+            await self.db.rollback()  # ends the transaction and its lock
+            log.warning("Skipped %s: @%s is not active", what, handle)
+            return None
+        return user
+
+    async def act[**P, T](
+        self,
+        handle: str,
+        what: str,
+        service: Callable[Concatenate[AsyncSession, Redis, User, P], Awaitable[T]],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> T | None:
+        """One service call as the account, in one transaction with the check above. A refusal
+        (a moderator hid the video, say) skips only this step: the demo never undoes moderation."""
+        user = await self.active(handle, what)
+        if user is None:
+            return None
+        try:
+            result = await service(self.db, self.redis, user, *args, **kwargs)
+        except DomainError as error:
+            await self.db.rollback()
+            log.warning("Skipped %s: %s", what, error.detail)
+            return None
+        await self.db.commit()  # the service has committed; this ends the lock on an early return
+        return result
+
+
 async def ensure_videos(
     db: AsyncSession, redis: Redis, storage: Storage, demo_dir: Path
 ) -> dict[str, UUID]:
@@ -207,15 +253,16 @@ async def ensure_videos(
     Returns the ids of the demo videos found or uploaded, by file name.
     """
     meta = {entry["file"]: entry for entry in _read_videos_json(demo_dir)}
+    actors = Actors(db, redis, await _ids(db))
     ids: dict[str, UUID] = {}
     for upload in UPLOADS:
         path = demo_dir / "videos" / upload.file
         if not path.is_file():
             log.warning("Skipped %s: not found. Run python3 demo-data/download.py", upload.file)
             continue
-        owner = await _user(db, upload.owner)
+        what = f"the upload of {upload.file}"
         title = meta[upload.file]["title"]
-        video = await videos.get_owned_by_title(db, owner.id, title)
+        video = await videos.get_owned_by_title(db, actors.ids[upload.owner], title)
         if video is None:
             draft = VideoCreate(
                 title=title,
@@ -223,14 +270,28 @@ async def ensure_videos(
                 visibility=Visibility.PUBLIC,
                 category=upload.category,
             )
-            created = await video_service.create_draft(db, redis, owner, draft)
-            video = await videos.get_by_public_id(db, created.id)
-            if video is None:  # just committed
-                raise SeedError(f"The draft of {upload.file} is gone")
+            created = await actors.act(upload.owner, what, video_service.create_draft, draft)
+            video = await videos.get_by_public_id(db, created.id) if created else None
+            if video is None:
+                continue
         if video.status is VideoStatus.UPLOADING:
-            await video_service.upload_file(
-                db, redis, storage, owner, video.public_id, read_chunks(path), path.stat().st_size
-            )
+            owner = await actors.active(upload.owner, what)
+            if owner is None:
+                continue
+            try:  # it checks the owner again under the lock before the file counts as uploaded
+                await video_service.upload_file(
+                    db,
+                    redis,
+                    storage,
+                    owner,
+                    video.public_id,
+                    read_chunks(path),
+                    path.stat().st_size,
+                )
+            except DomainError as error:
+                await db.rollback()
+                log.warning("Skipped %s: %s", what, error.detail)
+                continue
             log.info("Uploaded %s", upload.file)
         elif video.status is VideoStatus.UPLOADED:
             # A run stopped before the worker took it; the worker skips a duplicate.
@@ -260,8 +321,7 @@ async def wait_until_processed(db: AsyncSession, ids: Sequence[UUID]) -> dict[UU
 
 async def ensure_activity(db: AsyncSession, redis: Redis, ready: Mapping[str, UUID]) -> None:
     """Views, likes, comments, Watch later, subscriptions and playlists on the ready videos."""
-    people = {account.handle: await _user(db, account.handle) for account in ACCOUNTS}
-    act = partial(_attempt, db, people)
+    actors = Actors(db, redis, await _ids(db))
     public_ids: dict[str, str] = {}
     for upload in UPLOADS:
         video_id = ready.get(upload.file)
@@ -272,27 +332,22 @@ async def ensure_activity(db: AsyncSession, redis: Redis, ready: Mapping[str, UU
         public_id = public_ids[upload.file] = video.public_id
         await _ensure_views(db, video_id, len(ACCOUNTS) - 1)  # everyone but the owner
         for handle in upload.liked_by:
-            like = partial(reactions.rate_video, db, redis, people[handle], public_id, Rating.LIKE)
-            await act(f"@{handle}'s like of {upload.file}", like)
+            what = f"@{handle}'s like of {upload.file}"
+            await actors.act(handle, what, reactions.rate_video, public_id, Rating.LIKE)
         for comment in upload.comments:
-            await _ensure_comment(db, redis, people, video_id, public_id, comment, parent_id=None)
+            await _ensure_comment(actors, video_id, public_id, comment, parent_id=None)
         for handle in upload.saved_by:
-            watch_later = await playlists.get_watch_later(db, people[handle].id)
+            watch_later = await playlists.get_watch_later(db, actors.ids[handle])
             if watch_later is not None:  # a DB trigger makes it with the account
-                save = partial(
-                    playlist_service.add_video,
-                    db,
-                    redis,
-                    people[handle],
-                    watch_later.id,
-                    public_id,
+                what = f"@{handle}'s Watch later of {upload.file}"
+                await actors.act(
+                    handle, what, playlist_service.add_video, watch_later.id, public_id
                 )
-                await act(f"@{handle}'s Watch later of {upload.file}", save)
     for subscriber, channel in SUBSCRIPTIONS:
-        subscribe = partial(channels.subscribe, db, redis, people[subscriber], channel)
-        await act(f"@{subscriber}'s subscription to @{channel}", subscribe)
+        what = f"@{subscriber}'s subscription to @{channel}"
+        await actors.act(subscriber, what, channels.subscribe, channel)
     for playlist in PLAYLISTS:
-        await _ensure_playlist(db, redis, people, playlist, public_ids)
+        await _ensure_playlist(actors, playlist, public_ids)
 
 
 async def _ensure_views(db: AsyncSession, video_id: UUID, count: int) -> None:
@@ -304,99 +359,74 @@ async def _ensure_views(db: AsyncSession, video_id: UUID, count: int) -> None:
 
 
 async def _ensure_comment(
-    db: AsyncSession,
-    redis: Redis,
-    people: Mapping[str, User],
+    actors: Actors,
     video_id: UUID,
     public_id: str,
     comment: DemoComment,
     *,
     parent_id: UUID | None,
 ) -> None:
-    author = people[comment.author]
     found = await comments.find(
-        db, video_id=video_id, author_id=author.id, parent_id=parent_id, text=comment.text
+        actors.db,
+        video_id=video_id,
+        author_id=actors.ids[comment.author],
+        parent_id=parent_id,
+        text=comment.text,
     )
     if found is not None and found.is_deleted:
         return  # a moderator deleted it: it stays gone, with its likes, report and replies
     comment_id = found.id if found is not None else None
     if comment_id is None:
-        post = partial(
-            comment_service.add_comment,
-            db,
-            redis,
-            author,
-            public_id,
-            CommentIn(text=comment.text, parent_id=parent_id),
+        what = f"@{comment.author}'s comment on {public_id}"
+        data = CommentIn(text=comment.text, parent_id=parent_id)
+        posted = await actors.act(
+            comment.author, what, comment_service.add_comment, public_id, data
         )
-        posted = await _attempt(db, people, f"@{comment.author}'s comment on {public_id}", post)
         if posted is None:
             return
         comment_id = posted.id
     for handle in comment.liked_by:
-        like = partial(reactions.rate_comment, db, redis, people[handle], comment_id, Rating.LIKE)
-        await _attempt(db, people, f"@{handle}'s like of a comment", like)
+        what = f"@{handle}'s like of a comment"
+        await actors.act(handle, what, reactions.rate_comment, comment_id, Rating.LIKE)
     for handle in comment.reported_by:
         # Once: a report a moderator resolved isn't filed again.
-        if not await reports.exists(db, reporter_id=people[handle].id, comment_id=comment_id):
-            report = partial(
-                report_service.report_comment,
-                db,
-                redis,
-                people[handle],
-                comment_id,
-                ReportIn(reason=ReportReason.SPAM),
-            )
-            await _attempt(db, people, f"@{handle}'s report of a comment", report)
+        if not await reports.exists(
+            actors.db, reporter_id=actors.ids[handle], comment_id=comment_id
+        ):
+            what = f"@{handle}'s report of a comment"
+            data = ReportIn(reason=ReportReason.SPAM)
+            await actors.act(handle, what, report_service.report_comment, comment_id, data)
     for reply in comment.replies:
-        await _ensure_comment(db, redis, people, video_id, public_id, reply, parent_id=comment_id)
+        await _ensure_comment(actors, video_id, public_id, reply, parent_id=comment_id)
 
 
 async def _ensure_playlist(
-    db: AsyncSession,
-    redis: Redis,
-    people: Mapping[str, User],
-    playlist: DemoPlaylist,
-    public_ids: Mapping[str, str],
+    actors: Actors, playlist: DemoPlaylist, public_ids: Mapping[str, str]
 ) -> None:
-    owner = people[playlist.owner]
-    found = await playlists.get_owned_by_title(db, owner.id, playlist.title)
+    owner_id = actors.ids[playlist.owner]
+    found = await playlists.get_owned_by_title(actors.db, owner_id, playlist.title)
     playlist_id = found.id if found is not None else None
     if playlist_id is None:
+        what = f"@{playlist.owner}'s {playlist.title}"
         data = PlaylistCreate(title=playlist.title, visibility=Visibility.PUBLIC)
-        create = partial(playlist_service.create, db, redis, owner, data)
-        created = await _attempt(db, people, f"@{playlist.owner}'s {playlist.title}", create)
+        created = await actors.act(playlist.owner, what, playlist_service.create, data)
         if created is None:
             return
         playlist_id = created.id
     for file in playlist.files:
         if file in public_ids:
-            add = partial(
-                playlist_service.add_video, db, redis, owner, playlist_id, public_ids[file]
-            )
-            await _attempt(db, people, f"{file} in {playlist.title}", add)
+            what = f"{file} in {playlist.title}"
+            add = playlist_service.add_video
+            await actors.act(playlist.owner, what, add, playlist_id, public_ids[file])
 
 
-async def _attempt[T](
-    db: AsyncSession, people: Mapping[str, User], what: str, call: Callable[[], Awaitable[T]]
-) -> T | None:
-    """One service call. A refusal (a moderator hid the video, an admin banned the account) skips
-    only this step: the demo must not undo moderation, nor fail a re-run of install.sh."""
-    try:
-        return await call()
-    except DomainError as error:
-        await db.rollback()
-        for user in people.values():
-            await db.refresh(user)  # the rollback expired them
-        log.warning("Skipped %s: %s", what, error.detail)
-        return None
-
-
-async def _user(db: AsyncSession, handle: str) -> User:
-    user = await users.get_by_handle(db, handle)
-    if user is None:  # ensure_accounts ran first
-        raise SeedError(f"No account @{handle}")
-    return user
+async def _ids(db: AsyncSession) -> dict[str, UUID]:
+    """The demo accounts' ids by handle."""
+    found = {account.handle: await users.get_by_handle(db, account.handle) for account in ACCOUNTS}
+    missing = [handle for handle, user in found.items() if user is None]
+    if missing:  # ensure_accounts ran first
+        raise SeedError(f"No account @{missing[0]}")
+    return {handle: user.id for handle, user in found.items() if user is not None}
 
 
 async def run(

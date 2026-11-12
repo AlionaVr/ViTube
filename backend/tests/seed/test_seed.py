@@ -11,23 +11,25 @@ from uuid import UUID
 import anyio
 import pytest
 from fastapi import FastAPI
-from pydantic import SecretStr
+from pydantic import SecretStr, ValidationError
 from redis.asyncio import Redis
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 from sqlalchemy.orm import aliased
 
 from app import seed
 from app.db.models import Base
+from app.modules.audit.repository import Actor
 from app.modules.auth.passwords import verify_password
 from app.modules.channels.models import Subscription
 from app.modules.comments.models import Comment
 from app.modules.moderation import service as moderation
 from app.modules.playlists.models import Playlist, PlaylistItem
+from app.modules.reactions import service as reactions_service
 from app.modules.reactions.models import CommentReaction, VideoReaction
 from app.modules.reactions.schemas import Rating
 from app.modules.reports.models import Report, ReportReason, ReportStatus
-from app.modules.users.models import Role, User
+from app.modules.users.models import Role, User, UserStatus
 from app.modules.videos import pipeline
 from app.modules.videos import service as video_service
 from app.modules.videos.models import Video, VideoStatus, Visibility
@@ -397,3 +399,89 @@ async def test_gives_up_when_the_worker_does_not_process_in_time(
 
     with pytest.raises(seed.SeedError, match="in time"):
         await run_seed()
+
+
+async def ban(app: FastAPI, handle: str) -> None:
+    """As an admin's ban does it: the account's write lock, taken exclusively."""
+    async with app.state.sessionmaker() as db:
+        user_id = await db.scalar(select(User.id).where(User.handle == handle))
+        assert user_id is not None
+        await moderation.set_status(
+            db, app.state.sessions, Actor.cli(None), user_id, UserStatus.BANNED
+        )
+
+
+async def until_a_lock_is_awaited(admin_engine: AsyncEngine) -> None:
+    query = text("SELECT count(*) FROM pg_locks WHERE locktype = 'advisory' AND NOT granted")
+    async with asyncio.timeout(5):
+        while True:
+            async with admin_engine.connect() as conn:
+                if await conn.scalar(query):
+                    return
+            await asyncio.sleep(0.02)
+
+
+async def test_a_ban_waits_for_the_step_under_way_and_stops_the_rest(
+    app: FastAPI,
+    admin_engine: AsyncEngine,
+    run_seed: RunSeed,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # As for an API write (ADR 0005): the step holds the account's write lock, so a ban waits
+    # for it, and nothing of that account commits after the ban.
+    rate_video = reactions_service.rate_video
+    banned: list[asyncio.Task[None]] = []
+
+    async def rate_while_a_ban_starts(
+        db: AsyncSession, redis: Redis, user: User, *args: Any
+    ) -> Any:
+        if user.handle == "ben" and not banned:  # ben's first step
+            banned.append(asyncio.create_task(ban(app, "ben")))
+            await until_a_lock_is_awaited(admin_engine)  # the ban waits for this step
+            result = await rate_video(db, redis, user, *args)  # commits; then the ban goes on
+            await banned[0]
+            return result
+        return await rate_video(db, redis, user, *args)
+
+    monkeypatch.setattr(reactions_service, "rate_video", rate_while_a_ban_starts)
+    await run_seed()
+
+    assert banned
+    async with app.state.sessionmaker() as db:
+        ben = await db.scalar(select(User).where(User.handle == "ben"))
+        assert ben is not None and ben.status is UserStatus.BANNED
+        mine = [
+            select(func.count()).select_from(VideoReaction).where(VideoReaction.user_id == ben.id),
+            select(func.count()).select_from(Comment).where(Comment.author_id == ben.id),
+            select(func.count())
+            .select_from(Subscription)
+            .where(Subscription.subscriber_id == ben.id),
+            select(func.count())
+            .select_from(CommentReaction)
+            .where(CommentReaction.user_id == ben.id),
+        ]
+        assert [await db.scalar(query) for query in mine] == [1, 0, 0, 0]  # only the step under way
+        others = select(func.count()).select_from(Comment).where(Comment.author_id != ben.id)
+        assert await db.scalar(others)  # the other accounts went on
+
+
+async def test_a_restricted_owner_s_video_is_not_uploaded(
+    app: FastAPI, run_seed: RunSeed, demo_dir: Path, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    kept = tmp_path_factory.mktemp("kept") / "videos"
+    (demo_dir / "videos").rename(kept)
+    await run_seed()  # the accounts only: no videos yet, as after an install without internet
+    await ban(app, "nature-clips")
+
+    kept.rename(demo_dir / "videos")
+    await run_seed()
+
+    owners = {upload.file: upload.owner for upload in seed.UPLOADS}
+    assert len(await video_rows(app)) == sum(owner != "nature-clips" for owner in owners.values())
+
+
+def test_a_short_demo_password_is_not_printed(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("DEMO_PASSWORD", "short-secret")
+    with pytest.raises(ValidationError) as error:
+        seed.SeedSettings()  # pyright: ignore[reportCallIssue]
+    assert "short-secret" not in str(error.value)

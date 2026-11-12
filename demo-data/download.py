@@ -12,6 +12,7 @@ VIDEOS = ROOT / "videos"
 MAX_BYTES = 20 * 1024 * 1024
 # The seed container's user (uid 10001) reads the files through a read-only mount.
 FILE_MODE = 0o644
+DIR_MODE = 0o755
 
 
 def sha256(path: Path) -> str:
@@ -42,6 +43,7 @@ def download(video: dict) -> None:
 
 def main() -> None:
     VIDEOS.mkdir(exist_ok=True)
+    VIDEOS.chmod(DIR_MODE)  # mkdir's mode is cut by the umask
     for video in json.loads((ROOT / "videos.json").read_text())["videos"]:
         download(video)
     print("demo videos ready")

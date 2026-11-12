@@ -64,8 +64,12 @@ and a later `./install.sh` adds them. The worker processes them like any upload.
 
 The seed is the one-shot job `seed` (code: [backend/app/seed.py](backend/app/seed.py)); `install.sh` runs it with
 `docker compose run --rm --no-deps seed`. A re-run adds only what is missing. It never changes the role or password
-of an existing account, and what a moderator removed stays removed. If someone signed up with a demo email first,
-the seed stops and says so.
+of an existing account, what a moderator removed stays removed, and a banned or terminated demo account does
+nothing. If someone signed up with a demo email first, the seed stops and says so.
+
+A re-run finds the demo rows by what people see, such as a video's title, so it doesn't know what the demo accounts
+changed: a demo video or playlist its owner renamed is made again, and a like or subscription they took back
+returns.
 
 Updating a deployment made before the seed: add `DEMO_PASSWORD=<random, 16+ chars>` to `.env` (for example
 `openssl rand -hex 16`), then run `./install.sh` again.
