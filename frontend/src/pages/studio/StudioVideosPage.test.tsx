@@ -30,6 +30,7 @@ describe('StudioVideosPage', () => {
   })
 
   it('sends a guest to sign in and back here', async () => {
+    mockApi({ 'GET /api/auth/me': () => json(401, { detail: 'Sign in required' }) })
     const router = renderApp('/studio/videos')
 
     await screen.findByRole('heading', { name: 'Sign in' })
