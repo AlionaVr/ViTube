@@ -66,6 +66,23 @@
   gap: 24px;
 }
 
+/* Between the Google button and the fields: a hairline on each side of "or". */
+.or {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.or::before,
+.or::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid light-dark(#c4c7c5, #444746);
+}
+
 .alert {
   display: flex;
   gap: 8px;

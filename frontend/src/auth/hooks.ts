@@ -44,6 +44,30 @@ export function useSignUp() {
   })
 }
 
+/** Ways to sign in besides a password. They change only with the server's settings. */
+export function useAuthProviders() {
+  return useQuery({
+    queryKey: ['auth-providers'],
+    queryFn: () => unwrap(api.GET('/api/auth/providers')),
+    staleTime: Infinity,
+  })
+}
+
+/** Finishes signing in with Google: what Google gave the callback page, sent as a form. */
+export function useGoogleSignIn() {
+  const onAccountChange = useAccountChange()
+  return useMutation({
+    mutationFn: (body: { code: string; state: string }) =>
+      unwrap(
+        api.POST('/api/auth/google/finish', {
+          body,
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        }),
+      ),
+    onSuccess: onAccountChange,
+  })
+}
+
 export function useSignOut() {
   const onAccountChange = useAccountChange()
   return useMutation({

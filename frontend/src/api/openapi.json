@@ -122,6 +122,84 @@
         }
       }
     },
+    "/api/auth/providers": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Ways to sign in besides a password",
+        "operationId": "providers_api_auth_providers_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Providers"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/google/start": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Go to Google to sign in",
+        "description": "Keeps the sign-in's state in a short-lived cookie (ADR 0014). 404 when it's off.",
+        "operationId": "google_start_api_auth_google_start_get",
+        "responses": {
+          "302": {
+            "description": "Successful Response"
+          }
+        }
+      }
+    },
+    "/api/auth/google/finish": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Finish signing in with Google",
+        "description": "The web app's callback page sends what Google gave it. 409 when the email belongs to another account: accounts are never linked by email (ADR 0014).",
+        "operationId": "google_finish_api_auth_google_finish_post",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_google_finish_api_auth_google_finish_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/videos/upload-limits": {
       "get": {
         "tags": [
@@ -3233,6 +3311,24 @@
         "title": "AuditTarget",
         "description": "What an entry is about, as a person reads it."
       },
+      "Body_google_finish_api_auth_google_finish_post": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "state": {
+            "type": "string",
+            "title": "State"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "state"
+        ],
+        "title": "Body_google_finish_api_auth_google_finish_post"
+      },
       "Category": {
         "type": "string",
         "enum": [
@@ -4386,6 +4482,20 @@
           "position_sec"
         ],
         "title": "PositionIn"
+      },
+      "Providers": {
+        "properties": {
+          "google": {
+            "type": "boolean",
+            "title": "Google"
+          }
+        },
+        "type": "object",
+        "required": [
+          "google"
+        ],
+        "title": "Providers",
+        "description": "Ways to sign in besides a password: the web app shows a button for each one that is on."
       },
       "Rating": {
         "type": "string",

@@ -1,0 +1,36 @@
+/* Google's neutral button (its sign-in branding rules): a pill with a hairline frame. */
+.button {
+  --google-bg: light-dark(#fff, #131314);
+
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid light-dark(#747775, #8e918f);
+  border-radius: 20px;
+  background: var(--google-bg);
+  color: light-dark(#1f1f1f, #e3e3e3);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: 0.25px;
+  text-decoration: none;
+}
+
+/* Material's hover layer: the text color at 8%. */
+.button:hover {
+  background: color-mix(in srgb, currentcolor 8%, var(--google-bg));
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--color-link);
+  outline-offset: 2px;
+}
+
+.button svg {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}

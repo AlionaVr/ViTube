@@ -1,6 +1,7 @@
 import type { RouteObject } from 'react-router'
 
 import AuthPage from '../pages/auth/AuthPage'
+import GoogleCallbackPage from '../pages/auth/GoogleCallbackPage'
 import ChannelPage from '../pages/channel/ChannelPage'
 import ChannelPlaylists from '../pages/channel/ChannelPlaylists'
 import ChannelVideos from '../pages/channel/ChannelVideos'
@@ -25,6 +26,7 @@ export const routes: RouteObject[] = [
   // Outside Layout: full-page forms with no header or sidebar, like Google's sign-in.
   { path: '/login', element: <AuthPage mode="signin" /> },
   { path: '/signup', element: <AuthPage mode="signup" /> },
+  { path: '/auth/google/callback', element: <GoogleCallbackPage /> },
   {
     element: <Layout />,
     children: [

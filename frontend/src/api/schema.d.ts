@@ -72,6 +72,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auth/providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ways to sign in besides a password */
+        get: operations["providers_api_auth_providers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/google/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Go to Google to sign in
+         * @description Keeps the sign-in's state in a short-lived cookie (ADR 0014). 404 when it's off.
+         */
+        get: operations["google_start_api_auth_google_start_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/google/finish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Finish signing in with Google
+         * @description The web app's callback page sends what Google gave it. 409 when the email belongs to another account: accounts are never linked by email (ADR 0014).
+         */
+        post: operations["google_finish_api_auth_google_finish_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/videos/upload-limits": {
         parameters: {
             query?: never;
@@ -1077,6 +1134,13 @@ export interface components {
              */
             handle: string | null;
         };
+        /** Body_google_finish_api_auth_google_finish_post */
+        Body_google_finish_api_auth_google_finish_post: {
+            /** Code */
+            code: string;
+            /** State */
+            state: string;
+        };
         /**
          * Category
          * @description YouTube's upload categories, in its order.
@@ -1534,6 +1598,14 @@ export interface components {
              * @description Where playback is, in whole seconds; past the end: the end
              */
             position_sec: number;
+        };
+        /**
+         * Providers
+         * @description Ways to sign in besides a password: the web app shows a button for each one that is on.
+         */
+        Providers: {
+            /** Google */
+            google: boolean;
         };
         /**
          * Rating
@@ -1996,6 +2068,77 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserOut"];
+                };
+            };
+        };
+    };
+    providers_api_auth_providers_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Providers"];
+                };
+            };
+        };
+    };
+    google_start_api_auth_google_start_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    google_finish_api_auth_google_finish_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/x-www-form-urlencoded": components["schemas"]["Body_google_finish_api_auth_google_finish_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
