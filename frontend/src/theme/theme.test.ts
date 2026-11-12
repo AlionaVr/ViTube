@@ -2,6 +2,7 @@ import { act, renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import indexHtml from '../../index.html?raw'
+import themeInit from '../../public/theme-init.js?raw'
 import { setTheme, THEME_KEY, useTheme } from './theme'
 
 const root = document.documentElement
@@ -59,12 +60,13 @@ describe('theme', () => {
     expect(root.dataset.theme).toBe('dark')
   })
 
-  it('is set by index.html before the first paint', () => {
-    const script = /<script>([\s\S]*?)<\/script>/.exec(indexHtml)?.[1]
+  it('is set by theme-init.js, which index.html loads before the first paint', () => {
+    const head = /<head>([\s\S]*?)<\/head>/.exec(indexHtml)?.[1]
     localStorage.setItem(THEME_KEY, 'dark')
 
-    new Function(script!)()
+    new Function(themeInit)()
 
+    expect(head).toContain('<script src="/theme-init.js"></script>')
     expect(root.dataset.theme).toBe('dark')
   })
 })

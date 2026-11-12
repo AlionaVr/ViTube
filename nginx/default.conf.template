@@ -24,7 +24,11 @@ server {
     server_tokens off;
     root /usr/share/nginx/html;
 
-    # Basic hardening. CSP comes with the security stage.
+    # Pages may load scripts, styles, fonts, images and media from this site only: an injected tag or
+    # handler can't run, and nothing reaches another host. No inline scripts (the theme one is a file).
+    # data: images and fonts can't run code: Vite inlines small fonts, Swagger UI its icons.
+    set $csp "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self' data:; media-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
+    add_header Content-Security-Policy $csp always;
     add_header X-Content-Type-Options nosniff always;
     add_header X-Frame-Options DENY always;
     add_header Referrer-Policy strict-origin-when-cross-origin always;
@@ -100,6 +104,7 @@ server {
         # Stream to slow clients from memory; never spool big files into the small /tmp.
         proxy_max_temp_file_size 0;
         # A location with add_header drops the server's ones: repeat them.
+        add_header Content-Security-Policy $csp always;
         add_header X-Content-Type-Options nosniff always;
         add_header X-Frame-Options DENY always;
         add_header Referrer-Policy strict-origin-when-cross-origin always;
