@@ -1,0 +1,29 @@
+/* A page's top line: the back arrow and its name. */
+.title {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  height: 40px;
+  padding: 0 8px;
+  font-size: 16px;
+}
+
+.note {
+  margin: 0;
+  padding: 8px 16px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+/* The chevron sits at the end of the row. */
+.label {
+  flex: 1;
+}
+
+/* An empty slot on the other choices keeps the labels in line. */
+.check {
+  display: flex;
+  width: 24px;
+  height: 24px;
+}

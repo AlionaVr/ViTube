@@ -1,37 +1,50 @@
-/* Design tokens. The dark theme will override the colors. */
+/* Design tokens. A color is light-dark(light, dark): color-scheme picks the half. */
 :root {
+  /* No choice in Appearance: the OS decides (theme/theme.ts sets data-theme). */
+  color-scheme: light dark;
+
   --header-height: 56px;
   --sidebar-width: 240px;
   --sidebar-mini-width: 72px;
 
   --font-family: 'Roboto', 'Arial', sans-serif;
 
-  --color-bg: #fff;
-  --color-surface: #f8f8f8;
-  --color-surface-hover: #f0f0f0;
-  --color-text: #0f0f0f;
-  --color-text-secondary: #606060;
+  /* Dark values: YouTube's palette (yt-spec / yt-sys-color-baseline tokens, 2026). */
+  --color-bg: light-dark(#fff, #0f0f0f);
+  --color-surface: light-dark(#f8f8f8, #181818);
+  --color-surface-hover: light-dark(#f0f0f0, #272727);
+  --color-text: light-dark(#0f0f0f, #f1f1f1);
+  --color-text-secondary: light-dark(#606060, #aaa);
   /* Text on --color-text, e.g. the selected chip. */
-  --color-text-inverse: #f1f1f1;
-  --color-border: #d3d3d3;
-  --color-divider: rgba(0, 0, 0, 0.1);
-  --color-hover: rgba(0, 0, 0, 0.05);
-  --color-hover-strong: rgba(0, 0, 0, 0.1);
-  --color-hover-active: rgba(0, 0, 0, 0.2);
+  --color-text-inverse: light-dark(#f1f1f1, #0f0f0f);
+  --color-border: light-dark(#d3d3d3, #303030);
+  --color-divider: light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.2));
+  --color-hover: light-dark(rgba(0, 0, 0, 0.05), rgba(255, 255, 255, 0.1));
+  --color-hover-strong: light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.2));
+  --color-hover-active: light-dark(rgba(0, 0, 0, 0.2), rgba(255, 255, 255, 0.3));
   --color-scrim: rgba(0, 0, 0, 0.5);
-  --color-placeholder: rgba(0, 0, 0, 0.1);
+  --color-placeholder: light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.1));
   --color-overlay: rgba(0, 0, 0, 0.6);
   /* Opaque versions of the tonal greys, for boxes that cover text (description "more"). */
-  --color-tonal: #f2f2f2;
-  --color-tonal-hover: #e5e5e5;
-  --color-filled-hover: #272727;
-  --color-primary-hover: #0556bf;
-  --color-text-disabled: #909090;
-  --color-error: #cc0000;
+  --color-tonal: light-dark(#f2f2f2, #272727);
+  --color-tonal-hover: light-dark(#e5e5e5, #3f3f3f);
+  --color-filled-hover: light-dark(#272727, #d9d9d9);
+  --color-primary-hover: light-dark(#0556bf, #65b8ff);
+  --color-text-disabled: light-dark(#909090, #717171);
+  --color-error: light-dark(#cc0000, #ff5577);
   --shadow-popup: 0 4px 32px rgba(0, 0, 0, 0.1);
   --color-scrollbar: #aaa;
   --color-focus: #1c62b9;
-  --color-link: #065fd4;
-  --color-link-hover-bg: #def1ff;
+  --color-link: light-dark(#065fd4, #3ea6ff);
+  --color-link-hover-bg: light-dark(#def1ff, #263850);
   --color-brand: #e5232a;
+}
+
+/* Picked in Appearance. */
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
 }
