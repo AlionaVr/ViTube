@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { loadMetadata } from '../test/media'
+import type { UpNextVideo } from './AutoplayCountdown'
 import Player from './Player'
 
 interface Callbacks {
@@ -10,7 +11,12 @@ interface Callbacks {
   onNext?: () => void
   onEnded?: () => void
   onPlayed?: (seconds: number) => void
+  autoplay?: boolean
+  onAutoplayToggle?: () => void
+  upNext?: UpNextVideo
 }
+
+const NEXT: UpNextVideo = { title: 'Sintel', channel: 'Open Movie Club', thumbnail: null }
 
 function renderPlayer(props: Callbacks = {}) {
   const view = render(
@@ -24,6 +30,9 @@ function renderPlayer(props: Callbacks = {}) {
         onNext={props.onNext}
         onEnded={props.onEnded}
         onPlayed={props.onPlayed}
+        autoplay={props.autoplay}
+        onAutoplayToggle={props.onAutoplayToggle}
+        upNext={props.upNext}
       />
     </>,
   )
@@ -32,8 +41,21 @@ function renderPlayer(props: Callbacks = {}) {
   return video
 }
 
+/** Plays to the end, as a browser reports it: pause, then ended. */
+function playToTheEnd(video: HTMLVideoElement) {
+  Object.defineProperty(video, 'ended', { configurable: true, value: true })
+  act(() => {
+    video.pause()
+    fireEvent.ended(video)
+  })
+}
+
 describe('Player', () => {
-  afterEach(() => localStorage.clear())
+  afterEach(() => {
+    localStorage.clear()
+    vi.restoreAllMocks()
+    vi.useRealTimers()
+  })
 
   it('autoplays and toggles with the button, k and space', async () => {
     const video = renderPlayer()
@@ -48,6 +70,21 @@ describe('Player', () => {
 
     await userEvent.keyboard(' ')
     expect(video.paused).toBe(true)
+  })
+
+  it('shows a big Play button and no controls while the browser refuses autoplay', async () => {
+    vi.spyOn(HTMLMediaElement.prototype, 'play').mockRejectedValueOnce(
+      new DOMException('Autoplay is not allowed', 'NotAllowedError'),
+    )
+    const video = renderPlayer()
+    expect(video.paused).toBe(true)
+    expect(screen.queryByRole('button', { name: 'Settings' })).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Play' }))
+
+    expect(video.paused).toBe(false)
+    expect(screen.getByRole('button', { name: 'Pause' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Settings' })).toBeInTheDocument()
   })
 
   it('seeks with j/l, arrows and number keys, within the video', async () => {
@@ -112,6 +149,52 @@ describe('Player', () => {
     fireEvent.ended(video)
 
     expect(onEnded).toHaveBeenCalledOnce()
+  })
+
+  it('shows the Autoplay switch and asks the page to flip it', async () => {
+    const onAutoplayToggle = vi.fn()
+    renderPlayer({ autoplay: true, onAutoplayToggle })
+    const toggle = screen.getByRole('switch', { name: 'Autoplay' })
+    expect(toggle).toBeChecked()
+
+    await userEvent.click(toggle)
+
+    expect(onAutoplayToggle).toHaveBeenCalledOnce()
+  })
+
+  it('counts down to the next video at the end', () => {
+    vi.useFakeTimers()
+    const onNext = vi.fn()
+    const video = renderPlayer({ onNext, upNext: NEXT })
+
+    playToTheEnd(video)
+    const countdown = screen.getByRole('region', { name: 'Autoplay countdown' })
+    expect(countdown).toHaveTextContent('Up next in 5')
+    expect(countdown).toHaveTextContent('Sintel')
+    act(() => vi.advanceTimersByTime(4000))
+    expect(countdown).toHaveTextContent('Up next in 1')
+    expect(onNext).not.toHaveBeenCalled()
+    act(() => vi.advanceTimersByTime(1000))
+
+    expect(onNext).toHaveBeenCalledOnce()
+  })
+
+  it('stays at the end when the countdown is cancelled, until the next replay ends', () => {
+    vi.useFakeTimers()
+    const onNext = vi.fn()
+    const video = renderPlayer({ onNext, upNext: NEXT })
+    playToTheEnd(video)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    act(() => vi.advanceTimersByTime(10_000))
+    expect(onNext).not.toHaveBeenCalled()
+    expect(screen.queryByRole('region', { name: 'Autoplay countdown' })).not.toBeInTheDocument()
+
+    Object.defineProperty(video, 'ended', { configurable: true, value: false })
+    act(() => void video.play())
+    playToTheEnd(video)
+    fireEvent.click(screen.getByRole('button', { name: 'Play now' }))
+    expect(onNext).toHaveBeenCalledOnce()
   })
 
   it('changes the playback speed from the settings menu', async () => {

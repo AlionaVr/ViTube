@@ -44,7 +44,10 @@ describe('ChannelPage', () => {
     await openChannel()
 
     expect(screen.getByText('@openmovieclub')).toBeInTheDocument()
-    expect(screen.getByText(/2 subscribers • 3 videos/)).toBeInTheDocument()
+    // Each fact in its own span: a narrow screen wraps between them, never inside one.
+    expect(screen.getByText('@openmovieclub').parentElement).toHaveTextContent(
+      '@openmovieclub • 2 subscribers • 3 videos',
+    )
     expect(await screen.findByRole('button', { name: 'Subscribe' })).toBeEnabled()
     expect(document.title).toBe('Open Movie Club - ViTube')
     expect(screen.queryByRole('note')).not.toBeInTheDocument()

@@ -37,9 +37,11 @@ SUBSCRIPTIONS_PAGE_SIZE = 50
 async def get_channel(db: AsyncSession, viewer: User | None, handle: str) -> ChannelOut:
     channel = await get_by_handle(db, handle, viewer)
     subscribed = viewer is not None and await channels.is_subscribed(db, viewer.id, channel.id)
+    # As many as the Videos tab lists: on your own channel, that is all your ready videos.
+    own = viewer is not None and viewer.id == channel.id
     return ChannelOut.build(
         channel,
-        video_count=await channels.count_listed_videos(db, channel.id),
+        video_count=await channels.count_videos(db, channel.id, own=own),
         is_subscribed=subscribed,
     )
 

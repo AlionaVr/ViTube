@@ -25,8 +25,16 @@
 }
 
 .details {
+  position: relative;
   flex: 1 1 0;
   min-width: 0;
+}
+
+/* In the room the title keeps, level with its first line. */
+.menu {
+  position: absolute;
+  top: -6px;
+  right: -8px;
 }
 
 /* Room for the ⋮ menu button, as on YouTube: only the title wraps short of it. */

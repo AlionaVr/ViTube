@@ -4,10 +4,11 @@ from datetime import datetime
 
 import pytest
 from httpx2 import AsyncClient
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.users.models import User
-from app.modules.videos.models import VideoStatus, Visibility
+from app.modules.videos.models import Video, VideoStatus, Visibility
 from tests.interactions.conftest import OWNER_EMAIL, VIEWER_EMAIL, csrf, user_by_email
 from tests.videos.factories import make_user, make_video
 
@@ -54,8 +55,8 @@ async def test_malformed_handle_is_refused(client: AsyncClient, handle: str) -> 
     assert response.status_code == 422
 
 
-async def test_video_count_is_what_everyone_may_see_in_lists(
-    owner: AsyncClient, guest: AsyncClient, db: AsyncSession
+async def test_video_count_is_what_the_videos_tab_lists(
+    owner: AsyncClient, viewer: AsyncClient, guest: AsyncClient, db: AsyncSession
 ) -> None:
     anna = await user_by_email(db, OWNER_EMAIL)
     for _ in range(2):
@@ -64,12 +65,16 @@ async def test_video_count_is_what_everyone_may_see_in_lists(
         await make_video(db, anna, visibility=visibility)
     for status in (VideoStatus.PROCESSING, VideoStatus.FAILED):
         await make_video(db, anna, status=status)
+    hidden = await make_video(db, anna)  # by a moderator: Studio shows it, no tab does
+    await db.execute(update(Video).where(Video.id == hidden.id).values(is_hidden=True))
+    await db.commit()
     await make_video(db, await make_user(db, "bob"))  # another channel's
     url = f"/api/channels/{anna.handle}"
 
-    # The owner sees the same count: the channel page shows the channel's public face.
     assert (await guest.get(url)).json()["video_count"] == 2
-    assert (await owner.get(url)).json()["video_count"] == 2
+    assert (await viewer.get(url)).json()["video_count"] == 2
+    # The owner's tab lists their unlisted and private videos too.
+    assert (await owner.get(url)).json()["video_count"] == 4
 
 
 async def test_is_subscribed_for_a_subscriber_but_not_on_your_own_channel(

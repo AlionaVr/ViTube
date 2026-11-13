@@ -49,7 +49,10 @@ class ChannelOut(ChannelSummary):
 
     joined_at: datetime
     subscriber_count: int
-    video_count: int = Field(description="Public, ready videos: what the Videos tab lists")
+    video_count: int = Field(
+        description="What the Videos tab lists: public, ready videos; on your own channel, all "
+        "your ready ones"
+    )
     is_subscribed: bool = Field(description="False for guests and on your own channel")
     is_terminated: bool = Field(
         description="Terminated by an admin: only moderators see it, and it is frozen"

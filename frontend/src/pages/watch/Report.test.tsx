@@ -47,6 +47,14 @@ const sentReports = async (fetch: ReturnType<typeof mockApi>) =>
       .map(async (request) => [new URL(request.url).pathname, await request.clone().json()]),
   )
 
+/** The comments; Up next cards have a ⋮ of their own. */
+const comments = () => screen.getByRole('region', { name: /Comments?$/ })
+
+async function commentMenu() {
+  const section = await screen.findByRole('region', { name: /Comments?$/ })
+  return within(section).findByRole('button', { name: 'Action menu' })
+}
+
 describe('reporting from the watch page', () => {
   it('reports a video: a reason, then optional details, then thanks', async () => {
     const fetch = mockWatch()
@@ -90,7 +98,7 @@ describe('reporting from the watch page', () => {
     const fetch = mockWatch()
     await openWatch()
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Action menu' }))
+    await userEvent.click(await commentMenu())
     await userEvent.click(screen.getByRole('menuitem', { name: 'Report' }))
     const dialog = screen.getByRole('dialog', { name: 'Report comment' })
     await userEvent.click(within(dialog).getByLabelText('Spam or misleading'))
@@ -105,7 +113,7 @@ describe('reporting from the watch page', () => {
   it('says why a report failed and keeps the dialog open', async () => {
     mockWatch(VIDEO, SIGNED_IN, [COMMENT], 429)
     await openWatch()
-    await userEvent.click(await screen.findByRole('button', { name: 'Action menu' }))
+    await userEvent.click(await commentMenu())
     await userEvent.click(screen.getByRole('menuitem', { name: 'Report' }))
     const dialog = screen.getByRole('dialog', { name: 'Report comment' })
 
@@ -125,7 +133,9 @@ describe('reporting from the watch page', () => {
 
     await screen.findByText('Comment 1')
     expect(screen.queryByRole('button', { name: 'More actions' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Action menu' })).not.toBeInTheDocument()
+    expect(
+      within(comments()).queryByRole('button', { name: 'Action menu' }),
+    ).not.toBeInTheDocument()
   })
 
   it('asks a guest to sign in', async () => {

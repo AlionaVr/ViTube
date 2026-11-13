@@ -40,7 +40,7 @@
 }
 
 .names {
-  min-width: 0; /* lets a long email shrink to an ellipsis */
+  min-width: 0; /* lets a long name shrink to an ellipsis */
 }
 
 .name,

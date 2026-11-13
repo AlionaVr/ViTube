@@ -36,14 +36,15 @@ describe('header account area', () => {
     expect(router.state.location.state).toEqual({ from: '/results?search_query=cats' })
   })
 
-  it('shows the signed-in account', async () => {
+  it('shows the signed-in account as its channel, not its email', async () => {
     signedIn()
     renderApp('/')
 
     await openMenu()
 
-    expect(screen.getByText(ANNA.email)).toBeInTheDocument()
+    expect(screen.getByText(ANNA.handle)).toBeInTheDocument() // the channel's name for now
     expect(screen.getByText(`@${ANNA.handle}`)).toBeInTheDocument()
+    expect(screen.queryByText(ANNA.email)).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Sign in' })).not.toBeInTheDocument()
   })
 
@@ -62,14 +63,33 @@ describe('header account area', () => {
     expect(screen.queryByRole('link', { name: 'View your channel' })).not.toBeInTheDocument()
   })
 
+  it('leads to ViTube Studio after Sign out and closes', async () => {
+    mockApi({
+      'GET /api/auth/me': () => json(200, ANNA),
+      'GET /api/me/videos': () => json(200, page([])),
+    })
+    const router = renderApp('/')
+    await openMenu()
+    const signOut = screen.getByRole('button', { name: 'Sign out' })
+    const studio = screen.getByRole('link', { name: 'ViTube Studio' })
+    expect(signOut.compareDocumentPosition(studio)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+
+    await userEvent.click(studio)
+
+    expect(router.state.location.pathname).toBe('/studio/videos')
+    expect(screen.queryByRole('link', { name: 'ViTube Studio' })).not.toBeInTheDocument()
+  })
+
   it('leads moderators to the moderation page', async () => {
     mockApi({ 'GET /api/auth/me': () => json(200, { ...ANNA, role: 'moderator' }) })
     const router = renderApp('/')
     await openMenu()
     const signOut = screen.getByRole('button', { name: 'Sign out' })
+    const studio = screen.getByRole('link', { name: 'ViTube Studio' })
     const moderation = screen.getByRole('link', { name: 'Moderation' })
-    // Its own group after Sign out, as YouTube Studio's link is.
+    // A staff tool: its own group after Sign out and Studio.
     expect(signOut.compareDocumentPosition(moderation)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+    expect(studio.compareDocumentPosition(moderation)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
 
     await userEvent.click(moderation)
 

@@ -3548,7 +3548,7 @@
           "video_count": {
             "type": "integer",
             "title": "Video Count",
-            "description": "Public, ready videos: what the Videos tab lists"
+            "description": "What the Videos tab lists: public, ready videos; on your own channel, all your ready ones"
           },
           "is_subscribed": {
             "type": "boolean",

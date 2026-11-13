@@ -3,7 +3,17 @@
 from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy import delete, exists, func, literal_column, select, true, tuple_, update
+from sqlalchemy import (
+    ColumnElement,
+    delete,
+    exists,
+    func,
+    literal_column,
+    select,
+    true,
+    tuple_,
+    update,
+)
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
@@ -15,8 +25,15 @@ from app.modules.videos.models import Video, VideoStatus
 from app.modules.videos.repository import LISTED, VideoRow
 
 
-async def count_listed_videos(db: AsyncSession, owner_id: UUID) -> int:
-    query = select(func.count()).where(Video.owner_id == owner_id, *LISTED)
+def _shown(*, own: bool) -> tuple[ColumnElement[bool], ...]:
+    """What the Videos tab lists. `own`: the owner's view of their channel, every ready video
+    whatever its visibility. Hidden ones stay out, as of every list; Studio shows them with the
+    reason."""
+    return (Video.status == VideoStatus.READY, ~Video.is_hidden) if own else LISTED
+
+
+async def count_videos(db: AsyncSession, owner_id: UUID, *, own: bool) -> int:
+    query = select(func.count()).where(Video.owner_id == owner_id, *_shown(own=own))
     return await db.scalar(query) or 0
 
 
@@ -29,13 +46,9 @@ async def list_videos(
     after: tuple[object, ...] | None,
     limit: int,
 ) -> Sequence[Video]:
-    """The channel's listed videos in the sort's order, after the cursor (its sort key).
-
-    `own`: the owner's view of their channel, every ready video whatever its visibility. Hidden ones
-    stay out, as of every list; Studio shows them with the reason. ix_videos_owner_id, then a sort.
-    """
-    shown = (Video.status == VideoStatus.READY, ~Video.is_hidden) if own else LISTED
-    query = select(Video).where(Video.owner_id == owner_id, *shown)
+    """The channel's videos (see `_shown`) in the sort's order, after the cursor (its sort key).
+    ix_videos_owner_id, then a sort."""
+    query = select(Video).where(Video.owner_id == owner_id, *_shown(own=own))
     match sort:
         case VideoSort.LATEST:  # ids are uuidv7: ordered by time
             order, key = (Video.id.desc(),), (Video.id,)

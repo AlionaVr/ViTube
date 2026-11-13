@@ -121,6 +121,9 @@
   padding: 24px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
+  /* Rows as tall as their content: in one column at phone width, auto rows shrank to the
+     dialog's height and the preview covered the title. */
+  grid-auto-rows: max-content;
   gap: 24px;
   align-items: start;
   overflow-y: auto;

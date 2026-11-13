@@ -2,6 +2,7 @@ import { type SyntheticEvent, useEffect, useEffectEvent, useRef, useState } from
 
 import Icon, { type IconName } from '../components/Icon'
 import { formatDuration } from '../lib/format'
+import AutoplayCountdown, { type UpNextVideo } from './AutoplayCountdown'
 import ControlButton from './ControlButton'
 import styles from './Player.module.css'
 import ProgressBar from './ProgressBar'
@@ -25,6 +26,11 @@ interface PlayerProps {
   onPlayed?: (seconds: number) => void
   /** Where playback is: as it plays, and `urgent` on start, pause and end. */
   onPosition?: (seconds: number, urgent: boolean) => void
+  /** The Autoplay switch, shown with its handler. */
+  autoplay?: boolean
+  onAutoplayToggle?: () => void
+  /** What Autoplay plays (through onNext) after a countdown at the end. */
+  upNext?: UpNextVideo
 }
 
 /** The icon or text that flashes in the middle after an action. */
@@ -61,6 +67,9 @@ export default function Player({
   onEnded,
   onPlayed,
   onPosition,
+  autoplay = false,
+  onAutoplayToggle,
+  upNext,
 }: PlayerProps) {
   const root = useRef<HTMLDivElement>(null)
   const video = useRef<HTMLVideoElement>(null)
@@ -71,6 +80,9 @@ export default function Player({
   const [active, setActive] = useState(true)
   const [menuOpen, setMenuOpen] = useState(false)
   const [feedback, setFeedback] = useState<Feedback | null>(null)
+  // Until the first play (the browser may refuse autoplay): a big Play button, no control bar.
+  const [started, setStarted] = useState(false)
+  const [countdownCancelled, setCountdownCancelled] = useState(false)
   const idleTimer = useRef(0)
   const feedbackId = useRef(0)
 
@@ -266,6 +278,10 @@ export default function Player({
         playsInline
         onClick={togglePlay}
         onDoubleClick={toggleFullscreen}
+        onPlay={() => {
+          setStarted(true)
+          setCountdownCancelled(false)
+        }}
         onPlaying={(event) => {
           reportPlayed(event)
           reportPosition(event, true)
@@ -296,6 +312,25 @@ export default function Player({
         </div>
       )}
 
+      {!started && !media.error && (
+        <button
+          type="button"
+          className={styles.bigPlay}
+          aria-label="Play"
+          onClick={() => video.current!.play().catch(() => {})}
+        >
+          <Icon name="play" size={36} />
+        </button>
+      )}
+
+      {media.ended && upNext && onNext && !countdownCancelled && (
+        <AutoplayCountdown
+          video={upNext}
+          onPlay={onNext}
+          onCancel={() => setCountdownCancelled(true)}
+        />
+      )}
+
       {media.error && (
         <div className={styles.error} role="alert">
           <Icon name="error" size={48} />
@@ -304,66 +339,85 @@ export default function Player({
         </div>
       )}
 
-      <div className={styles.chrome}>
-        <ProgressBar
-          currentTime={media.currentTime}
-          duration={media.duration}
-          buffered={media.buffered}
-          onSeek={seekTo}
-        />
-        <div className={styles.bar}>
-          <div className={styles.left}>
-            <ControlButton
-              icon={media.ended ? 'replay' : media.paused ? 'play' : 'pause'}
-              label={media.ended ? 'Replay' : media.paused ? 'Play' : 'Pause'}
-              iconSize={36}
-              shortcut="k"
-              onClick={togglePlay}
-            />
-            {onNext && (
+      {started && (
+        <div className={styles.chrome}>
+          <ProgressBar
+            currentTime={media.currentTime}
+            duration={media.duration}
+            buffered={media.buffered}
+            onSeek={seekTo}
+          />
+          <div className={styles.bar}>
+            <div className={styles.left}>
               <ControlButton
-                icon="next"
-                label="Next"
-                shortcut="Shift+N"
-                iconSize={32}
-                onClick={onNext}
-              />
-            )}
-            <VolumeControl
-              volume={media.volume}
-              muted={media.muted}
-              onToggleMute={() => toggleMute()}
-              onChange={(volume) => changeVolume(volume)}
-            />
-            <span className={styles.time}>
-              {formatDuration(media.currentTime)} / {formatDuration(media.duration)}
-            </span>
-          </div>
-          <div className={styles.right}>
-            <SpeedMenu
-              rate={media.rate}
-              open={menuOpen}
-              onOpenChange={setMenuOpen}
-              onChange={changeRate}
-            />
-            {!fullscreen && (
-              <ControlButton
-                icon={theater ? 'defaultView' : 'theater'}
-                label={theater ? 'Default view' : 'Theater mode'}
+                icon={media.ended ? 'replay' : media.paused ? 'play' : 'pause'}
+                label={media.ended ? 'Replay' : media.paused ? 'Play' : 'Pause'}
                 iconSize={36}
-                shortcut="t"
-                onClick={onTheaterToggle}
+                shortcut="k"
+                onClick={togglePlay}
               />
-            )}
-            <ControlButton
-              icon={fullscreen ? 'fullscreenExit' : 'fullscreen'}
-              label={fullscreen ? 'Exit full screen' : 'Full screen'}
-              shortcut="f"
-              onClick={toggleFullscreen}
-            />
+              {onNext && (
+                <ControlButton
+                  icon="next"
+                  label="Next"
+                  shortcut="Shift+N"
+                  iconSize={32}
+                  onClick={onNext}
+                />
+              )}
+              <VolumeControl
+                volume={media.volume}
+                muted={media.muted}
+                onToggleMute={() => toggleMute()}
+                onChange={(volume) => changeVolume(volume)}
+              />
+              <span className={styles.time}>
+                {formatDuration(media.currentTime)} / {formatDuration(media.duration)}
+              </span>
+            </div>
+            <div className={styles.right}>
+              {onAutoplayToggle && (
+                <button
+                  type="button"
+                  role="switch"
+                  className={styles.control}
+                  aria-label="Autoplay"
+                  aria-checked={autoplay}
+                  data-tooltip={autoplay ? 'Autoplay is on' : 'Autoplay is off'}
+                  onClick={onAutoplayToggle}
+                >
+                  <span className={styles.autoplayTrack}>
+                    <span className={styles.autoplayKnob}>
+                      <Icon name={autoplay ? 'play' : 'pause'} size={14} />
+                    </span>
+                  </span>
+                </button>
+              )}
+              <SpeedMenu
+                rate={media.rate}
+                open={menuOpen}
+                onOpenChange={setMenuOpen}
+                onChange={changeRate}
+              />
+              {!fullscreen && (
+                <ControlButton
+                  icon={theater ? 'defaultView' : 'theater'}
+                  label={theater ? 'Default view' : 'Theater mode'}
+                  iconSize={36}
+                  shortcut="t"
+                  onClick={onTheaterToggle}
+                />
+              )}
+              <ControlButton
+                icon={fullscreen ? 'fullscreenExit' : 'fullscreen'}
+                label={fullscreen ? 'Exit full screen' : 'Full screen'}
+                shortcut="f"
+                onClick={toggleFullscreen}
+              />
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

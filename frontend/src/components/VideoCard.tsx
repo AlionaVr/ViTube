@@ -6,6 +6,7 @@ import type { Visibility, VideoSummary } from '../videos/types'
 import Avatar from './Avatar'
 import Thumbnail from './Thumbnail'
 import styles from './VideoCard.module.css'
+import VideoMenu from './VideoMenu'
 import VisibilityBadge from './VisibilityBadge'
 
 interface VideoCardProps {
@@ -14,7 +15,7 @@ interface VideoCardProps {
   showChannel?: boolean
   /** On the owner's own channel, which lists every visibility: marks what isn't public. */
   visibility?: Visibility
-  /** A shelf's narrow card (the You page): no avatar, smaller type. */
+  /** A shelf's narrow card (the You page): no avatar, no menu, smaller type. */
   compact?: boolean
 }
 
@@ -53,6 +54,7 @@ export default function VideoCard({
           </p>
           {visibility && <VisibilityBadge visibility={visibility} />}
         </div>
+        {!compact && <VideoMenu videoId={video.id} className={styles.menu} />}
       </div>
     </article>
   )
