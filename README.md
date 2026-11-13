@@ -48,16 +48,19 @@ Other OS: install Docker Engine 28 or newer with Compose 2.39 or newer yourself,
 
 ### Prebuilt images
 
-CI publishes the images of every commit on `main` that passed its checks:
+CI publishes and signs the images of every commit on `main` that passed its checks:
 `docker.io/alionavinahrad/vitube-{backend,worker,nginx}:sha-<commit>` (amd64). `install.sh` pulls them for a
-checkout of such a commit, so the first start needs no build. It builds the images instead, and says why, when:
+checkout of such a commit and checks CI's signature with [cosign](https://docs.sigstore.dev/), so the first start
+needs no build. It builds the images instead, and says why, when:
 
 - the commit has no published images (a branch, a commit not on `main` yet);
 - `backend/`, `frontend/` or `nginx/` have local changes;
-- the machine is not amd64.
+- the machine is not amd64;
+- a signature doesn't check out, or Sigstore can't be reached.
 
-`VITUBE_REGISTRY` sets where to pull from (e.g. a fork's Docker Hub account); `VITUBE_REGISTRY= ./install.sh`
-always builds. See [ADR 0008](docs/adr/0008-deployment.md).
+A fork sets `VITUBE_REGISTRY` (its Docker Hub account) and `VITUBE_SIGNER` (its workflow,
+`https://github.com/<owner>/<repo>/.github/workflows/ci.yml@refs/heads/main`); `VITUBE_REGISTRY= ./install.sh`
+always builds. See [ADR 0008](docs/adr/0008-deployment.md) and [ADR 0015](docs/adr/0015-supply-chain.md).
 
 ## Demo data
 

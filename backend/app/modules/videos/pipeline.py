@@ -1,7 +1,8 @@
 """Video processing in the worker (ADR 0003): probe, transcode to MP4, thumbnail, store, ready.
 
 Each step trusts nothing about the upload. ffmpeg reads it with fixed lists of formats and decoders,
-local files only and a pixel cap, and runs without the worker's secrets in its environment.
+local files only and a pixel cap. Its environment holds no secrets, but it runs as the worker's
+user: a decoder exploit could read the worker's from /proc. Isolation needs a container (ADR 0003).
 """
 
 import asyncio
@@ -50,7 +51,8 @@ SAFE_INPUT = [
     "-codec_whitelist", DECODERS,
     "-max_pixels", str(MAX_PIXELS),
 ]  # fmt: skip
-TOOL_ENV = {"PATH": os.environ.get("PATH", "/usr/bin:/bin")}  # no DB, Redis or S3 secrets
+# Keeps the secrets out of ffmpeg's own environment (and its error output); not a sandbox.
+TOOL_ENV = {"PATH": os.environ.get("PATH", "/usr/bin:/bin")}
 THUMBNAIL_HEIGHT = 360
 SCRATCH_PREFIX = "job-"
 

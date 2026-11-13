@@ -94,6 +94,9 @@ async def login(db: AsyncSession, redis: Redis, email: str, password: str, ip: s
     await LOGIN_PER_EMAIL_AND_IP.hit(redis, ip_key)
     await LOGIN_PER_EMAIL.hit(redis, email_key)
     user = await users.get_by_email(db, email)
+    # Ends the read: while the check waits for a hashing slot, its DB connection is back in the
+    # pool. A login flood fills the hashing queue only, not the pool the whole site needs.
+    await db.commit()
     # Unknown email and wrong password: same work, same error. No probing for accounts.
     valid = await verify_password(user.password_hash if user else None, password)
     if user is None or not valid:

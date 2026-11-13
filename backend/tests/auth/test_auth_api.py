@@ -183,6 +183,26 @@ async def test_unknown_email_still_runs_a_password_check(
     assert checked == [None]  # a check against a dummy hash: the same time as a real one
 
 
+async def test_login_holds_no_db_connection_while_checking_the_password(
+    app: FastAPI, client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Logins queue for a hashing slot: holding a connection there would let a flood take the pool.
+    await signup(client)
+    pool = app.state.sessionmaker.kw["bind"].pool
+    held: list[int] = []
+    real_check = service.verify_password
+
+    async def spy(password_hash: str | None, password: str) -> bool:
+        held.append(pool.checkedout())
+        return await real_check(password_hash, password)
+
+    monkeypatch.setattr(service, "verify_password", spy)
+
+    assert (await login(client)).status_code == 200
+    assert (await login(client, email="nobody@example.com")).status_code == 401
+    assert held == [0, 0]
+
+
 async def test_login_is_limited_per_ip(app: FastAPI, client: AsyncClient) -> None:
     async with client_from(app, "10.0.0.1") as attacker, client_from(app, "10.0.0.2") as other:
         for i in range(10):  # different emails: only the IP limit applies

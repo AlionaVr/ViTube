@@ -23,6 +23,7 @@ x-backend: &backend
   <<: *hardened
   image: vitube-backend
   pull_policy: never  # local image, never pulled from a registry
+  user: "10001:10001"  # as in the Dockerfile; set here too, so no image can pick root (ADR 0015)
   restart: unless-stopped
   networks: [ data ]
   environment: &backend-env
@@ -291,6 +292,7 @@ services:
         nginx-conf: ./nginx
       provenance: false  # same as for the backend: stable image ID
     image: vitube-nginx
+    user: "101:101"  # as in the image; set here too, so no image can pick root
     restart: unless-stopped
     networks: [ edge, web, media ]
     environment:

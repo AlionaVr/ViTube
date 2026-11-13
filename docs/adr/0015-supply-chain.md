@@ -23,6 +23,13 @@ known CVEs have to reach us. Reviewers deploy the same files on a clean VM, so w
 - **Third-party images** (Postgres, Redis, MinIO) are scanned as a report only: we can't fix them, and their fixes
   come with a new digest. Postgres's `gosu` is skipped: the container starts as `postgres` (ADR 0008).
 - The nginx image runs `apk upgrade` at build: its base is rebuilt less often than Alpine ships fixes.
+- **Published images** (ADR 0008). The `publish` job runs on pushes to `main` after every other job passed. It
+  loads the images the `stack` job tested (their IDs recorded before any test tool ran), pushes them and signs
+  each digest with cosign, keyless: the certificate names this workflow and the commit. The Docker Hub token lives
+  in the `dockerhub` environment, for `main` only, and never meets the test tools. `install.sh` verifies the
+  signature with a digest-pinned cosign image and tags the checked digest; on any doubt it builds. A stolen
+  Docker Hub token can move a tag, but not make a signature. Compose sets our services' users, so no image can
+  pick root.
 
 **Alternatives.**
 
@@ -35,3 +42,4 @@ known CVEs have to reach us. Reviewers deploy the same files on a clean VM, so w
 - ➕ A build uses the reviewed inputs only; a new CVE with a fix in our code or images stops the PR.
 - ➖ A CVE published overnight can fail an unrelated PR until the fix is taken (a Dependabot PR or `apk upgrade`).
 - ➖ The nginx image is not bit-for-bit reproducible: `apk upgrade` takes the packages of the build day.
+- ➖ Installing a published commit needs Sigstore's servers (ghcr.io, its trust root); without them it builds.

@@ -13,8 +13,9 @@ right away.
    internet. A failed download only warns; the site works without them.
 4. Runs `docker compose up -d --wait`. If CI published the images of the checked-out commit
    (`docker.io/<ns>/vitube-{backend,worker,nginx}:sha-<commit>`) and the engine is amd64 and `backend`, `frontend`,
-   `nginx` have no local changes, it pulls them and tags them with the local names `compose.yaml` uses. Otherwise it
-   builds them (`--build`). CI pushes the images that passed the `stack` job, on each push to `main`.
+   `nginx` have no local changes, it pulls them, checks that CI signed each one for this commit (ADR 0015) and tags
+   the checked digests with the local names `compose.yaml` uses. Otherwise it builds them (`--build`). CI pushes
+   the images that passed the `stack` job, once every check passed, on each push to `main`.
    *(Amended 2026-11-13: always built them.)*
     - services: nginx, api, worker, postgres, redis, minio;
     - one-shot jobs: `minio-perms`, `migrate`, `minio-init`.
