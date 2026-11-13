@@ -10,7 +10,8 @@ A YouTube clone built with AI: FastAPI, PostgreSQL, React, MinIO, Celery.
   reports.
 - Public, unlisted and private videos; a private video can be shared with chosen people.
 - Moderation: reports, hidden videos, banned and terminated accounts, an audit log.
-- Sign in with an email and password, or [with Google](#sign-in-with-google) once it is set up.
+- Sign in with an email and password, or [with Google](#sign-in-with-google): it needs a Google client and a fixed
+  host (`localhost`, or a domain with HTTPS).
 
 ## Quick start
 
@@ -115,13 +116,20 @@ After a change, run `./install.sh` again.
 
 ### Sign-in with Google
 
-Off by default: while `GOOGLE_CLIENT_ID` is empty, the sign-in page has no Google button. To turn it on:
+Implemented, but off by default: while `GOOGLE_CLIENT_ID` is empty, the sign-in page has no Google button.
+
+It needs a fixed host. Google sends the user back only to a redirect URI registered in its client, and takes `http`
+only for `localhost`; any other host needs a domain and HTTPS, never a bare IP. So a server set up by `install.sh`
+and opened by its IP can't offer it until it gets a domain and HTTPS in front of nginx
+([ADR 0014](docs/adr/0014-google-sign-in.md)).
+
+To turn it on:
 
 1. In [Google Cloud Console](https://console.cloud.google.com/apis/credentials), create an OAuth client ID of type
    "Web application" (set up the consent screen first if asked).
 2. Under "Authorized redirect URIs", add the site's callback page, e.g. `http://localhost/auth/google/callback`
-   (with another `HTTP_PORT`, put it in: `http://localhost:8080/...`). Google allows `http` only for `localhost`:
-   a server needs a domain and HTTPS (`https://<domain>/auth/google/callback`, and `COOKIE_SECURE=true`).
+   (with another `HTTP_PORT`, put it in: `http://localhost:8080/...`). On a server with a domain:
+   `https://<domain>/auth/google/callback`, and `COOKIE_SECURE=true`.
 3. Put the client's ID and secret into `.env` as `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, and the URI from
    step 2 as `GOOGLE_REDIRECT_URI`. Run `./install.sh` again.
 
