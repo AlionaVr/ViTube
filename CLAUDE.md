@@ -108,7 +108,9 @@ FastAPI + PostgreSQL + MinIO + Celery + React. Deployed with `./install.sh` (Doc
 - The user fills `.env` by hand. Never edit an existing `.env` or automate it. When `.env.example` gets a key, tell
   the user which key to add, why, and how to generate it (e.g. `openssl rand -hex 32`), before the stack starts.
 - A hook blocks commands that name `.env`. Never dodge it (e.g. by building the name from parts): check secrets only
-  via a script file that prints no values.
+  via a script file that names `.env` plainly and prints no values.
+- In a worktree session, `!` commands for the user pass the same isolation check: give plain single commands (no
+  variables, `&&` chains or `{ }`), or ask the user to run a one-liner in their own terminal.
 - `docker compose config` fills in secrets: use only `config --quiet`, or `config --images` (image names only;
   `install.sh` reads them); never print or save its other output.
 
@@ -127,3 +129,6 @@ Claude commits after each logical step.
 - Linear history. Before a branch is pushed, fold fixes into their commit (fixup + rebase). Resolve PR conflicts by
   rebasing onto `main`, never with a merge commit.
 - Never rewrite pushed history. Never push, force push or `reset` without the user's permission.
+- Before a rebase, check the branch on the remote (`git fetch`, `gh pr view <branch>`), never assume it is unpushed.
+  A pushed branch needs `push --force-with-lease`: ask first, and tell the user that the IDE's "Push rejected →
+  Merge / Rebase" choices are wrong after it.
