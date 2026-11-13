@@ -30,6 +30,11 @@
   color: var(--color-text-secondary);
 }
 
+/* A narrow screen wraps between the facts, never inside one ("No / videos"). */
+.fact {
+  white-space: nowrap;
+}
+
 .handle {
   font-weight: 500;
   color: var(--color-text);

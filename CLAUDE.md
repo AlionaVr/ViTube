@@ -17,11 +17,13 @@ FastAPI + PostgreSQL + MinIO + Celery + React. Deployed with `./install.sh` (Doc
   checkout's containers; without the tags, a build moves the other checkouts' next `up` or `run` onto this code and
   its migrations: rebuild then only with the user's OK. The worktree's `.env` is the user's copy with a free
   `HTTP_PORT`. Check frontend work with `API_PROXY=http://localhost:<stack port> npm run dev -- --port <free port>`.
-- Migrations: `docker compose run --rm migrate alembic <cmd>`. See the `add-migration` skill.
+- Migrations: `docker compose run --rm migrate alembic <cmd>`. See the `add-migration` skill. New migrations' SQL
+  lint (`backend/`): `uv run python -m scripts.lint_migrations origin/main`.
 - Frontend (`frontend/`): `npm run dev` (proxies `/api` to the stack, or to `API_PROXY`), `npm run lint`, `npm run format:check`, `npm test`, `npm run build`.
 - API types: after changing the API, run `npm run gen:api` in `frontend/` and commit `src/api/openapi.json` + `schema.d.ts` (CI checks).
 - Local dev (backend from the IDE): `compose.local.yaml` + `.env.local`, see README. Production uses `compose.yaml` only.
-- CI (`.github/workflows/ci.yml`): the checks above, plus a deploy via `install.sh`, `alembic check` and migrations down/up.
+- CI (`.github/workflows/ci.yml`): the checks above, scanners (hadolint, Trivy, squawk; ADR 0015), a deploy via
+  `install.sh`, `alembic check` and migrations down/up.
 
 ## Workflow
 
@@ -106,8 +108,11 @@ FastAPI + PostgreSQL + MinIO + Celery + React. Deployed with `./install.sh` (Doc
 - The user fills `.env` by hand. Never edit an existing `.env` or automate it. When `.env.example` gets a key, tell
   the user which key to add, why, and how to generate it (e.g. `openssl rand -hex 32`), before the stack starts.
 - A hook blocks commands that name `.env`. Never dodge it (e.g. by building the name from parts): check secrets only
-  via a script file that prints no values.
-- `docker compose config` fills in secrets: use only `config --quiet`; never print or save its output.
+  via a script file that names `.env` plainly and prints no values.
+- In a worktree session, `!` commands for the user pass the same isolation check: give plain single commands (no
+  variables, `&&` chains or `{ }`), or ask the user to run a one-liner in their own terminal.
+- `docker compose config` fills in secrets: use only `config --quiet`, or `config --images` (image names only;
+  `install.sh` reads them); never print or save its other output.
 
 ## Git
 
@@ -124,3 +129,6 @@ Claude commits after each logical step.
 - Linear history. Before a branch is pushed, fold fixes into their commit (fixup + rebase). Resolve PR conflicts by
   rebasing onto `main`, never with a merge commit.
 - Never rewrite pushed history. Never push, force push or `reset` without the user's permission.
+- Before a rebase, check the branch on the remote (`git fetch`, `gh pr view <branch>`), never assume it is unpushed.
+  A pushed branch needs `push --force-with-lease`: ask first, and tell the user that the IDE's "Push rejected →
+  Merge / Rebase" choices are wrong after it.

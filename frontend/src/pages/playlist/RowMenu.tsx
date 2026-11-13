@@ -1,11 +1,5 @@
-import { useQueryClient } from '@tanstack/react-query'
-
-import type { MenuChoice } from '../../components/Menu'
-import { useToast } from '../../hooks/useToast'
-import { useSetInPlaylist, watchLaterQuery } from '../../playlists/hooks'
-import { NOT_SAVED } from '../../playlists/SaveDialog'
-import { useViewer } from '../../viewer/useViewer'
-import { Menu } from './OwnerTools'
+import { Menu, type MenuChoice } from '../../components/Menu'
+import { useVideoChoices, type VideoDialog } from '../../videos/useVideoChoices'
 
 /** What the list's owner can do to a row. */
 export interface ItemActions {
@@ -17,7 +11,7 @@ export interface ItemActions {
 }
 
 /** Opens the page's one Save or Share dialog: the row may leave while it is open. */
-export type OpenDialog = (dialog: 'save' | 'share', videoId: string) => void
+export type OpenDialog = (dialog: VideoDialog, videoId: string) => void
 
 /** ⋮ on a playlist row, as YouTube's: save and share, then the list's own actions. */
 export function RowMenu({
@@ -35,37 +29,11 @@ export function RowMenu({
   actions?: ItemActions
   openDialog: OpenDialog
 }) {
-  const signedIn = useViewer().status === 'authenticated'
-  const queryClient = useQueryClient()
-  const save = useSetInPlaylist(videoId)
-  const toast = useToast()
-
-  async function saveToWatchLater() {
-    try {
-      const list = await queryClient.ensureQueryData(watchLaterQuery)
-      await save.mutateAsync({ playlistId: list.id, saved: true })
-      toast(`Saved to ${list.title}`)
-    } catch {
-      toast(NOT_SAVED)
-    }
-  }
-
-  const choices: MenuChoice[] = []
-  if (signedIn && !watchLater) {
-    choices.push({
-      icon: 'watchLater',
-      label: 'Save to Watch later',
-      onSelect: () => void saveToWatchLater(),
-    })
-  }
-  if (signedIn) {
-    choices.push({
-      icon: 'bookmark',
-      label: 'Save to playlist',
-      onSelect: () => openDialog('save', videoId),
-    })
-  }
-  choices.push({ icon: 'share', label: 'Share', onSelect: () => openDialog('share', videoId) })
+  const choices: MenuChoice[] = useVideoChoices(
+    videoId,
+    (dialog) => openDialog(dialog, videoId),
+    watchLater,
+  )
   if (actions) {
     choices.push({ icon: 'delete', label: `Remove from ${title}`, onSelect: actions.remove })
     if (actions.moveToTop) {

@@ -31,11 +31,3 @@
   font: inherit;
   font-size: 14px;
 }
-
-.status {
-  min-height: 20px;
-  margin: 12px 0 0;
-  font-size: 14px;
-  line-height: 20px;
-  color: var(--color-text-secondary);
-}

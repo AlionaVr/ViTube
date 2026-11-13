@@ -130,6 +130,34 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* YouTube's Autoplay switch: a track with a knob that shows play (on) or pause (off). */
+.autoplayTrack {
+  position: relative;
+  width: 36px;
+  height: 14px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.autoplayKnob {
+  position: absolute;
+  top: -3px;
+  left: 0;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #bdbdbd;
+  color: #0f0f0f;
+  transition: translate 0.1s;
+}
+
+[aria-checked='true'] > .autoplayTrack .autoplayKnob {
+  translate: 16px 0;
+  background: #fff;
+}
+
 /* ---- Seek bar: 3px, 5px on hover; the scrubber dot grows in. */
 
 .progress {
@@ -374,6 +402,139 @@
   }
 }
 
+/* YouTube's large play button: on the poster until the first play. */
+.bigPlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  width: 68px;
+  height: 48px;
+  translate: -50% -50%;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 14px;
+  background: rgba(33, 33, 33, 0.8);
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.1s cubic-bezier(0.4, 0, 1, 1);
+}
+
+.bigPlay:hover,
+.bigPlay:focus-visible {
+  background: var(--color-brand);
+}
+
+.bigPlay:focus-visible {
+  outline: 2px solid rgba(27, 127, 204, 0.8);
+  outline-offset: 2px;
+}
+
+/* ---- The end screen's Autoplay countdown. Under the control bar, which stays usable (Replay). */
+
+.countdown {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.7);
+  text-align: center;
+}
+
+.countdownLabel,
+.countdownTitle,
+.countdownChannel {
+  max-width: min(100%, 400px);
+  margin: 0;
+}
+
+.countdownLabel {
+  margin-bottom: 12px;
+  color: #aaa;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.countdownThumbnail {
+  width: 240px;
+  aspect-ratio: 16 / 9;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.countdownTitle {
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 26px;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.countdownChannel {
+  color: #aaa;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.countdownActions {
+  margin-top: 16px;
+  display: flex;
+  gap: 12px;
+}
+
+.countdownCancel,
+.countdownPlay {
+  height: 36px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 18px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.countdownCancel {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.countdownCancel:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.countdownPlay {
+  background: #fff;
+  color: #0f0f0f;
+}
+
+.countdownPlay:hover {
+  background: #d9d9d9;
+}
+
+.countdownCancel:focus-visible,
+.countdownPlay:focus-visible {
+  outline: 2px solid rgba(27, 127, 204, 0.8);
+  outline-offset: 2px;
+}
+
+/* A short player (a phone): the title and the buttons, no picture. */
+@container (max-height: 360px) {
+  .countdownThumbnail {
+    display: none;
+  }
+}
+
 /* Shows only after a short wait, so quick seeks don't flicker. */
 .buffering {
   position: absolute;
@@ -439,6 +600,11 @@
 
   .feedbackIcon {
     animation-name: fade;
+  }
+
+  .bigPlay,
+  .autoplayKnob {
+    transition: none;
   }
 
   .buffering {

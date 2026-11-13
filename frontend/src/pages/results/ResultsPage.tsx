@@ -5,6 +5,7 @@ import EmptyState from '../../components/EmptyState'
 import ErrorState from '../../components/ErrorState'
 import Spinner from '../../components/Spinner'
 import Thumbnail from '../../components/Thumbnail'
+import VideoMenu from '../../components/VideoMenu'
 import { useInfiniteScroll } from '../../hooks/useInfiniteScroll'
 import { formatTimeAgo, formatViews } from '../../lib/format'
 import type { SearchResult } from '../../search/api'
@@ -36,6 +37,7 @@ function Result({ video }: { video: SearchResult }) {
           {channel.name}
         </Link>
         {video.description && <p className={styles.description}>{video.description}</p>}
+        <VideoMenu videoId={video.id} className={styles.menu} />
       </div>
     </article>
   )

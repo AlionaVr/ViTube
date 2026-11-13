@@ -16,6 +16,9 @@ description: Create and review an Alembic migration for ViTube after changing SQ
     - extensions (the baseline has `citext` and `pg_trgm`; add others by hand);
     - server defaults and CHECK constraints.
 4. Make sure `downgrade()` really reverses `upgrade()`.
+   Lint its SQL for long locks (CI does it on pull requests): in `backend/`,
+   `uv run python -m scripts.lint_migrations origin/main`. On a big table use the lock-safe form (e.g.
+   `CREATE INDEX CONCURRENTLY`, a constraint `NOT VALID` + `VALIDATE`).
 5. Apply: `docker compose build api && docker compose run --rm migrate`. Test: `docker compose run --rm migrate alembic downgrade -1`, then
    `... alembic upgrade head`.
 6. Never edit a migration that was already committed. Add a new one.

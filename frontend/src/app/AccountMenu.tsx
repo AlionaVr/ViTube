@@ -49,16 +49,17 @@ export default function AccountMenu({ user }: { user: User }) {
         aria-controls={panelId}
         onClick={() => setOpen((isOpen) => !isOpen)}
       >
-        <Avatar name={user.email} size={32} />
+        <Avatar name={user.handle} size={32} />
       </button>
 
       {open && (
         <div id={panelId} className={styles.panel}>
           <MenuPages>
             <div className={styles.account}>
-              <Avatar name={user.email} size={40} />
+              {/* The channel's name and avatar, as on its page (the name is the handle for now). */}
+              <Avatar name={user.handle} size={40} />
               <div className={styles.names}>
-                <p className={styles.name}>{user.email}</p>
+                <p className={styles.name}>{user.handle}</p>
                 <p className={styles.handle}>@{user.handle}</p>
                 <Link
                   to={channelUrl(user.handle)}
@@ -81,7 +82,12 @@ export default function AccountMenu({ user }: { user: User }) {
               <Icon name="signOut" />
               Sign out
             </button>
-            {/* A staff tool gets its own group after Sign out, as YouTube Studio does. */}
+            <hr className={menu.divider} />
+            <Link to="/studio/videos" className={menu.item} onClick={() => setOpen(false)}>
+              <Icon name="studio" />
+              ViTube Studio
+            </Link>
+            {/* A staff tool gets its own group after Studio, as YouTube's menu does. */}
             {canModerate(user) && (
               <>
                 <hr className={menu.divider} />

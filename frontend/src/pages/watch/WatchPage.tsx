@@ -112,6 +112,7 @@ export default function WatchPage() {
   const twoColumns = useMediaQuery(TWO_COLUMNS)
   const { page, box } = usePlayerHeight()
   const [theater, toggleTheater] = useStoredFlag('vitube:theater', false)
+  const [autoplay, toggleAutoplay] = useStoredFlag('vitube:autoplay', true)
   const reportPlayed = useViewReport(id, video.data?.duration_sec ?? 0)
   const viewer = useViewer()
   const signedIn = viewer.status === 'authenticated'
@@ -122,8 +123,9 @@ export default function WatchPage() {
   // The player starts where the viewer stopped, so it waits for that; a guest has nothing saved.
   const startKnown = viewer.status === 'guest' || (signedIn && !progress.isPending)
 
-  // In a list, Next and the end of the video go to its next video; once it's over, Next goes to
-  // Up next and nothing plays by itself. No Next while the list is still loading.
+  // In a list, Next and the end of the video go to its next video. Without one, or once it's over,
+  // Next goes to Up next, and with Autoplay on the end counts down to it. No Next while the list
+  // is still loading.
   const listNext: QueueNext =
     queue.status === 'ready' ? queue.next : { status: queue.status === 'none' ? 'end' : 'pending' }
   const upNext = related.data?.pages[0]?.items[0]
@@ -134,6 +136,7 @@ export default function WatchPage() {
         ? watchUrl(upNext.id)
         : undefined
   const autoplayUrl = listNext.status === 'video' ? listNext.url : undefined
+  const countdownTo = autoplay && listNext.status === 'end' ? upNext : undefined
   const panel = queue.status === 'ready' && <PlaylistPanel queue={queue} />
   const notFound = video.error instanceof ApiError && video.error.status === 404
   const ready = video.data?.status === 'ready'
@@ -166,6 +169,15 @@ export default function WatchPage() {
                   onEnded={autoplayUrl === undefined ? undefined : () => void navigate(autoplayUrl)}
                   onPlayed={frozen ? undefined : reportPlayed}
                   onPosition={frozen ? undefined : recordPosition}
+                  autoplay={autoplay}
+                  onAutoplayToggle={toggleAutoplay}
+                  upNext={
+                    countdownTo && {
+                      title: countdownTo.title,
+                      channel: countdownTo.channel.name,
+                      thumbnail: countdownTo.thumbnail_url,
+                    }
+                  }
                 />
               )
             ) : (

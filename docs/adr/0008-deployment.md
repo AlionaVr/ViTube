@@ -11,9 +11,14 @@ right away.
 2. Creates `.env` from `.env.example` with random secrets. Never overwrites an existing `.env`.
 3. Downloads the demo videos (`demo-data/download.py`, pinned hashes): they aren't in git, and the backend has no
    internet. A failed download only warns; the site works without them.
-4. Runs `docker compose up -d --build --wait`:
+4. Runs `docker compose up -d --wait`. If CI published the images of the checked-out commit
+   (`docker.io/<ns>/vitube-{backend,worker,nginx}:sha-<commit>`) and the engine is amd64 and `backend`, `frontend`,
+   `nginx` have no local changes, it pulls them, checks that CI signed each one for this commit (ADR 0015) and tags
+   the checked digests with the local names `compose.yaml` uses. Otherwise it builds them (`--build`). CI pushes
+   the images that passed the `stack` job, once every check passed, on each push to `main`.
+   *(Amended 2026-11-13: always built them.)*
     - services: nginx, api, worker, postgres, redis, minio;
-    - one-shot jobs: `migrate`, `minio-init`.
+    - one-shot jobs: `minio-perms`, `migrate`, `minio-init`.
 5. Runs the one-shot `seed` job (`docker compose run --rm --no-deps seed`): demo accounts and videos. Safe to re-run.
    *(Amended 2026-11-12: was part of `up`, but `up --wait` fails when a job that nothing depends on exits fast, even
    with code 0.)*
@@ -23,7 +28,10 @@ Only port 80 is exposed. All services have healthchecks, `restart: unless-stoppe
 
 Containers are hardened:
 
-- non-root users, `no-new-privileges`, all capabilities dropped (data services keep only what their entrypoint needs);
+- non-root users, `no-new-privileges`, all capabilities dropped. Postgres, Redis and MinIO start as their own
+  users; the one-shot `minio-perms` job (root with `CHOWN` only, no network) hands the MinIO volume to its user.
+  *(Amended 2026-11-13: data services started as root and kept the capabilities to chown their data and drop to
+  their user, incl. `DAC_READ_SEARCH` for Postgres.)*
 - read-only root FS for our containers;
 - networks: `edge` (nginx only, the published port), internal `web` (nginx ↔ api) and internal `data`
   (backend ↔ Postgres, Redis, MinIO). The worker and data have no internet access. *(Amended 2026-11-12: the api
@@ -33,9 +41,14 @@ Containers are hardened:
 
 Local development adds `compose.local.yaml` (DB ports on localhost); `install.sh` never uses it.
 
-**Alternatives.** Native apt + systemd: no Docker, but fragile across Ubuntu versions.
+**Alternatives.**
+
+- Native apt + systemd: no Docker, but fragile across Ubuntu versions.
+- A tag variable in `compose.yaml` for the published images: a later plain `docker compose up` lacks it and builds
+  again.
 
 **Consequences.**
 
 - ➕ Same setup on reviewer VM, dev machine and CI.
-- ➖ The first build takes a few minutes.
+- ➕ A published commit installs without a build: no PyPI, npm or apt downloads.
+- ➖ Otherwise (a branch, local changes, arm64) the first build takes a few minutes.

@@ -5,13 +5,7 @@
     <link href="/favicon.svg" rel="icon" type="image/svg+xml"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <title>ViTube</title>
-    <script>
-        // The theme picked in Appearance (src/theme/theme.ts), set before the first paint: no white flash.
-        try {
-            const theme = localStorage.getItem('vitube:theme')
-            if (theme === 'dark' || theme === 'light') document.documentElement.dataset.theme = theme
-        } catch {}
-    </script>
+    <script src="/theme-init.js"></script>
 </head>
 <body>
 <div id="root"></div>

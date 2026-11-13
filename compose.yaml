@@ -9,8 +9,8 @@ x-hardened: &hardened
   tmpfs: [ "/tmp:size=64m" ]  # RAM: capped; big work files go to volumes
   pids_limit: 256  # stops a fork bomb
 
-# Third-party data services start as root, fix data dir owners, then drop to their own user:
-# they keep only the capabilities that step needs (see cap_add).
+# Third-party data services start as their own user, with no capabilities: the images' entrypoints
+# then skip their root-only setup, as the data dirs already belong to that user.
 x-data-service: &data-service
   restart: unless-stopped
   security_opt: [ "no-new-privileges:true" ]
@@ -23,6 +23,7 @@ x-backend: &backend
   <<: *hardened
   image: vitube-backend
   pull_policy: never  # local image, never pulled from a registry
+  user: "10001:10001"  # as in the Dockerfile; set here too, so no image can pick root (ADR 0015)
   restart: unless-stopped
   networks: [ data ]
   environment: &backend-env
@@ -37,14 +38,17 @@ x-storage-env: &storage-env
   S3_SECRET_KEY: ${MINIO_APP_PASSWORD:?}
   S3_BUCKET: ${S3_BUCKET:?}
 
-x-minio-image: &minio-image pgsty/minio:RELEASE.2026-08-04T00-00-00Z  # community fork, see ADR 0002
+# Third-party images by digest (MinIO here, Postgres and Redis below): a tag can be moved to other
+# contents, a digest can't. Dependabot bumps both. MinIO: a community fork, see ADR 0002.
+x-minio-image: &minio-image pgsty/minio:RELEASE.2026-08-04T00-00-00Z@sha256:b6bfe7239bfc83fb90d31612d9704d86039dd714f7904b3f1ad68f211e602372
+# The image has no user of its own: fixed ids, next to the backend's 10001.
+x-minio-user: &minio-user "10002:10002"
 
 services:
   postgres:
     <<: *data-service
-    image: postgres:18-alpine
-    # Found by testing fresh init and restarts; DAC_READ_SEARCH (not DAC_OVERRIDE) to walk the 0700 data dir.
-    cap_add: [ CHOWN, DAC_READ_SEARCH, FOWNER, SETGID, SETUID ]
+    image: postgres:18-alpine@sha256:1018733457011bf88d81db98cf43aac6d5150afc18787dbe204771fedf80ff95
+    user: postgres  # uid 70 in the image; the volume's root dir is world-writable there, so initdb works too
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
@@ -59,8 +63,8 @@ services:
 
   redis:
     <<: *data-service
-    image: redis:8-alpine
-    cap_add: [ CHOWN, SETGID, SETUID ]
+    image: redis:8-alpine@sha256:7958cfbb9d152f87dadfbc89f1b0b15938f0b81ff8982feb327476f4911935c3
+    user: redis  # uid 999 in the image, which owns /data
     # Append-only log, fsync every second: a crash loses at most 1 s, so logouts stay done (ADR 0005).
     command:
       [ "redis-server", "--requirepass", "${REDIS_PASSWORD:?}", "--appendonly", "yes", "--appendfsync", "everysec" ]
@@ -74,9 +78,26 @@ services:
       timeout: 3s
       retries: 10
 
+  # One-shot: hands the MinIO volume to the minio user. Older deploys ran MinIO as root and the
+  # image's /data is root's, so a new volume needs it too. Safe to re-run.
+  minio-perms:
+    image: *minio-image
+    network_mode: none
+    security_opt: [ "no-new-privileges:true" ]
+    cap_drop: [ ALL ]
+    cap_add: [ CHOWN ]  # root keeps only this, for this one command
+    read_only: true
+    environment:
+      MINIO_OWNER: *minio-user
+    entrypoint: [ "/bin/sh", "-c" ]
+    command: [ 'chown -R "$$MINIO_OWNER" /data' ]
+    volumes:
+      - minio-data:/data
+
   minio:
     <<: *data-service
     image: *minio-image
+    user: *minio-user
     networks: [ data, media ]  # media: nginx reads videos and thumbnails (ADR 0004)
     command: [ "server", "/data" ]
     environment:
@@ -84,6 +105,9 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?}
     volumes:
       - minio-data:/data
+    depends_on:
+      minio-perms:
+        condition: service_completed_successfully
     healthcheck:
       test: [ "CMD", "curl", "-fsS", "http://localhost:9000/minio/health/live" ]
       interval: 5s
@@ -94,6 +118,7 @@ services:
   minio-init:
     <<: *hardened
     image: *minio-image
+    user: *minio-user  # a client only: any unprivileged user
     networks: [ data ]
     depends_on:
       minio:
@@ -185,10 +210,16 @@ services:
     init: true  # PID 1 that forwards signals and reaps child processes
     # Uploads hold at most 32 × 16 MiB (ADR 0006); the rest is the app. A leak can't take the host.
     mem_limit: 1g
-    # oauth-egress: the token and keys endpoints of Google sign-in (ADR 0014)
-    networks: [ web, data, oauth-egress ]
+    networks:
+      web:
+        aliases: [ api-web ]  # a name for the api's address on "web" only
+      data: { }
+      oauth-egress: { }  # the token and keys endpoints of Google sign-in (ADR 0014)
     environment:
       <<: [ *backend-env, *storage-env ]
+      # Listens on "web" only: nginx alone can connect, so it alone sets X-Forwarded-For.
+      # Neighbours on "data" and "oauth-egress" get "connection refused".
+      UVICORN_HOST: api-web
       SESSION_SECRET: ${SESSION_SECRET:?}  # only the api handles sessions
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       # Sign-in with Google, off while the client id is empty (README)
@@ -209,7 +240,7 @@ services:
         - CMD
         - python
         - -c
-        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=2)
+        - import urllib.request; urllib.request.urlopen('http://api-web:8000/api/health', timeout=2)
       interval: 10s
       timeout: 3s
       retries: 5
@@ -261,6 +292,7 @@ services:
         nginx-conf: ./nginx
       provenance: false  # same as for the backend: stable image ID
     image: vitube-nginx
+    user: "101:101"  # as in the image; set here too, so no image can pick root
     restart: unless-stopped
     networks: [ edge, web, media ]
     environment:

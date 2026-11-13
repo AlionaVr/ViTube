@@ -1,3 +1,14 @@
+.row {
+  position: relative;
+}
+
+/* Over the room .meta keeps, at the title's top. */
+.menu {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+}
+
 .card {
   display: flex;
   gap: 12px;

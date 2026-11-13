@@ -7,3 +7,6 @@
 !src
 !tsconfig*.json
 !vite.config.ts
+# Tests never reach the build.
+src/**/*.test.*
+src/test

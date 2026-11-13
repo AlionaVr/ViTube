@@ -119,7 +119,7 @@ export default function CommentItem({ comment, videoId, threadId }: CommentItemP
             {(props) => (
               <button
                 type="button"
-                className={`${buttons.pill} ${buttons.text} ${buttons.small}`}
+                className={`${buttons.pill} ${buttons.text} ${buttons.small} ${styles.replyButton}`}
                 {...props}
               >
                 Reply

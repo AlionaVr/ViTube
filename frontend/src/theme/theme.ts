@@ -3,7 +3,7 @@ import { useSyncExternalStore } from 'react'
 /** "device" follows the OS; dark and light pin the theme. */
 export type Theme = 'device' | 'dark' | 'light'
 
-/** The inline script in index.html reads it too, before the first paint. */
+/** public/theme-init.js reads it too, before the first paint. */
 export const THEME_KEY = 'vitube:theme'
 
 function load(): Theme {

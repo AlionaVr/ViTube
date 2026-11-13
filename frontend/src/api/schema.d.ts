@@ -1214,7 +1214,7 @@ export interface components {
             subscriber_count: number;
             /**
              * Video Count
-             * @description Public, ready videos: what the Videos tab lists
+             * @description What the Videos tab lists: public, ready videos; on your own channel, all your ready ones
              */
             video_count: number;
             /**

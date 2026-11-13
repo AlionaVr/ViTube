@@ -110,9 +110,75 @@ download_demo_videos() {
   python3 demo-data/download.py || warn "Could not download the demo videos. Re-run later to add them."
 }
 
+# Where CI publishes the images of each commit on main (ADR 0008). Empty: always build.
+REGISTRY=${VITUBE_REGISTRY-docker.io/alionavinahrad}
+# Who must have signed them: this repository's CI workflow on main (keyless Sigstore, ADR 0015).
+SIGNER=${VITUBE_SIGNER-https://github.com/AlionaVr/ViTube/.github/workflows/ci.yml@refs/heads/main}
+COSIGN=ghcr.io/sigstore/cosign/cosign:v3.1.4@sha256:0f06154836d2de34f887a5c273506d52ca43edaa1d9e53e6510fa78a48f69c2d
+PREBUILT=(backend worker nginx)
+NO_PREBUILT_REASON=
+
+# The local name Compose gives one of our images (a worktree's override renames them): the only
+# image name that ends in -<name>. `config --images` prints names only, no secrets.
+local_image() {
+  local names
+  names=$("${DOCKER[@]}" compose config --images | grep -E -- "-$1\$" | sort -u)
+  [ -n "$names" ] && [ "$(wc -l <<<"$names")" -eq 1 ] && printf '%s\n' "$names"
+}
+
+# The digest of the image a tag gave us, as the registry names it: what CI signed.
+pulled_digest() {
+  "${DOCKER[@]}" image inspect -f '{{range .RepoDigests}}{{println .}}{{end}}' "$1" |
+    grep -F -- "/vitube-$2@" | head -n 1 | sed 's/.*@//'
+}
+
+# True if CI signed this exact image (repo@digest) in a run for this commit ($2). A tag can be
+# moved by anyone holding the registry token; a signature from the CI workflow can't be forged.
+signed_by_ci() {
+  "${DOCKER[@]}" run --rm "$COSIGN" verify \
+    --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+    --certificate-identity "$SIGNER" --certificate-github-workflow-sha "$2" "$1" >/dev/null 2>&1
+}
+
+# Pulls the images CI built and signed for this very commit and gives them the local names: no
+# build, no PyPI, npm or apt downloads. Only for a checkout without local changes to their sources.
+pull_prebuilt_images() {
+  local commit name digest target
+  local -A verified=()
+  [ -n "$REGISTRY" ] || { NO_PREBUILT_REASON="VITUBE_REGISTRY is empty"; return 1; }
+  commit=$(git rev-parse HEAD 2>/dev/null) || { NO_PREBUILT_REASON="not a git checkout"; return 1; }
+  [ -z "$(git status --porcelain -- backend frontend nginx)" ] ||
+    { NO_PREBUILT_REASON="backend, frontend or nginx has local changes"; return 1; }
+  [ "$("${DOCKER[@]}" version --format '{{.Server.Arch}}')" = amd64 ] ||
+    { NO_PREBUILT_REASON="CI publishes amd64 images only"; return 1; }
+  for name in "${PREBUILT[@]}"; do
+    local_image "$name" >/dev/null || { NO_PREBUILT_REASON="no single local name for the $name image"; return 1; }
+    "${DOCKER[@]}" pull -q "$REGISTRY/vitube-$name:sha-$commit" >/dev/null 2>&1 ||
+      { NO_PREBUILT_REASON="no published images for commit ${commit:0:12}"; return 1; }
+    digest=$(pulled_digest "$REGISTRY/vitube-$name:sha-$commit" "$name")
+    if [ -z "$digest" ] || ! signed_by_ci "$REGISTRY/vitube-$name@$digest" "$commit"; then
+      NO_PREBUILT_REASON="the $name image has no valid CI signature for this commit"
+      return 1
+    fi
+    verified[$name]="$REGISTRY/vitube-$name@$digest"
+  done
+  # Tag the checked digests, not the tags: a tag moved meanwhile changes nothing here.
+  for name in "${PREBUILT[@]}"; do
+    target=$(local_image "$name")
+    "${DOCKER[@]}" tag "${verified[$name]}" "$target" ||
+      { NO_PREBUILT_REASON="could not tag ${verified[$name]}"; return 1; }
+  done
+}
+
 start_stack() {
-  log "Building and starting the stack (the first run takes a few minutes)"
-  "${DOCKER[@]}" compose up -d --build --wait ||
+  local build=--build
+  if pull_prebuilt_images; then
+    log "Starting the stack from the images CI built for this commit"
+    build=--no-build
+  else
+    log "Building and starting the stack, as $NO_PREBUILT_REASON (the first build takes a few minutes)"
+  fi
+  "${DOCKER[@]}" compose up -d "$build" --wait ||
     die "Some services did not start. Check: ${DOCKER[*]} compose ps, then ${DOCKER[*]} compose logs <service>"
 }
 

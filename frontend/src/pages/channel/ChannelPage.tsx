@@ -51,11 +51,11 @@ function Header({ channel }: { channel: Channel }) {
       <div className={styles.info}>
         <h1 className={styles.name}>{channel.name}</h1>
         <p className={styles.meta}>
-          <span className={styles.handle}>@{channel.handle}</span>
+          <span className={`${styles.fact} ${styles.handle}`}>@{channel.handle}</span>
           {' • '}
-          {formatSubscribers(channel.subscriber_count)}
+          <span className={styles.fact}>{formatSubscribers(channel.subscriber_count)}</span>
           {' • '}
-          {formatVideoCount(channel.video_count)}
+          <span className={styles.fact}>{formatVideoCount(channel.video_count)}</span>
         </p>
         {/* Nothing until we know who is watching: the owner never sees a Subscribe flash by.
             A terminated channel is frozen: no Subscribe. */}

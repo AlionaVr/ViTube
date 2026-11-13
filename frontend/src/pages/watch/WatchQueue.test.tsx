@@ -1,6 +1,6 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { ANNA, json, mockApi } from '../../test/api'
 import { channel } from '../../test/channels'
@@ -318,5 +318,41 @@ describe('WatchPage with a list', () => {
     const upNext = await screen.findByRole('region', { name: 'Up next' })
     expect(panel.compareDocumentPosition(upNext)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
     expect(upNext.parentElement).toBe(panel.parentElement)
+  })
+})
+
+/** Ends the video as a browser does: `ended` is set, so the player shows its end screen. */
+function playToTheEnd() {
+  const video = document.querySelector('video')!
+  Object.defineProperty(video, 'ended', { configurable: true, value: true })
+  fireEvent.ended(video)
+}
+
+describe('WatchPage without a list', () => {
+  afterEach(() => localStorage.clear())
+
+  it('counts down to Up next’s first video at the end, Autoplay being on by default', async () => {
+    mockQueue()
+    const router = renderApp('/watch?v=video-00002')
+    await screen.findByRole('region', { name: 'Video player' })
+    expect(await screen.findByRole('switch', { name: 'Autoplay' })).toBeChecked()
+
+    playToTheEnd()
+    const countdown = await screen.findByRole('region', { name: 'Autoplay countdown' })
+    expect(countdown).toHaveTextContent(UP_NEXT.title)
+    await userEvent.click(within(countdown).getByRole('button', { name: 'Play now' }))
+
+    expect(location(router)).toBe(`?v=${UP_NEXT.id}`)
+  })
+
+  it('stays at the end with Autoplay off, and keeps the choice', async () => {
+    mockQueue()
+    renderApp('/watch?v=video-00002')
+    await userEvent.click(await screen.findByRole('switch', { name: 'Autoplay' }))
+
+    playToTheEnd()
+
+    expect(screen.queryByRole('region', { name: 'Autoplay countdown' })).not.toBeInTheDocument()
+    expect(localStorage.getItem('vitube:autoplay')).toBe('0')
   })
 })

@@ -1,7 +1,8 @@
-import { useRef, useState } from 'react'
+import { useRef } from 'react'
 
 import Dialog from '../components/Dialog'
 import IconButton from '../components/IconButton'
+import { useToast } from '../hooks/useToast'
 import buttons from '../styles/buttons.module.css'
 import { watchUrl } from './paths'
 import styles from './ShareDialog.module.css'
@@ -14,29 +15,24 @@ interface ShareDialogProps {
 
 export default function ShareDialog({ videoId, open, onClose }: ShareDialogProps) {
   const input = useRef<HTMLInputElement>(null)
-  const [copied, setCopied] = useState(false)
+  const toast = useToast()
   const url = `${window.location.origin}${watchUrl(videoId)}`
 
   async function copy() {
     try {
       await navigator.clipboard.writeText(url)
-      setCopied(true)
+      toast('Link copied to clipboard')
     } catch {
       // No clipboard access (e.g. plain http): select the link so Ctrl+C works.
       input.current?.select()
     }
   }
 
-  function close() {
-    setCopied(false)
-    onClose()
-  }
-
   return (
-    <Dialog open={open} onClose={close} label="Share">
+    <Dialog open={open} onClose={onClose} label="Share">
       <div className={styles.header}>
         <h2 className={styles.title}>Share</h2>
-        <IconButton icon="close" label="Close" onClick={close} />
+        <IconButton icon="close" label="Close" onClick={onClose} />
       </div>
       <div className={styles.link}>
         <input
@@ -51,9 +47,6 @@ export default function ShareDialog({ videoId, open, onClose }: ShareDialogProps
           Copy
         </button>
       </div>
-      <p className={styles.status} role="status">
-        {copied && 'Link copied to clipboard'}
-      </p>
     </Dialog>
   )
 }

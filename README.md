@@ -10,7 +10,8 @@ A YouTube clone built with AI: FastAPI, PostgreSQL, React, MinIO, Celery.
   reports.
 - Public, unlisted and private videos; a private video can be shared with chosen people.
 - Moderation: reports, hidden videos, banned and terminated accounts, an audit log.
-- Sign in with an email and password, or [with Google](#sign-in-with-google) once it is set up.
+- Sign in with an email and password, or [with Google](#sign-in-with-google): it needs a Google client and a fixed
+  host (`localhost`, or a domain with HTTPS).
 
 ## Quick start
 
@@ -25,7 +26,7 @@ The script:
 1. installs Docker Engine and the compose plugin, if missing;
 2. creates `.env` with random secrets (an existing `.env` is kept);
 3. downloads the demo videos;
-4. builds and starts the stack, then waits until the site answers;
+4. starts the stack ([prebuilt images](#prebuilt-images) or a local build), then waits until the site answers;
 5. adds the [demo data](#demo-data);
 6. prints the site and API docs URLs, the demo logins and their password.
 
@@ -44,6 +45,22 @@ Prefix the commands below with `sudo` if your user is not in the `docker` group 
 > To change them, run `docker compose down -v` first, or the services can't log in.
 
 Other OS: install Docker Engine 28 or newer with Compose 2.39 or newer yourself, then run `./install.sh`.
+
+### Prebuilt images
+
+CI publishes and signs the images of every commit on `main` that passed its checks:
+`docker.io/alionavinahrad/vitube-{backend,worker,nginx}:sha-<commit>` (amd64). `install.sh` pulls them for a
+checkout of such a commit and checks CI's signature with [cosign](https://docs.sigstore.dev/), so the first start
+needs no build. It builds the images instead, and says why, when:
+
+- the commit has no published images (a branch, a commit not on `main` yet);
+- `backend/`, `frontend/` or `nginx/` have local changes;
+- the machine is not amd64;
+- a signature doesn't check out, or Sigstore can't be reached.
+
+A fork sets `VITUBE_REGISTRY` (its Docker Hub account) and `VITUBE_SIGNER` (its workflow,
+`https://github.com/<owner>/<repo>/.github/workflows/ci.yml@refs/heads/main`); `VITUBE_REGISTRY= ./install.sh`
+always builds. See [ADR 0008](docs/adr/0008-deployment.md) and [ADR 0015](docs/adr/0015-supply-chain.md).
 
 ## Demo data
 
@@ -102,13 +119,20 @@ After a change, run `./install.sh` again.
 
 ### Sign-in with Google
 
-Off by default: while `GOOGLE_CLIENT_ID` is empty, the sign-in page has no Google button. To turn it on:
+Implemented, but off by default: while `GOOGLE_CLIENT_ID` is empty, the sign-in page has no Google button.
+
+It needs a fixed host. Google sends the user back only to a redirect URI registered in its client, and takes `http`
+only for `localhost`; any other host needs a domain and HTTPS, never a bare IP. So a server set up by `install.sh`
+and opened by its IP can't offer it until it gets a domain and HTTPS in front of nginx
+([ADR 0014](docs/adr/0014-google-sign-in.md)).
+
+To turn it on:
 
 1. In [Google Cloud Console](https://console.cloud.google.com/apis/credentials), create an OAuth client ID of type
    "Web application" (set up the consent screen first if asked).
 2. Under "Authorized redirect URIs", add the site's callback page, e.g. `http://localhost/auth/google/callback`
-   (with another `HTTP_PORT`, put it in: `http://localhost:8080/...`). Google allows `http` only for `localhost`:
-   a server needs a domain and HTTPS (`https://<domain>/auth/google/callback`, and `COOKIE_SECURE=true`).
+   (with another `HTTP_PORT`, put it in: `http://localhost:8080/...`). On a server with a domain:
+   `https://<domain>/auth/google/callback`, and `COOKIE_SECURE=true`.
 3. Put the client's ID and secret into `.env` as `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, and the URI from
    step 2 as `GOOGLE_REDIRECT_URI`. Run `./install.sh` again.
 
@@ -118,12 +142,12 @@ accounts are never joined by email ([ADR 0014](docs/adr/0014-google-sign-in.md))
 ## Architecture
 
 ```
-Browser ──:80──► nginx ─┬─ /             → React static files
-                        ├─ /api/*, /docs → api (FastAPI)
-                        └─ /media/*      → auth_request → minio
+Browser ──:80──► nginx ─┬─ /, /docs     → static files (React, Swagger UI)
+                        ├─ /api/*       → api (FastAPI)
+                        └─ /media/*     → auth_request → minio
 api    ──► postgres, redis, minio; Google (sign-in only)
 worker (Celery + ffmpeg) ◄── redis; ──► minio, postgres
-one-shot jobs: migrate, minio-init, seed
+one-shot jobs: minio-perms, migrate, minio-init, seed
 ```
 
 Only nginx is published. The worker and the data services have no internet; the api reaches it for Google sign-in

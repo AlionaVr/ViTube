@@ -3,43 +3,13 @@ import { useNavigate } from 'react-router'
 
 import Dialog from '../../components/Dialog'
 import IconButton from '../../components/IconButton'
-import MenuChoices, { type MenuChoice } from '../../components/Menu'
-import Popover from '../../components/Popover'
+import { Menu } from '../../components/Menu'
 import { useToast } from '../../hooks/useToast'
 import EditPlaylistDialog from '../../playlists/EditPlaylistDialog'
 import { useDeletePlaylist } from '../../playlists/hooks'
 import type { Playlist } from '../../playlists/types'
 import buttons from '../../styles/buttons.module.css'
 import styles from './OwnerTools.module.css'
-
-/** YouTube's ⋮ menu. */
-export function Menu({
-  label,
-  choices,
-  light,
-}: {
-  label: string
-  choices: MenuChoice[]
-  light?: boolean
-}) {
-  return (
-    <Popover
-      label={label}
-      role="menu"
-      align={light ? 'start' : 'end'}
-      trigger={(props) => (
-        <IconButton
-          icon="moreVert"
-          label={label}
-          className={light ? styles.light : undefined}
-          {...props}
-        />
-      )}
-    >
-      {(close) => <MenuChoices choices={choices} close={close} />}
-    </Popover>
-  )
-}
 
 function DeleteDialog({
   playlist,
@@ -110,7 +80,8 @@ export function PlaylistTools({ playlist }: { playlist: Playlist }) {
       />
       <Menu
         label="More actions"
-        light
+        align="start"
+        className={styles.light}
         choices={[
           { icon: 'delete', label: 'Delete playlist', onSelect: () => setDialog('delete') },
         ]}

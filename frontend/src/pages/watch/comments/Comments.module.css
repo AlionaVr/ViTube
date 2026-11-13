@@ -218,6 +218,12 @@
   color: var(--color-text-secondary);
 }
 
+/* YouTube's comment Reply is smaller than other pills. */
+.replyButton {
+  font-size: 12px;
+  line-height: 18px;
+}
+
 .repliesToggle {
   margin: 4px 0 0 -12px;
 }

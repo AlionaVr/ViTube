@@ -3,9 +3,17 @@
 }
 
 .details {
+  position: relative;
   margin-top: 12px;
   display: flex;
   gap: 12px;
+}
+
+/* The ⋮ in the room .meta keeps: the icon's edge on the card's, its top on the title's. */
+.menu {
+  position: absolute;
+  top: -8px;
+  right: -8px;
 }
 
 /* YouTube keeps room for the ⋮ menu button, so titles wrap there too. */
