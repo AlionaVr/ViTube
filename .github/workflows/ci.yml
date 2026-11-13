@@ -136,6 +136,23 @@ jobs:
           for image in vitube-backend vitube-worker vitube-nginx; do
             trivy image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 "$image"
           done
+      # install.sh pulls these instead of building, for a checkout of this commit (ADR 0008).
+      - name: Log in to Docker Hub
+        if: github.event_name == 'push'
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Publish the tested images
+        if: github.event_name == 'push'
+        env:
+          REPO: docker.io/${{ vars.DOCKERHUB_USERNAME }}
+          TAG: sha-${{ github.sha }}
+        run: |
+          for name in backend worker nginx; do
+            docker tag "vitube-$name" "$REPO/vitube-$name:$TAG"
+            docker push "$REPO/vitube-$name:$TAG"
+          done
       # Report only: we can't fix them; Dependabot brings their fixed digests. gosu is never run
       # (Postgres starts as its own user).
       - name: Third-party images (Trivy, report)

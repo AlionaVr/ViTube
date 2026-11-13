@@ -11,7 +11,11 @@ right away.
 2. Creates `.env` from `.env.example` with random secrets. Never overwrites an existing `.env`.
 3. Downloads the demo videos (`demo-data/download.py`, pinned hashes): they aren't in git, and the backend has no
    internet. A failed download only warns; the site works without them.
-4. Runs `docker compose up -d --build --wait`:
+4. Runs `docker compose up -d --wait`. If CI published the images of the checked-out commit
+   (`docker.io/<ns>/vitube-{backend,worker,nginx}:sha-<commit>`) and the engine is amd64 and `backend`, `frontend`,
+   `nginx` have no local changes, it pulls them and tags them with the local names `compose.yaml` uses. Otherwise it
+   builds them (`--build`). CI pushes the images that passed the `stack` job, on each push to `main`.
+   *(Amended 2026-11-13: always built them.)*
     - services: nginx, api, worker, postgres, redis, minio;
     - one-shot jobs: `minio-perms`, `migrate`, `minio-init`.
 5. Runs the one-shot `seed` job (`docker compose run --rm --no-deps seed`): demo accounts and videos. Safe to re-run.
@@ -36,9 +40,14 @@ Containers are hardened:
 
 Local development adds `compose.local.yaml` (DB ports on localhost); `install.sh` never uses it.
 
-**Alternatives.** Native apt + systemd: no Docker, but fragile across Ubuntu versions.
+**Alternatives.**
+
+- Native apt + systemd: no Docker, but fragile across Ubuntu versions.
+- A tag variable in `compose.yaml` for the published images: a later plain `docker compose up` lacks it and builds
+  again.
 
 **Consequences.**
 
 - ➕ Same setup on reviewer VM, dev machine and CI.
-- ➖ The first build takes a few minutes.
+- ➕ A published commit installs without a build: no PyPI, npm or apt downloads.
+- ➖ Otherwise (a branch, local changes, arm64) the first build takes a few minutes.

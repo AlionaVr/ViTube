@@ -109,7 +109,8 @@ FastAPI + PostgreSQL + MinIO + Celery + React. Deployed with `./install.sh` (Doc
   the user which key to add, why, and how to generate it (e.g. `openssl rand -hex 32`), before the stack starts.
 - A hook blocks commands that name `.env`. Never dodge it (e.g. by building the name from parts): check secrets only
   via a script file that prints no values.
-- `docker compose config` fills in secrets: use only `config --quiet`; never print or save its output.
+- `docker compose config` fills in secrets: use only `config --quiet`, or `config --images` (image names only;
+  `install.sh` reads them); never print or save its other output.
 
 ## Git
 

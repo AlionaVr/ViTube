@@ -25,7 +25,7 @@ The script:
 1. installs Docker Engine and the compose plugin, if missing;
 2. creates `.env` with random secrets (an existing `.env` is kept);
 3. downloads the demo videos;
-4. builds and starts the stack, then waits until the site answers;
+4. starts the stack ([prebuilt images](#prebuilt-images) or a local build), then waits until the site answers;
 5. adds the [demo data](#demo-data);
 6. prints the site and API docs URLs, the demo logins and their password.
 
@@ -44,6 +44,19 @@ Prefix the commands below with `sudo` if your user is not in the `docker` group 
 > To change them, run `docker compose down -v` first, or the services can't log in.
 
 Other OS: install Docker Engine 28 or newer with Compose 2.39 or newer yourself, then run `./install.sh`.
+
+### Prebuilt images
+
+CI publishes the images of every commit on `main` that passed its checks:
+`docker.io/alionavinahrad/vitube-{backend,worker,nginx}:sha-<commit>` (amd64). `install.sh` pulls them for a
+checkout of such a commit, so the first start needs no build. It builds the images instead, and says why, when:
+
+- the commit has no published images (a branch, a commit not on `main` yet);
+- `backend/`, `frontend/` or `nginx/` have local changes;
+- the machine is not amd64.
+
+`VITUBE_REGISTRY` sets where to pull from (e.g. a fork's Docker Hub account); `VITUBE_REGISTRY= ./install.sh`
+always builds. See [ADR 0008](docs/adr/0008-deployment.md).
 
 ## Demo data
 
