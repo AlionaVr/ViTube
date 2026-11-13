@@ -1,0 +1,45 @@
+# Weekly update PRs for everything pinned: libraries (lock files), images (tags and digests) and CI
+# actions (SHAs). A release waits a week first: a hijacked one is usually caught by then.
+version: 2
+updates:
+  - package-ecosystem: uv
+    directory: /backend
+    schedule: { interval: weekly }
+    cooldown: { default-days: 7 }
+    groups:
+      backend:
+        update-types: [ minor, patch ]
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule: { interval: weekly }
+    cooldown: { default-days: 7 }
+    groups:
+      frontend:
+        update-types: [ minor, patch ]
+
+  # Base images. Majors are deliberate moves (Python, Node), so not proposed here.
+  - package-ecosystem: docker
+    directories: [ /backend, /frontend ]
+    schedule: { interval: weekly }
+    cooldown: { default-days: 7 }
+    ignore:
+      - dependency-name: "*"
+        update-types: [ version-update:semver-major ]
+
+  # Data services. A Postgres major needs a data migration: never proposed here.
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule: { interval: weekly }
+    cooldown: { default-days: 7 }
+    ignore:
+      - dependency-name: "*"
+        update-types: [ version-update:semver-major ]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
+    cooldown: { default-days: 7 }
+    groups:
+      actions:
+        patterns: [ "*" ]

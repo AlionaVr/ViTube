@@ -8,6 +8,9 @@ on:
 permissions:
   contents: read
 
+# Actions by commit SHA: a tag can be moved to other code (trivy-action's were, 2026-03).
+# Dependabot bumps the SHA and the version comment.
+
 jobs:
   backend:
     runs-on: ubuntu-24.04
@@ -15,9 +18,8 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v7
-      # No floating major tags since v8; this release is immutable.
-      - uses: astral-sh/setup-uv@v10.3.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
       - run: uv sync --locked
@@ -38,8 +40,8 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24 # same as frontend/Dockerfile
           cache: npm
@@ -57,13 +59,13 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # Runners ship an older Compose; install.sh needs 2.39+ (same as on a clean Ubuntu).
-      - uses: docker/setup-compose-action@v2
+      - uses: docker/setup-compose-action@54042514f505b273907334ae2b9cdbb9a0213c1a # v2.4.0
         with:
           version: latest
       # install.sh downloads the demo videos; the cache spares their hosts a fetch on every run.
-      - uses: actions/cache@v6
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: demo-data/videos
           key: demo-videos-${{ hashFiles('demo-data/videos.json') }}
@@ -86,7 +88,7 @@ jobs:
           docker compose exec -T worker python -c "
           import errno, socket
           assert socket.socket().connect_ex(('api', 8000)) == errno.ECONNREFUSED"
-      - uses: astral-sh/setup-uv@v10.3.3
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
       - name: ffmpeg for the sample video
