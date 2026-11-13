@@ -37,14 +37,16 @@ x-storage-env: &storage-env
   S3_SECRET_KEY: ${MINIO_APP_PASSWORD:?}
   S3_BUCKET: ${S3_BUCKET:?}
 
-x-minio-image: &minio-image pgsty/minio:RELEASE.2026-08-04T00-00-00Z  # community fork, see ADR 0002
+# Third-party images by digest (MinIO here, Postgres and Redis below): a tag can be moved to other
+# contents, a digest can't. Dependabot bumps both. MinIO: a community fork, see ADR 0002.
+x-minio-image: &minio-image pgsty/minio:RELEASE.2026-08-04T00-00-00Z@sha256:b6bfe7239bfc83fb90d31612d9704d86039dd714f7904b3f1ad68f211e602372
 # The image has no user of its own: fixed ids, next to the backend's 10001.
 x-minio-user: &minio-user "10002:10002"
 
 services:
   postgres:
     <<: *data-service
-    image: postgres:18-alpine
+    image: postgres:18-alpine@sha256:1018733457011bf88d81db98cf43aac6d5150afc18787dbe204771fedf80ff95
     user: postgres  # uid 70 in the image; the volume's root dir is world-writable there, so initdb works too
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?}
@@ -60,7 +62,7 @@ services:
 
   redis:
     <<: *data-service
-    image: redis:8-alpine
+    image: redis:8-alpine@sha256:7958cfbb9d152f87dadfbc89f1b0b15938f0b81ff8982feb327476f4911935c3
     user: redis  # uid 999 in the image, which owns /data
     # Append-only log, fsync every second: a crash loses at most 1 s, so logouts stay done (ADR 0005).
     command:

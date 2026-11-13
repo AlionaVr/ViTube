@@ -1,6 +1,7 @@
 # Build the SPA, then serve it with nginx. nginx also proxies the API (see nginx/default.conf.template).
+# Images by digest: a tag can be moved to other contents, a digest can't. Dependabot bumps both.
 
-FROM node:24-alpine AS build
+FROM node:24-alpine@sha256:116b800c3754b440ee0aa3ed2f20f5bf3d99a554bfd9adeea09ea8017f6e85f5 AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 # --ignore-scripts: no install-time code from npm packages runs during the build.
@@ -10,7 +11,7 @@ COPY . .
 RUN npm run build
 
 # Runs as uid 101 and listens on 8080: no root in the running container.
-FROM nginxinc/nginx-unprivileged:1.30-alpine
+FROM nginxinc/nginx-unprivileged:1.30-alpine@sha256:f5116ed4606f3eb015dd4a8e28cb9b351476dc0ad4bc6e9f93b19cec130cdf03
 # nginx-conf is a named build context: ./nginx (see compose.yaml). The entrypoint renders the template
 # into /etc/nginx/conf.d at start; compose mounts a tmpfs there, as the root FS is read-only.
 COPY --from=nginx-conf default.conf.template /etc/nginx/templates/default.conf.template

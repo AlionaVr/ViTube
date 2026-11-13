@@ -1,7 +1,8 @@
 # Two images: app (api and migrate) and worker (the same code plus ffmpeg).
+# Images by digest: a tag can be moved to other contents, a digest can't. Dependabot bumps both.
 
-FROM python:3.13-slim AS build
-COPY --from=ghcr.io/astral-sh/uv:0.13.7 /uv /bin/uv
+FROM python:3.13-slim@sha256:e48f59cdba69a3cbd9ed2cf0f348d90d45a8d350d98134cf1070bc106ee9ed90 AS build
+COPY --from=ghcr.io/astral-sh/uv:0.13.7@sha256:96f40d3904aad8d0bd010539001d36c8e2188b981e1334471a90c4a1d93bb490 /uv /bin/uv
 # Bytecode at build time; copy from the cache mount; use the image's Python, never download one.
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never
 WORKDIR /app
@@ -12,7 +13,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-dev
 
 # Shared runtime base: Python and the app user, no build tools.
-FROM python:3.13-slim AS base
+FROM python:3.13-slim@sha256:e48f59cdba69a3cbd9ed2cf0f348d90d45a8d350d98134cf1070bc106ee9ed90 AS base
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 PATH="/app/.venv/bin:$PATH"
 # Fixed ids (see USER); no home, no login shell.
 RUN groupadd --system --gid 10001 app \
