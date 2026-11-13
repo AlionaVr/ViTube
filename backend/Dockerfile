@@ -15,6 +15,12 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # Shared runtime base: Python and the app user, no build tools.
 FROM python:3.13-slim@sha256:e48f59cdba69a3cbd9ed2cf0f348d90d45a8d350d98134cf1070bc106ee9ed90 AS base
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 PATH="/app/.venv/bin:$PATH"
+# Debian's security fixes ship days before the base image is rebuilt (ADR 0015). No pip: uv builds the
+# venv above, and pip's own copies of urllib3 and msgpack lag behind their fixes.
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/* \
+    && python -m pip uninstall --yes --quiet pip
 # Fixed ids (see USER); no home, no login shell.
 RUN groupadd --system --gid 10001 app \
     && useradd --system --uid 10001 --gid app --no-create-home --shell /usr/sbin/nologin app

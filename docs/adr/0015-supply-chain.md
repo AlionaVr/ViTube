@@ -22,7 +22,10 @@ known CVEs have to reach us. Reviewers deploy the same files on a clean VM, so w
       Model choices are excluded in `backend/.squawk.toml`, with reasons.
 - **Third-party images** (Postgres, Redis, MinIO) are scanned as a report only: we can't fix them, and their fixes
   come with a new digest. Postgres's `gosu` is skipped: the container starts as `postgres` (ADR 0008).
-- The nginx image runs `apk upgrade` at build: its base is rebuilt less often than Alpine ships fixes.
+- Our images take their distribution's fixes at build (`apk upgrade` for nginx, `apt-get upgrade` for backend and
+  worker): a base image is rebuilt days after a fix ships. The backend images drop pip: uv builds their venv, and
+  pip's own copies of libraries lag behind their fixes. *(Amended 2026-11-13: was nginx only; CI on `main` then
+  failed on a Debian zlib fix and on pip's copies of urllib3 and msgpack.)*
 - **Published images** (ADR 0008). The `publish` job runs on pushes to `main` after every other job passed. It
   loads the images the `stack` job tested (their IDs recorded before any test tool ran), pushes them and signs
   each digest with cosign, keyless: the certificate names this workflow and the commit. The Docker Hub token lives
@@ -40,6 +43,7 @@ known CVEs have to reach us. Reviewers deploy the same files on a clean VM, so w
 **Consequences.**
 
 - ➕ A build uses the reviewed inputs only; a new CVE with a fix in our code or images stops the PR.
-- ➖ A CVE published overnight can fail an unrelated PR until the fix is taken (a Dependabot PR or `apk upgrade`).
-- ➖ The nginx image is not bit-for-bit reproducible: `apk upgrade` takes the packages of the build day.
+- ➖ A CVE published overnight can fail an unrelated PR until the fix is taken: a Dependabot PR, or a rebuild for a
+  distribution package.
+- ➖ Our images are not bit-for-bit reproducible: the upgrade takes the packages of the build day.
 - ➖ Installing a published commit needs Sigstore's servers (ghcr.io, its trust root); without them it builds.
