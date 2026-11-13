@@ -19,6 +19,8 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the base branch, for the migration lint
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
@@ -28,6 +30,11 @@ jobs:
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run pyright
+      - name: New migrations take no long locks (squawk)
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: origin/${{ github.base_ref }}
+        run: uv run python -m scripts.lint_migrations "$BASE_REF"
       - run: uv run pytest
       - name: Web app API schema is up to date (run npm run gen:api if not)
         run: |
@@ -53,6 +60,21 @@ jobs:
       - run: npm run format:check
       - run: npm test
       - run: npm run build
+
+  # Known issues in what we build: Dockerfile mistakes, locked libraries with fixable CVEs.
+  scan:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Dockerfiles (hadolint)
+        uses: hadolint/hadolint-action@06be81baf89a55ffd0e24b8f04a4185738dd3387 # v3.5.0
+        with:
+          recursive: true
+      - uses: aquasecurity/setup-trivy@81e514348e19b6112ce2a7e3ecbafe19c1e1f567 # v0.3.1
+        with:
+          version: v0.76.2
+      - name: Locked libraries (Trivy)
+        run: trivy fs --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 .
 
   # Deploys the whole stack the way a reviewer does, then checks migrations.
   stack:
@@ -106,6 +128,22 @@ jobs:
         run: |
           docker compose run --rm migrate alembic downgrade base
           docker compose run --rm migrate alembic upgrade head
+      - uses: aquasecurity/setup-trivy@81e514348e19b6112ce2a7e3ecbafe19c1e1f567 # v0.3.1
+        with:
+          version: v0.76.2
+      - name: Our images (Trivy)
+        run: |
+          for image in vitube-backend vitube-worker vitube-nginx; do
+            trivy image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 "$image"
+          done
+      # Report only: we can't fix them; Dependabot brings their fixed digests. gosu is never run
+      # (Postgres starts as its own user).
+      - name: Third-party images (Trivy, report)
+        run: |
+          for image in $(docker compose ps --format '{{.Image}}' | grep -v '^vitube-' | sort -u); do
+            trivy image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed \
+              --skip-files usr/local/bin/gosu "$image"
+          done
       - name: Show services and logs
         if: failure()
         run: |

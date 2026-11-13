@@ -1,0 +1,13 @@
+# squawk: lints the SQL of new migrations (scripts/lint_migrations.py; CI on pull requests).
+pg_version = "18.0"
+excluded_rules = [
+    # Model choices: bounded strings are VARCHAR(n); counts and seconds fit in int (ids are UUIDs).
+    "prefer-text-field",
+    "prefer-bigint-over-int",
+    "prefer-bigint-over-smallint",
+    # alembic/env.py sets lock_timeout for each run; offline SQL doesn't show it.
+    "require-lock-timeout",
+    # No statement timeout for the one-shot migrate job: lock_timeout already keeps it from
+    # queueing the app's queries; a slow but lock-free step may run to its end.
+    "require-statement-timeout",
+]

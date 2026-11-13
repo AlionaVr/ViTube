@@ -110,6 +110,8 @@ flow works on the stack, and it ends with a PR.
 ## Verification
 
 - **Checks:** `pytest`, `ruff`, `pyright`, frontend build and tests.
+- **Scanners** ([ADR 0015](adr/0015-supply-chain.md)): hadolint, Trivy (lock files and our images block; third-party
+  images report), squawk on new migrations.
 - **Clean Ubuntu VM:** `./install.sh` → site at `http://<ip>/`, Swagger at `/docs`, demo data present.
 - **E2E:** `tests/e2e/test_scenario.py` runs the core flow and the private-video checks; `test_moderation.py` runs
   report, hide, restore, comment delete, ban, terminate and the audit log.

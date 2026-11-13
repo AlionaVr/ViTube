@@ -18,3 +18,4 @@ One short file per key decision: context, decision, alternatives, consequences.
 | [0012](0012-watch-history.md)             | Watch history: one row per video, player saves    |
 | [0013](0013-liked-videos.md)              | Liked videos: a list read from likes              |
 | [0014](0014-google-sign-in.md)            | Sign-in with Google: OIDC code flow via Authlib   |
+| [0015](0015-supply-chain.md)              | Supply chain: pinned inputs, Dependabot, scanners |

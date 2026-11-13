@@ -36,6 +36,8 @@ CMD ["uvicorn", "app.main:app", "--port", "8000", "--proxy-headers", "--forwarde
 # The worker: the app plus ffmpeg. Only this image carries it: less to attack in the api.
 # ffmpeg goes in before the code, so code changes keep this layer cached. Command: compose.yaml.
 FROM base AS worker
+# No apt version pins (DL3008): Debian drops old versions from its mirrors; the base is pinned by digest.
+# hadolint ignore=DL3008
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ffmpeg \
     && rm -rf /var/lib/apt/lists/*

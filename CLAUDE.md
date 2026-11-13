@@ -17,11 +17,13 @@ FastAPI + PostgreSQL + MinIO + Celery + React. Deployed with `./install.sh` (Doc
   checkout's containers; without the tags, a build moves the other checkouts' next `up` or `run` onto this code and
   its migrations: rebuild then only with the user's OK. The worktree's `.env` is the user's copy with a free
   `HTTP_PORT`. Check frontend work with `API_PROXY=http://localhost:<stack port> npm run dev -- --port <free port>`.
-- Migrations: `docker compose run --rm migrate alembic <cmd>`. See the `add-migration` skill.
+- Migrations: `docker compose run --rm migrate alembic <cmd>`. See the `add-migration` skill. New migrations' SQL
+  lint (`backend/`): `uv run python -m scripts.lint_migrations origin/main`.
 - Frontend (`frontend/`): `npm run dev` (proxies `/api` to the stack, or to `API_PROXY`), `npm run lint`, `npm run format:check`, `npm test`, `npm run build`.
 - API types: after changing the API, run `npm run gen:api` in `frontend/` and commit `src/api/openapi.json` + `schema.d.ts` (CI checks).
 - Local dev (backend from the IDE): `compose.local.yaml` + `.env.local`, see README. Production uses `compose.yaml` only.
-- CI (`.github/workflows/ci.yml`): the checks above, plus a deploy via `install.sh`, `alembic check` and migrations down/up.
+- CI (`.github/workflows/ci.yml`): the checks above, scanners (hadolint, Trivy, squawk; ADR 0015), a deploy via
+  `install.sh`, `alembic check` and migrations down/up.
 
 ## Workflow
 

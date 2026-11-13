@@ -16,11 +16,14 @@ FROM nginxinc/nginx-unprivileged:1.30-alpine@sha256:f5116ed4606f3eb015dd4a8e28cb
 USER 0
 RUN apk upgrade --no-cache
 USER 101
-# nginx-conf is a named build context: ./nginx (see compose.yaml). The entrypoint renders the template
-# into /etc/nginx/conf.d at start; compose mounts a tmpfs there, as the root FS is read-only.
+# nginx-conf is a named build context: ./nginx (see compose.yaml); hadolint takes it for a stage (DL3022).
+# The entrypoint renders the template into /etc/nginx/conf.d at start; compose mounts a tmpfs there, as
+# the root FS is read-only.
+# hadolint ignore=DL3022
 COPY --from=nginx-conf default.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html
 # API docs (/docs): Swagger UI from the locked npm package and our page; no CDN at runtime.
 COPY --from=build /app/node_modules/swagger-ui-dist/swagger-ui-bundle.js \
     /app/node_modules/swagger-ui-dist/swagger-ui.css /usr/share/nginx/html/swagger/
+# hadolint ignore=DL3022
 COPY --from=nginx-conf swagger/ /usr/share/nginx/html/swagger/

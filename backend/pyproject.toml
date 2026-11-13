@@ -27,6 +27,7 @@ dev = [
     "pytest>=9.2.0",
     "pytest-asyncio>=1.4.1.post1",
     "ruff>=0.17.3",
+    "squawk-cli>=2.71.0",
     "testcontainers[minio,postgres,redis]>=4.15.0",
     "types-aiobotocore[s3]>=3.10.0",
 ]
